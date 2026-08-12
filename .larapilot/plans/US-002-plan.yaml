@@ -707,7 +707,7 @@ tasks:
     id: TASK-09
     title: 'Schermate dei progetti e dei responsabili di progetto'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
       - TASK-05
@@ -747,14 +747,14 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Un amministratore crea, modifica e disattiva un progetto
-      - [ ] Uno slug duplicato e rifiutato in validazione con messaggio, prima del vincolo di database
-      - [ ] Un progetto appena creato mostra la mappatura predefinita gia precompilata
-      - [ ] Modificare la mappatura del progetto non altera quella predefinita
-      - [ ] Assegnare una persona disattivata e rifiutato con messaggio esplicito
-      - [ ] Nessuna azione di cancellazione progetto esposta
-      - [ ] Nessuna query dentro cicli Blade: `withCount` sull'elenco, `with` annidato sulla pagina responsabili
-      - [ ] Schermate usabili a 375, 768 e 1280 px
+      - [x] Un amministratore crea, modifica e disattiva un progetto
+      - [x] Uno slug duplicato e rifiutato in validazione con messaggio, prima del vincolo di database
+      - [x] Un progetto appena creato mostra la mappatura predefinita gia precompilata
+      - [x] Modificare la mappatura del progetto non altera quella predefinita
+      - [x] Assegnare una persona disattivata e rifiutato con messaggio esplicito
+      - [x] Nessuna azione di cancellazione progetto esposta
+      - [x] Nessuna query dentro cicli Blade: `withCount` sull'elenco, `with` annidato sulla pagina responsabili
+      - [x] Schermate usabili a 375, 768 e 1280 px
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -763,6 +763,12 @@ tasks:
       - Commit: `feat(US-002): TASK-09 progetti e responsabili di progetto`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: a57c8eb1b94c58498abc24ebbd43b1aeaa793cd5
+      short_sha: a57c8eb
+      subject: 'feat(US-002): TASK-09 progetti e responsabili di progetto'
+      committed_at: '2026-08-12T16:53:36+02:00'
+      url: null
   -
     id: TASK-10
     title: 'Schermata della mappatura predefinita di team'
@@ -905,4 +911,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:51:12+00:00'
+updated_at: '2026-08-12T14:53:36+00:00'
