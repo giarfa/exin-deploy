@@ -1,0 +1,44 @@
+# Changelog
+
+Tutte le modifiche rilevanti di questo progetto sono documentate qui.
+
+Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il
+versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
+
+## [Unreleased]
+
+### Added
+
+- **Accesso allo strumento** (US-001, FR-001): autenticazione via Laravel Fortify con
+  recupero password e verifica in due passaggi TOTP, schermate proprie in Livewire e Flux.
+- **Gestione dei membri del team**: un amministratore crea, modifica e disattiva i membri.
+  I membri non vengono mai cancellati, per non perdere la loro traccia nello storico dei
+  rilasci.
+- **Livelli applicativi** `admin` e `member` come enum nativo, con autorizzazione
+  applicata dalle Policy lato server.
+- **Shell applicativa** secondo lo Starter Kit variante Livewire: sidebar permanente da
+  1024 px e drawer sotto, tema chiaro/scuro/sistema, skip link e navigazione accessibile.
+  Le sezioni non ancora implementate sono visibili e marcate "in arrivo".
+- **Ambiente dimostrativo**: seeder con il team di esempio, incluso un membro disattivato
+  per verificare il rifiuto dell'accesso.
+- Documentazione baseline: README con avvio via Herd, nota architetturale sulla separazione
+  fra definizione e istanza, questo changelog.
+
+### Security
+
+- Hashing **Argon2id** al posto di bcrypt.
+- Regole password globali via `Password::defaults()`: minimo 8 caratteri, maiuscole e
+  minuscole, numeri, simboli, e verifica contro violazioni di dati note.
+- **Chiavi primarie UUID** (UUIDv7) su tutti i modelli.
+- **Nessuna registrazione pubblica**: `/register` risponde 404.
+- **Passkey disattivate**, pur presenti come dipendenza di Fortify: fuori dal perimetro
+  del prodotto.
+- Un membro disattivato non accede piu, con messaggio dedicato distinto da quello delle
+  credenziali errate. Tentativi falliti e accessi rifiutati vengono registrati nel log.
+- `robots.txt` con `Disallow: /` e meta `noindex, nofollow`: lo strumento non deve essere
+  indicizzato in nessun caso.
+
+### Changed
+
+- SQLite configurato in modalita **WAL** con `busy_timeout`, per contenere il rischio di
+  concorrenza in scrittura accettato nel PRD.

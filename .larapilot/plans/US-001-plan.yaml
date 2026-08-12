@@ -648,7 +648,7 @@ tasks:
     id: TASK-09
     title: 'Test: autorizzazione e gestione dei membri'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-08
     body: |
@@ -676,15 +676,21 @@ tasks:
       4. `php artisan test --compact` — la suite completa resta verde
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] L'autorizzazione e verificata a livello di rotta, non solo di Policy isolata
-      - [ ] La suite completa e verde
-      - [ ] Nessuno strumento browser o E2E introdotto
+      - [x] I test passano in locale
+      - [x] L'autorizzazione e verificata a livello di rotta, non solo di Policy isolata
+      - [x] La suite completa e verde
+      - [x] Nessuno strumento browser o E2E introdotto
 
       ## Git Deliverables
       - Commit: `test(US-001): TASK-09 copre autorizzazione e gestione dei membri`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: b85dfe8fc3f5cc7d12a5ccdc59309539f7bed213
+      short_sha: b85dfe8
+      subject: 'test(US-001): TASK-09 copre autorizzazione e gestione dei membri'
+      committed_at: '2026-08-12T12:48:36+02:00'
+      url: null
   -
     id: TASK-10
     title: 'Documentazione baseline e CHANGELOG'
@@ -735,4 +741,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:47:15+00:00'
+updated_at: '2026-08-12T10:48:37+00:00'
