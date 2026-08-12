@@ -1,0 +1,45 @@
+code: US-001
+title: 'Accesso allo strumento e gestione dei membri del team'
+epic:
+  code: EP-001
+  title: 'Fondamenta e accesso'
+priority: CRITICAL
+points: 8
+status: 'IN PROGRESS'
+body: |
+  #### US-001: Accesso allo strumento e gestione dei membri del team
+
+  **Epic:** EP-001 | **Priority:** CRITICAL | **Points:** 8 | **Status:** TODO
+  **Blocked by:** -
+  **Traces to:** FR-001 (MoSCoW: Must)
+
+  **Storia utente**
+  Come Release Owner,
+  voglio che allo strumento accedano solo i membri del team autenticati e poter gestire chi ne fa parte,
+  così che ogni azione sul processo di rilascio sia attribuibile a una persona reale.
+
+  **Dimostra**
+  Dopo questa spec si accede con email e password più 2FA TOTP; un amministratore crea, modifica e
+  disattiva i membri; un membro disattivato non entra più ma resta visibile nello storico dei rilasci.
+
+  **Criteri di accettazione**
+  - [ ] Nessuna rotta applicativa è raggiungibile senza autenticazione: un utente anonimo viene rediretto al login
+  - [ ] Login con email e password e reset password funzionanti via Fortify
+  - [ ] 2FA TOTP attivabile dall'utente, con QR di enrolment e codici di recupero
+  - [ ] `Password::defaults()` registrato in `AppServiceProvider::boot()` (min 8, maiuscole/minuscole, numeri, simboli, `uncompromised`) e applicato a ogni validazione di password
+  - [ ] Modello `User` con chiave primaria UUID e hashing Argon2id
+  - [ ] Nessuna registrazione pubblica: gli account sono creati esclusivamente da un amministratore
+  - [ ] Un amministratore crea un membro con nome, email e livello applicativo (`admin` / `member`)
+  - [ ] Un amministratore disattiva un membro: il login viene rifiutato con messaggio esplicito, mentre nome e riferimenti storici restano visibili
+  - [ ] Un `member` non accede alla gestione dei membri: il controllo è a livello di Policy lato server, non solo comandi nascosti nell'interfaccia
+  - [ ] Shell applicativa secondo lo Starter Kit variante `livewire`: layout con sidebar, drawer sotto 1024 px, tema chiaro e scuro
+  - [ ] `public/robots.txt` con `Disallow: /` e meta `robots: noindex, nofollow` nel layout
+  - [ ] README con prerequisiti, avvio locale via Laravel Herd, variabili d'ambiente, comandi di test e di seed
+  - [ ] Nota architetturale iniziale che spiega la separazione fra tabelle di definizione e di istanza
+  - [ ] I tentativi di login falliti sono registrati nel log applicativo
+status_history:
+  - status: PLANNED
+    at: '2026-08-12T10:11:39+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-12T10:16:51+00:00'
+rework: false

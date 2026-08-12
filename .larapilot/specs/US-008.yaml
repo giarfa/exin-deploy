@@ -1,0 +1,35 @@
+code: US-008
+title: 'Dettaglio della release con catena e informazioni fornite'
+epic:
+  code: EP-004
+  title: 'Visibilità e tracciabilità'
+priority: HIGH
+points: 5
+status: TODO
+body: |
+  #### US-008: Dettaglio della release con catena e informazioni fornite
+
+  **Epic:** EP-004 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+  **Blocked by:** US-004
+  **Traces to:** FR-014 (MoSCoW: Must)
+
+  **Storia utente**
+  Come Osservatore del rilascio,
+  voglio aprire una release e vedere l'intera catena con lo stato di ogni step, il responsabile e i dati già forniti,
+  così da sapere dove siamo e chi stiamo aspettando senza interrompere nessuno.
+
+  **Dimostra**
+  Dopo questa spec apro la release v2.4.0 e vedo i cinque step con stato completato, attivo o bloccato,
+  ruolo e nome del responsabile, valori e istanti degli step chiusi, e il template da cui deriva.
+
+  **Criteri di accettazione**
+  - [ ] La vista mostra etichetta, progetto, stato, template di origine, autore e istante di avvio
+  - [ ] Mostra la sequenza completa degli step nell'ordine congelato dallo snapshot, con lo stato di ciascuno
+  - [ ] Ogni step mostra il ruolo e il nome del responsabile risolto
+  - [ ] Gli step completati mostrano i valori forniti, l'autore e l'istante di chiusura
+  - [ ] Gli step bloccati non mostrano alcun campo compilabile
+  - [ ] Il comando di apertura dello step attivo appare solo al responsabile o a un amministratore, e l'autorizzazione resta applicata lato server
+  - [ ] I campi di tipo link sono resi come collegamenti; i campi di tipo conferma come esito affermativo o negativo
+  - [ ] Ogni membro autenticato può consultare il dettaglio in sola lettura, anche senza essere responsabile di alcuno step
+  - [ ] Nessuna query N+1 su catena, campi e responsabili (verificato)
+  - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/dettaglio-release.html`: colonna singola su mobile, due colonne da 1024 px

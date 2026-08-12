@@ -1,0 +1,411 @@
+specs:
+  -
+    code: US-001
+    title: 'Accesso allo strumento e gestione dei membri del team'
+    epic:
+      code: EP-001
+      title: 'Fondamenta e accesso'
+    priority: CRITICAL
+    points: 8
+    status: 'IN PROGRESS'
+    body: |
+      #### US-001: Accesso allo strumento e gestione dei membri del team
+
+      **Epic:** EP-001 | **Priority:** CRITICAL | **Points:** 8 | **Status:** TODO
+      **Blocked by:** -
+      **Traces to:** FR-001 (MoSCoW: Must)
+
+      **Storia utente**
+      Come Release Owner,
+      voglio che allo strumento accedano solo i membri del team autenticati e poter gestire chi ne fa parte,
+      così che ogni azione sul processo di rilascio sia attribuibile a una persona reale.
+
+      **Dimostra**
+      Dopo questa spec si accede con email e password più 2FA TOTP; un amministratore crea, modifica e
+      disattiva i membri; un membro disattivato non entra più ma resta visibile nello storico dei rilasci.
+
+      **Criteri di accettazione**
+      - [ ] Nessuna rotta applicativa è raggiungibile senza autenticazione: un utente anonimo viene rediretto al login
+      - [ ] Login con email e password e reset password funzionanti via Fortify
+      - [ ] 2FA TOTP attivabile dall'utente, con QR di enrolment e codici di recupero
+      - [ ] `Password::defaults()` registrato in `AppServiceProvider::boot()` (min 8, maiuscole/minuscole, numeri, simboli, `uncompromised`) e applicato a ogni validazione di password
+      - [ ] Modello `User` con chiave primaria UUID e hashing Argon2id
+      - [ ] Nessuna registrazione pubblica: gli account sono creati esclusivamente da un amministratore
+      - [ ] Un amministratore crea un membro con nome, email e livello applicativo (`admin` / `member`)
+      - [ ] Un amministratore disattiva un membro: il login viene rifiutato con messaggio esplicito, mentre nome e riferimenti storici restano visibili
+      - [ ] Un `member` non accede alla gestione dei membri: il controllo è a livello di Policy lato server, non solo comandi nascosti nell'interfaccia
+      - [ ] Shell applicativa secondo lo Starter Kit variante `livewire`: layout con sidebar, drawer sotto 1024 px, tema chiaro e scuro
+      - [ ] `public/robots.txt` con `Disallow: /` e meta `robots: noindex, nofollow` nel layout
+      - [ ] README con prerequisiti, avvio locale via Laravel Herd, variabili d'ambiente, comandi di test e di seed
+      - [ ] Nota architetturale iniziale che spiega la separazione fra tabelle di definizione e di istanza
+      - [ ] I tentativi di login falliti sono registrati nel log applicativo
+    status_history:
+      - { status: PLANNED, at: '2026-08-12T10:11:39+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-12T10:16:51+00:00' }
+    rework: false
+  -
+    code: US-002
+    title: 'Ruoli funzionali, progetti e responsabili'
+    epic:
+      code: EP-002
+      title: 'Configurazione del processo'
+    priority: HIGH
+    points: 8
+    status: TODO
+    body: |
+      #### US-002: Ruoli funzionali, progetti e responsabili
+
+      **Epic:** EP-002 | **Priority:** HIGH | **Points:** 8 | **Status:** TODO
+      **Blocked by:** US-001
+      **Traces to:** FR-002, FR-003, FR-004, FR-005 (MoSCoW: Must)
+
+      **Storia utente**
+      Come Release Owner,
+      voglio definire i ruoli funzionali del processo, i progetti su cui rilasciamo e chi ricopre ciascun ruolo — con una mappatura predefinita a livello di team —
+      così che lo stesso processo si applichi a tutti i progetti senza riconfigurarlo ogni volta.
+
+      **Dimostra**
+      Dopo questa spec creo i ruoli, imposto la mappatura predefinita ruolo→persona, creo un progetto e
+      ritrovo quella mappatura già precompilata, modificabile sul progetto senza alterare il valore predefinito.
+
+      **Criteri di accettazione**
+      - [ ] Un amministratore crea, modifica e disattiva ruoli funzionali (nome, descrizione)
+      - [ ] Un ruolo referenziato da un template o da una release non è cancellabile: il tentativo è rifiutato con messaggio esplicito e il ruolo resta disattivabile
+      - [ ] Un amministratore crea, modifica e disattiva progetti (nome, slug, descrizione)
+      - [ ] Lo slug del progetto è univoco: il duplicato è rifiutato in validazione e vincolato a livello di schema
+      - [ ] Un amministratore definisce la mappatura predefinita ruolo→persona valida per il team
+      - [ ] Alla creazione di un progetto la mappatura predefinita viene precompilata sul progetto
+      - [ ] Modificare la mappatura di un progetto non altera la mappatura predefinita, e viceversa
+      - [ ] Una sola persona per coppia progetto/ruolo, con vincolo di unicità a livello di schema e non solo di validazione
+      - [ ] Assegnare a un ruolo una persona disattivata è rifiutato con messaggio esplicito
+      - [ ] Un `member` non accede alla configurazione di ruoli, progetti e mappature (Policy lato server)
+      - [ ] Factory e seeder aggiornati per ruoli, progetti e mappature nello stesso commit delle migrazioni
+  -
+    code: US-003
+    title: 'Template di workflow con step ordinati e campi richiesti'
+    epic:
+      code: EP-002
+      title: 'Configurazione del processo'
+    priority: HIGH
+    points: 13
+    status: TODO
+    body: |
+      #### US-003: Template di workflow con step ordinati e campi richiesti
+
+      **Epic:** EP-002 | **Priority:** HIGH | **Points:** 13 | **Status:** TODO
+      **Blocked by:** US-002
+      **Traces to:** FR-006, FR-007, FR-008 (MoSCoW: Must)
+
+      **Storia utente**
+      Come Release Owner,
+      voglio configurare template di workflow riutilizzabili — una sequenza ordinata di step, ciascuno con un ruolo responsabile e l'elenco delle informazioni da fornire —
+      così che il processo di rilascio sia esplicito, autoesplicativo e ripetibile su tutti i progetti.
+
+      **Dimostra**
+      Dopo questa spec creo il template "Rilascio standard" con cinque step ordinati, assegno un ruolo a
+      ciascuno, definisco i campi richiesti nei quattro tipi previsti, riordino gli step, e il template
+      risulta associabile ai progetti come predefinito.
+
+      **Criteri di accettazione**
+      - [ ] Un amministratore crea, modifica e disattiva template (nome, descrizione, flag di predefinito)
+      - [ ] Un solo template può essere predefinito: impostarne uno nuovo rimuove il flag dal precedente
+      - [ ] Il template predefinito è proposto in automatico alla creazione di un progetto, e resta sostituibile
+      - [ ] Un amministratore aggiunge step al template con nome, istruzioni per chi lo esegue e ruolo responsabile
+      - [ ] Gli step hanno una posizione ordinata e sono riordinabili
+      - [ ] Dopo un riordino o una cancellazione le posizioni restano contigue e senza duplicati (verificato da test)
+      - [ ] Per ogni step si definiscono i campi richiesti: etichetta, tipo, obbligatorietà, posizione e testo di aiuto opzionale
+      - [ ] I tipi supportati sono esattamente quattro: testo breve, testo lungo, link, conferma
+      - [ ] Il tipo di campo è modellato come enum PHP nativo: un valore fuori dall'enum è rifiutato
+      - [ ] Un template senza step non è utilizzabile per avviare una release, con messaggio esplicito
+      - [ ] Il sistema segnala i ruoli previsti dal template e non ancora assegnati sul progetto associato
+      - [ ] Un `member` non accede alla configurazione dei template (Policy lato server)
+      - [ ] Factory e seeder producono il template "Rilascio standard" con cinque step realistici e i relativi campi
+  -
+    code: US-004
+    title: 'Avvio di una release con snapshot congelato del workflow'
+    epic:
+      code: EP-003
+      title: 'Esecuzione del rilascio'
+    priority: HIGH
+    points: 5
+    status: TODO
+    body: |
+      #### US-004: Avvio di una release con snapshot congelato del workflow
+
+      **Epic:** EP-003 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+      **Blocked by:** US-003
+      **Traces to:** FR-009, FR-010 (prima attivazione) (MoSCoW: Must)
+
+      **Storia utente**
+      Come Release Owner,
+      voglio avviare una release su un progetto e ottenere una copia congelata del workflow con i responsabili già risolti,
+      così che il rilascio proceda su una definizione che non può cambiare sotto i piedi.
+
+      **Dimostra**
+      Dopo questa spec avvio una release su "Portale Clienti" con etichetta v2.4.0: step e campi vengono
+      copiati dal template, ogni step riporta la persona risolta dal ruolo, il primo step è attivo e gli
+      altri bloccati. Modifico poi il template e la release avviata non cambia forma.
+
+      **Criteri di accettazione**
+      - [ ] Un amministratore avvia una release indicando progetto ed etichetta
+      - [ ] All'avvio step e campi del template sono copiati nelle tabelle di istanza (snapshot)
+      - [ ] Ogni step di istanza memorizza il responsabile risolto dalla mappatura ruolo→persona del progetto
+      - [ ] Il primo step risulta attivo e tutti gli altri bloccati; la release è in stato "in corso"
+      - [ ] Modificare, riordinare o disattivare il template dopo l'avvio non altera step, ordine, campi né responsabili della release avviata (verificato da test)
+      - [ ] Il codice di esecuzione della release non legge le tabelle di definizione (verificato da test)
+      - [ ] L'avvio è impedito con messaggio esplicito quando un ruolo previsto dal template non è assegnato sul progetto
+      - [ ] L'avvio è impedito quando il progetto non ha un template associato o il template non ha step
+      - [ ] L'etichetta è obbligatoria e univoca per progetto: il duplicato è rifiutato
+      - [ ] L'avvio è registrato nel registro delle transizioni con attore e istante
+      - [ ] Un `member` non avvia release (Policy lato server)
+  -
+    code: US-005
+    title: 'Chiusura di uno step con validazione e avanzamento sequenziale'
+    epic:
+      code: EP-003
+      title: 'Esecuzione del rilascio'
+    priority: CRITICAL
+    points: 8
+    status: TODO
+    body: |
+      #### US-005: Chiusura di uno step con validazione e avanzamento sequenziale
+
+      **Epic:** EP-003 | **Priority:** CRITICAL | **Points:** 8 | **Status:** TODO
+      **Blocked by:** US-004
+      **Traces to:** FR-010, FR-011, FR-012, FR-016 (scrittura degli eventi) (MoSCoW: Must)
+
+      **Storia utente**
+      Come Step Owner,
+      voglio compilare le informazioni richieste dal mio step e chiuderlo,
+      così che il flusso passi al responsabile successivo solo quando quei dati esistono davvero.
+
+      **Dimostra**
+      Dopo questa spec, come responsabile dello step attivo compilo i campi e chiudo: lo step successivo si
+      attiva e diventa compilabile dal suo responsabile. Con un campo obbligatorio mancante o un URL
+      malformato la chiusura è rifiutata indicando cosa correggere. Un utente non responsabile non riesce a
+      chiudere lo step nemmeno invocando la rotta direttamente.
+
+      **Criteri di accettazione**
+      - [ ] Il responsabile dello step attivo compila i campi e ne richiede la chiusura
+      - [ ] La chiusura è rifiutata quando un campo obbligatorio è vuoto, indicando quale campo e perché
+      - [ ] La chiusura è rifiutata quando un campo di tipo link contiene un URL malformato
+      - [ ] La chiusura è rifiutata quando un campo di tipo conferma obbligatorio non è spuntato
+      - [ ] Un campo opzionale lasciato vuoto non impedisce la chiusura
+      - [ ] Alla chiusura valida sono registrati valori, autore e istante; lo step passa a completato e il successivo ad attivo
+      - [ ] Chiusura, attivazione dello step successivo e scrittura dell'evento avvengono in una sola transazione
+      - [ ] Esiste al massimo uno step attivo per release in ogni momento (verificato da test)
+      - [ ] Due richieste concorrenti di chiusura dello stesso step producono un solo avanzamento e un solo evento, con lock pessimistico sulla riga della release (verificato da test)
+      - [ ] Uno step bloccato non è compilabile né chiudibile, nemmeno invocando la rotta direttamente
+      - [ ] Uno step completato è in sola lettura
+      - [ ] Solo il responsabile assegnato o un amministratore possono compilare e chiudere: controllo a livello di Policy lato server
+      - [ ] Un tentativo non autorizzato è rifiutato con 403, registrato nel log applicativo e nel registro delle transizioni
+      - [ ] Interfaccia conforme al mockup `.larapilot/mockups/superficie-operativa/chiusura-step.html`: errori collegati al campo con `aria-describedby`, riepilogo errori con `role="alert"`, obbligatorietà annunciata a parole
+      - [ ] Nota architetturale estesa con diagramma Mermaid della macchina a stati e diagramma ER che distingue tabelle di definizione e di istanza
+  -
+    code: US-006
+    title: 'Conclusione della release come consegna in produzione'
+    epic:
+      code: EP-003
+      title: 'Esecuzione del rilascio'
+    priority: HIGH
+    points: 3
+    status: TODO
+    body: |
+      #### US-006: Conclusione della release come consegna in produzione
+
+      **Epic:** EP-003 | **Priority:** HIGH | **Points:** 3 | **Status:** TODO
+      **Blocked by:** US-005
+      **Traces to:** FR-017 (MoSCoW: Must)
+
+      **Storia utente**
+      Come Release Owner,
+      voglio che la chiusura dell'ultimo step concluda la release registrando chi ha consegnato e quando,
+      così che ogni rilascio lasci una prova documentata e non più alterabile.
+
+      **Dimostra**
+      Dopo questa spec chiudo l'ultimo step della catena: la release passa a conclusa con autore e istante
+      della consegna, non compare più tra quelle in corso e ogni tentativo di modifica è rifiutato.
+
+      **Criteri di accettazione**
+      - [ ] La chiusura dell'ultimo step marca la release come conclusa, con autore e istante della consegna
+      - [ ] Una release conclusa non ha alcuno step attivo (verificato da test)
+      - [ ] Una release conclusa è in sola lettura: nessuno step è compilabile o riapribile, nemmeno da un amministratore
+      - [ ] Il tentativo di chiudere o modificare uno step di una release conclusa è rifiutato con esito 403 o 409
+      - [ ] La conclusione è registrata nel registro delle transizioni
+      - [ ] Una release conclusa non compare tra quelle in corso e resta consultabile a tempo indeterminato
+      - [ ] La riapertura di uno step da parte di un amministratore resta esclusa da questo rilascio (FR-019, rinviata alle fasi successive) e il messaggio all'utente non promette il contrario
+  -
+    code: US-007
+    title: 'Vista operativa: i miei step'
+    epic:
+      code: EP-004
+      title: 'Visibilità e tracciabilità'
+    priority: HIGH
+    points: 5
+    status: TODO
+    body: |
+      #### US-007: Vista operativa: i miei step
+
+      **Epic:** EP-004 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+      **Blocked by:** US-005
+      **Traces to:** FR-013 (MoSCoW: Must)
+
+      **Storia utente**
+      Come Step Owner,
+      voglio vedere in un colpo d'occhio se qualcosa attende me, su tutti i progetti,
+      così da non essere il collo di bottiglia senza saperlo.
+
+      **Dimostra**
+      Dopo questa spec entro nell'applicazione e la prima schermata elenca gli step attivi di cui sono
+      responsabile, con progetto, release e nome dello step, apribili in un tocco. È leggibile e usabile a 375 px.
+
+      **Criteri di accettazione**
+      - [ ] Dopo il login la vista "i miei step" è la schermata di ingresso, non una dashboard di grafici
+      - [ ] Elenca esclusivamente gli step in stato attivo di cui l'utente autenticato è responsabile, su tutti i progetti
+      - [ ] Ogni voce mostra progetto, etichetta della release, nome dello step, posizione (es. "Step 2 di 5") e ruolo
+      - [ ] Uno step attivo di cui l'utente non è responsabile non compare nell'elenco
+      - [ ] Stato vuoto esplicito quando nessuno step attende l'utente, che spiega quando ne comparirà uno
+      - [ ] Blocco secondario con le release in corso che coinvolgono l'utente, indicando chi trattiene il flusso e da quanto tempo — mitigazione dell'assenza di notifiche registrata nel PRD fra i rischi accettati
+      - [ ] Nessuna query N+1: release, step e responsabili caricati in eager loading (verificato)
+      - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/index.html`: mobile first a 375 px, target touch almeno 44x44 px, sidebar a drawer sotto 1024 px
+      - [ ] Gli stati sono resi con icona e parola, mai dal solo colore
+      - [ ] Il contatore degli step in attesa è annunciato agli screen reader con `aria-live="polite"`
+  -
+    code: US-008
+    title: 'Dettaglio della release con catena e informazioni fornite'
+    epic:
+      code: EP-004
+      title: 'Visibilità e tracciabilità'
+    priority: HIGH
+    points: 5
+    status: TODO
+    body: |
+      #### US-008: Dettaglio della release con catena e informazioni fornite
+
+      **Epic:** EP-004 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+      **Blocked by:** US-004
+      **Traces to:** FR-014 (MoSCoW: Must)
+
+      **Storia utente**
+      Come Osservatore del rilascio,
+      voglio aprire una release e vedere l'intera catena con lo stato di ogni step, il responsabile e i dati già forniti,
+      così da sapere dove siamo e chi stiamo aspettando senza interrompere nessuno.
+
+      **Dimostra**
+      Dopo questa spec apro la release v2.4.0 e vedo i cinque step con stato completato, attivo o bloccato,
+      ruolo e nome del responsabile, valori e istanti degli step chiusi, e il template da cui deriva.
+
+      **Criteri di accettazione**
+      - [ ] La vista mostra etichetta, progetto, stato, template di origine, autore e istante di avvio
+      - [ ] Mostra la sequenza completa degli step nell'ordine congelato dallo snapshot, con lo stato di ciascuno
+      - [ ] Ogni step mostra il ruolo e il nome del responsabile risolto
+      - [ ] Gli step completati mostrano i valori forniti, l'autore e l'istante di chiusura
+      - [ ] Gli step bloccati non mostrano alcun campo compilabile
+      - [ ] Il comando di apertura dello step attivo appare solo al responsabile o a un amministratore, e l'autorizzazione resta applicata lato server
+      - [ ] I campi di tipo link sono resi come collegamenti; i campi di tipo conferma come esito affermativo o negativo
+      - [ ] Ogni membro autenticato può consultare il dettaglio in sola lettura, anche senza essere responsabile di alcuno step
+      - [ ] Nessuna query N+1 su catena, campi e responsabili (verificato)
+      - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/dettaglio-release.html`: colonna singola su mobile, due colonne da 1024 px
+  -
+    code: US-009
+    title: 'Elenco e storico delle release'
+    epic:
+      code: EP-004
+      title: 'Visibilità e tracciabilità'
+    priority: HIGH
+    points: 3
+    status: TODO
+    body: |
+      #### US-009: Elenco e storico delle release
+
+      **Epic:** EP-004 | **Priority:** HIGH | **Points:** 3 | **Status:** TODO
+      **Blocked by:** US-006
+      **Traces to:** FR-015 (MoSCoW: Must)
+
+      **Storia utente**
+      Come Release Owner,
+      voglio elencare le release filtrandole per progetto e per stato, e accedere allo storico dei rilasci conclusi,
+      così da avere una vista d'insieme e poter ricostruire un rilascio passato.
+
+      **Dimostra**
+      Dopo questa spec elenco le release in corso con step corrente e responsabile in attesa, passo a quelle
+      concluse con data e autore della consegna, e filtro per progetto.
+
+      **Criteri di accettazione**
+      - [ ] Elenco delle release con progetto, etichetta, stato, step corrente e responsabile in attesa
+      - [ ] Filtro per stato (in corso / concluse) e per progetto
+      - [ ] Le release concluse mostrano autore e istante della consegna
+      - [ ] Lo storico è consultabile a tempo indeterminato, senza limite implicito di data
+      - [ ] Ordinamento predefinito dalle più recenti alle più vecchie
+      - [ ] Indici su `release.project_id` e `release.status` creati nella stessa migrazione dello schema
+      - [ ] Nessuna query N+1 (verificato)
+      - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/desktop.html`: card impilate sotto 1024 px, tabella da 1024 px, nessuno scroll orizzontale a nessun breakpoint
+  -
+    code: US-010
+    title: 'Registro consultabile delle transizioni'
+    epic:
+      code: EP-004
+      title: 'Visibilità e tracciabilità'
+    priority: HIGH
+    points: 5
+    status: TODO
+    body: |
+      #### US-010: Registro consultabile delle transizioni
+
+      **Epic:** EP-004 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+      **Blocked by:** US-005
+      **Traces to:** FR-016 (MoSCoW: Must) — la scrittura degli eventi è consegnata in US-005; questa spec copre la consultazione e le garanzie di immutabilità
+
+      **Storia utente**
+      Come Release Owner,
+      voglio consultare la cronologia completa e non alterabile di una release,
+      così che la tracciabilità del processo sia una prova e non un racconto.
+
+      **Dimostra**
+      Dopo questa spec apro il registro di una release e vedo in ordine cronologico avvio, chiusure di step
+      con attore e istante, attivazioni, tentativi non autorizzati e conclusione. Nessuna funzione
+      dell'interfaccia permette di modificare o cancellare una voce.
+
+      **Criteri di accettazione**
+      - [ ] Vista cronologica degli eventi di una release: avvio, chiusura di step, attivazione dello step successivo, conclusione, tentativo non autorizzato
+      - [ ] Ogni voce riporta attore, istante e riferimento allo step interessato
+      - [ ] Nessuna rotta, comando o funzione dell'interfaccia consente la modifica o la cancellazione di una voce (verificato da test)
+      - [ ] Il modello degli eventi non espone operazioni di aggiornamento o cancellazione
+      - [ ] Gli istanti sono memorizzati in UTC e mostrati nel fuso dell'applicazione, coerentemente su tutte le viste
+      - [ ] I tentativi di chiusura non autorizzati compaiono nel registro con l'indicazione dell'attore
+      - [ ] Il registro è consultabile da ogni membro autenticato; le voci relative a tentativi non autorizzati sono visibili solo agli amministratori
+      - [ ] Nessuna query N+1 (verificato)
+  -
+    code: US-011
+    title: 'Ambiente dimostrativo coerente'
+    epic:
+      code: EP-001
+      title: 'Fondamenta e accesso'
+    priority: HIGH
+    points: 2
+    status: TODO
+    body: |
+      #### US-011: Ambiente dimostrativo coerente
+
+      **Epic:** EP-001 | **Priority:** HIGH | **Points:** 2 | **Status:** TODO
+      **Blocked by:** US-006
+      **Traces to:** FR-018 (MoSCoW: Must)
+
+      **Storia utente**
+      Come sviluppatore del progetto,
+      voglio un dataset dimostrativo coerente prodotto dai seeder,
+      così da valutare le schermate reali e scrivere test su dati plausibili invece che su tabelle vuote.
+
+      **Dimostra**
+      Dopo questa spec `php artisan migrate:fresh --seed` produce membri con ruoli assegnati, due progetti,
+      un template realistico, una release a metà catena e una release conclusa con registro popolato.
+
+      **Criteri di accettazione**
+      - [ ] `php artisan migrate:fresh --seed` completa senza errori
+      - [ ] Il dataset comprende un amministratore e almeno quattro membri con ruoli funzionali distinti
+      - [ ] Almeno due progetti attivi con mappatura ruolo→persona completa per il template associato
+      - [ ] Un template "Rilascio standard" con cinque step e campi che coprono tutti e quattro i tipi
+      - [ ] Una release in corso con il primo step completato e valori realistici, e il secondo step attivo
+      - [ ] Una release conclusa con tutti gli step completati e il registro delle transizioni popolato
+      - [ ] I dati sono in italiano e plausibili per il dominio: nessun lorem ipsum, nessun record orfano
+      - [ ] Le factory dei singoli modelli restano di competenza delle rispettive spec: qui si compone lo scenario in `DatabaseSeeder`

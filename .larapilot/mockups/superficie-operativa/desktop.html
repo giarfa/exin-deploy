@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Release — Exin Deploy</title>
+  <meta name="description" content="Elenco delle release: in corso e concluse, per progetto e stato.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
+  <link rel="stylesheet" href="starter-kit-tokens.css">
+  <link rel="stylesheet" href="mockup.css">
+</head>
+<body class="sk-mockup">
+  <a href="#contenuto" class="exd-skip-link">Salta al contenuto</a>
+
+  <div class="sk-layout">
+    <aside class="sk-sidebar" id="menu-mobile" aria-label="Navigazione principale">
+      <div class="sk-sidebar__header">
+        <a href="index.html" class="sk-sidebar__logo" aria-label="Exin Deploy — vai a I miei step">
+          <img src="logo.svg" alt="Exin Deploy" width="126" height="24" style="display:block">
+        </a>
+      </div>
+      <div class="sk-sidebar__group-label">Operativo</div>
+      <nav class="sk-sidebar__nav" aria-label="Sezioni operative">
+        <a href="index.html">I miei step</a>
+        <a href="desktop.html" class="is-active" aria-current="page">Release</a>
+        <a href="#" aria-disabled="true">Progetti</a>
+      </nav>
+      <div class="sk-sidebar__group-label">Configurazione</div>
+      <nav class="sk-sidebar__nav" aria-label="Sezioni di configurazione">
+        <a href="#" aria-disabled="true">Template di workflow</a>
+        <a href="#" aria-disabled="true">Ruoli</a>
+        <a href="#" aria-disabled="true">Membri del team</a>
+      </nav>
+      <div class="sk-sidebar__footer">
+        <button type="button" class="sk-sidebar__user" aria-haspopup="menu" aria-expanded="false">
+          <span class="sk-sidebar__avatar" aria-hidden="true">FG</span>
+          <span class="sk-sidebar__user-meta">
+            <span class="sk-sidebar__user-name">Francesco Giarola</span>
+            <span class="sk-sidebar__user-email">Amministratore</span>
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="sk-inset">
+      <header class="sk-inset-header">
+        <button type="button" class="sk-sidebar-toggle" aria-label="Apri il menu di navigazione" aria-expanded="false" aria-controls="menu-mobile">☰</button>
+        <ol class="sk-breadcrumbs" aria-label="Percorso di navigazione">
+          <li><span>Release</span></li>
+        </ol>
+      </header>
+
+      <main class="sk-inset-content" id="contenuto">
+
+        <div class="exd-page-head">
+          <h1>Release</h1>
+          <p>3 rilasci in corso, 24 conclusi.</p>
+        </div>
+
+        <!-- Filtri: bottoni a piena larghezza su mobile, in linea da 640px -->
+        <div class="exd-form-actions" style="margin-top:0;padding-top:0;border:0">
+          <button type="button" class="sk-btn sk-btn--primary">Avvia una release</button>
+          <button type="button" class="sk-btn sk-btn--outline" aria-pressed="true">In corso</button>
+          <button type="button" class="sk-btn sk-btn--ghost" aria-pressed="false">Concluse</button>
+          <button type="button" class="sk-btn sk-btn--ghost" aria-pressed="false">Tutti i progetti</button>
+        </div>
+
+        <h2 class="exd-section-title">In corso</h2>
+
+        <table class="exd-table">
+          <caption class="exd-sr-only">Release in corso, con step corrente e responsabile in attesa</caption>
+          <thead>
+            <tr>
+              <th scope="col">Progetto</th>
+              <th scope="col">Etichetta</th>
+              <th scope="col">Stato</th>
+              <th scope="col">Step corrente</th>
+              <th scope="col">In attesa di</th>
+              <th scope="col">Avviata</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="Progetto"><a href="dettaglio-release.html">Portale Clienti</a></td>
+              <td data-label="Etichetta">v2.4.0</td>
+              <td data-label="Stato">
+                <span class="exd-status exd-status--active"><span class="exd-status__icon" aria-hidden="true">●</span> In corso</span>
+              </td>
+              <td data-label="Step corrente">2 di 5 — Verifica QA su staging</td>
+              <td data-label="In attesa di">Marta Bellini</td>
+              <td data-label="Avviata">12/08/2026</td>
+            </tr>
+            <tr>
+              <td data-label="Progetto"><a href="dettaglio-release.html">App Preventivi</a></td>
+              <td data-label="Etichetta">v1.9.2</td>
+              <td data-label="Stato">
+                <span class="exd-status exd-status--active"><span class="exd-status__icon" aria-hidden="true">●</span> In corso</span>
+              </td>
+              <td data-label="Step corrente">4 di 5 — Approvazione di rilascio</td>
+              <td data-label="In attesa di">Chiara Fumagalli</td>
+              <td data-label="Avviata">11/08/2026</td>
+            </tr>
+            <tr>
+              <td data-label="Progetto"><a href="dettaglio-release.html">Sito Corporate</a></td>
+              <td data-label="Etichetta">v3.1.0</td>
+              <td data-label="Stato">
+                <span class="exd-status exd-status--active"><span class="exd-status__icon" aria-hidden="true">●</span> In corso</span>
+              </td>
+              <td data-label="Step corrente">3 di 5 — Backup pre-rilascio</td>
+              <td data-label="In attesa di">Davide Rossi <span class="sk-badge sk-badge--destructive">da 2 giorni</span></td>
+              <td data-label="Avviata">10/08/2026</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 class="exd-section-title">Concluse</h2>
+
+        <table class="exd-table">
+          <caption class="exd-sr-only">Release concluse, con data e autore della consegna in produzione</caption>
+          <thead>
+            <tr>
+              <th scope="col">Progetto</th>
+              <th scope="col">Etichetta</th>
+              <th scope="col">Stato</th>
+              <th scope="col">Consegnata da</th>
+              <th scope="col">Conclusa</th>
+              <th scope="col">Durata</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="Progetto"><a href="dettaglio-release.html">Portale Clienti</a></td>
+              <td data-label="Etichetta">v2.3.0</td>
+              <td data-label="Stato">
+                <span class="exd-status exd-status--closed"><span class="exd-status__icon" aria-hidden="true">✓</span> Conclusa</span>
+              </td>
+              <td data-label="Consegnata da">Davide Rossi</td>
+              <td data-label="Conclusa">04/08/2026 17:32</td>
+              <td data-label="Durata">1 giorno, 6 ore</td>
+            </tr>
+            <tr>
+              <td data-label="Progetto"><a href="dettaglio-release.html">App Preventivi</a></td>
+              <td data-label="Etichetta">v1.9.1</td>
+              <td data-label="Stato">
+                <span class="exd-status exd-status--closed"><span class="exd-status__icon" aria-hidden="true">✓</span> Conclusa</span>
+              </td>
+              <td data-label="Consegnata da">Davide Rossi</td>
+              <td data-label="Conclusa">29/07/2026 11:05</td>
+              <td data-label="Durata">4 ore</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="exd-frame-note" style="margin-top:2rem">
+          <strong>Mockup — riferimento desktop.</strong> Apri questa pagina a 1280&nbsp;px per vedere
+          l'arricchimento desktop: sidebar visibile e tabella dati completa. Sotto 1024&nbsp;px la stessa
+          tabella si trasforma in card impilate — <em>senza</em> scroll orizzontale. Anche
+          <code>dettaglio-release.html</code> è responsive e passa a due colonne da 1024&nbsp;px.
+        </p>
+
+      </main>
+    </div>
+  </div>
+</body>
+</html>

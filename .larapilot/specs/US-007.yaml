@@ -1,0 +1,35 @@
+code: US-007
+title: 'Vista operativa: i miei step'
+epic:
+  code: EP-004
+  title: 'Visibilità e tracciabilità'
+priority: HIGH
+points: 5
+status: TODO
+body: |
+  #### US-007: Vista operativa: i miei step
+
+  **Epic:** EP-004 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+  **Blocked by:** US-005
+  **Traces to:** FR-013 (MoSCoW: Must)
+
+  **Storia utente**
+  Come Step Owner,
+  voglio vedere in un colpo d'occhio se qualcosa attende me, su tutti i progetti,
+  così da non essere il collo di bottiglia senza saperlo.
+
+  **Dimostra**
+  Dopo questa spec entro nell'applicazione e la prima schermata elenca gli step attivi di cui sono
+  responsabile, con progetto, release e nome dello step, apribili in un tocco. È leggibile e usabile a 375 px.
+
+  **Criteri di accettazione**
+  - [ ] Dopo il login la vista "i miei step" è la schermata di ingresso, non una dashboard di grafici
+  - [ ] Elenca esclusivamente gli step in stato attivo di cui l'utente autenticato è responsabile, su tutti i progetti
+  - [ ] Ogni voce mostra progetto, etichetta della release, nome dello step, posizione (es. "Step 2 di 5") e ruolo
+  - [ ] Uno step attivo di cui l'utente non è responsabile non compare nell'elenco
+  - [ ] Stato vuoto esplicito quando nessuno step attende l'utente, che spiega quando ne comparirà uno
+  - [ ] Blocco secondario con le release in corso che coinvolgono l'utente, indicando chi trattiene il flusso e da quanto tempo — mitigazione dell'assenza di notifiche registrata nel PRD fra i rischi accettati
+  - [ ] Nessuna query N+1: release, step e responsabili caricati in eager loading (verificato)
+  - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/index.html`: mobile first a 375 px, target touch almeno 44x44 px, sidebar a drawer sotto 1024 px
+  - [ ] Gli stati sono resi con icona e parola, mai dal solo colore
+  - [ ] Il contatore degli step in attesa è annunciato agli screen reader con `aria-live="polite"`

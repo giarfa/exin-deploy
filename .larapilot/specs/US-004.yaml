@@ -1,0 +1,37 @@
+code: US-004
+title: 'Avvio di una release con snapshot congelato del workflow'
+epic:
+  code: EP-003
+  title: 'Esecuzione del rilascio'
+priority: HIGH
+points: 5
+status: TODO
+body: |
+  #### US-004: Avvio di una release con snapshot congelato del workflow
+
+  **Epic:** EP-003 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+  **Blocked by:** US-003
+  **Traces to:** FR-009, FR-010 (prima attivazione) (MoSCoW: Must)
+
+  **Storia utente**
+  Come Release Owner,
+  voglio avviare una release su un progetto e ottenere una copia congelata del workflow con i responsabili già risolti,
+  così che il rilascio proceda su una definizione che non può cambiare sotto i piedi.
+
+  **Dimostra**
+  Dopo questa spec avvio una release su "Portale Clienti" con etichetta v2.4.0: step e campi vengono
+  copiati dal template, ogni step riporta la persona risolta dal ruolo, il primo step è attivo e gli
+  altri bloccati. Modifico poi il template e la release avviata non cambia forma.
+
+  **Criteri di accettazione**
+  - [ ] Un amministratore avvia una release indicando progetto ed etichetta
+  - [ ] All'avvio step e campi del template sono copiati nelle tabelle di istanza (snapshot)
+  - [ ] Ogni step di istanza memorizza il responsabile risolto dalla mappatura ruolo→persona del progetto
+  - [ ] Il primo step risulta attivo e tutti gli altri bloccati; la release è in stato "in corso"
+  - [ ] Modificare, riordinare o disattivare il template dopo l'avvio non altera step, ordine, campi né responsabili della release avviata (verificato da test)
+  - [ ] Il codice di esecuzione della release non legge le tabelle di definizione (verificato da test)
+  - [ ] L'avvio è impedito con messaggio esplicito quando un ruolo previsto dal template non è assegnato sul progetto
+  - [ ] L'avvio è impedito quando il progetto non ha un template associato o il template non ha step
+  - [ ] L'etichetta è obbligatoria e univoca per progetto: il duplicato è rifiutato
+  - [ ] L'avvio è registrato nel registro delle transizioni con attore e istante
+  - [ ] Un `member` non avvia release (Policy lato server)

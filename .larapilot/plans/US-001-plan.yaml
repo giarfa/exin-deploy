@@ -1,0 +1,684 @@
+code: US-001
+plan_body: |
+  ## Technical Solution
+
+  Spec di fondamenta: porta il repository da scheletro Laravel a applicazione autenticata con
+  shell operativa, e stabilisce la baseline di sicurezza su cui poggiano tutte le spec successive.
+
+  **Stack installato** (compatibilita verificata in discovery con dry-run su Laravel 13.24 / PHP 8.4):
+
+  - `livewire/livewire` ^4.4 e `livewire/flux` ^2.16 — solo componenti Flux **free**; l'adozione di
+    componenti Flux Pro richiede una licenza a pagamento non acquistata e va decisa dall'utente
+  - `laravel/fortify` ^1.38 — login, reset password, 2FA TOTP, con viste proprie in Livewire
+
+  Gli Starter Kit ufficiali si applicano alla creazione del progetto (`laravel new`), mentre questo
+  repository esiste gia con Larapilot installato: la variante `livewire` registrata nel PRD si ottiene
+  installando i tre pacchetti e costruendo layout, navigazione e schermate di autenticazione allineati
+  alle convenzioni del kit. Riferimento visivo: `.larapilot/design-systems/starter-kit/` e i mockup in
+  `.larapilot/mockups/superficie-operativa/`.
+
+  **Nessuna registrazione pubblica.** La feature `registration` di Fortify resta disattivata: gli
+  account nascono solo da un amministratore. Anche la feature **passkeys** resta disattivata — Fortify
+  1.38 installa `laravel/passkeys` come dipendenza, ma le passkey non sono nel perimetro del PRD e
+  attivarle aprirebbe una superficie di autenticazione non specificata.
+
+  **Modello User.** Chiave primaria UUID (`HasUuids`, UUIDv7), livello applicativo come enum PHP
+  nativo (`App\Enums\UserLevel`: `Admin`, `Member`), flag `is_active`. Il file `app/Models/User.php`
+  di Laravel 13 usa gli attributi `#[Fillable]` e `#[Hidden]`: mantenere quella convenzione, non
+  reintrodurre le proprieta `$fillable`/`$hidden`.
+
+  **Migrazione della chiave primaria.** La tabella `users` di serie usa `$table->id()` autoincrementale
+  e `sessions.user_id` e una `foreignId` (bigint). Il passaggio a UUID richiede di cambiare **entrambe**
+  le colonne, altrimenti la chiave esterna si rompe in modo silenzioso. Poiche l'applicazione non e mai
+  stata rilasciata e non esistono dati, si modifica direttamente la migrazione di serie
+  `0001_01_01_000000_create_users_table.php` invece di aggiungere una migrazione correttiva: e piu
+  leggibile e non lascia debito. Questa e una deroga consapevole alla regola "una migrazione per
+  concern", valida solo prima del primo rilascio.
+
+  **Autorizzazione.** `UserPolicy` con metodo `before()` che concede tutto agli utenti `Admin`
+  (vedi Policy Filters nella documentazione Laravel 13). Il controllo vive nella Policy lato server:
+  nascondere comandi nell'interfaccia non e autorizzazione. Vale per tutta la gestione dei membri.
+
+  **Utente disattivato.** Il login di un utente con `is_active = false` viene rifiutato con messaggio
+  esplicito tramite `Fortify::authenticateUsing()`, e il record non viene mai cancellato: la traccia
+  storica sui rilasci passati deve restare leggibile (requisito del registro, FR-016).
+
+  **Baseline di sicurezza** (per Security baseline in `runtime-delivery.md`): `HASH_DRIVER=argon2id`
+  (supporto PHP verificato: `password_algos()` include `argon2id`), `Password::defaults()` registrato in
+  `AppServiceProvider::boot()`, chiavi primarie UUID, 2FA TOTP.
+
+  **Configurazione SQLite.** Laravel 13 espone nativamente `journal_mode`, `busy_timeout` e
+  `synchronous` nel blocco `sqlite` di `config/database.php`: si impostano WAL e un timeout di attesa
+  per contenere il rischio di concorrenza in scrittura registrato tra i rischi accettati del PRD.
+  Vincolo permanente: solo Eloquent e migrazioni portabili, nessuna funzione SQLite-specifica, perche
+  la migrazione a PostgreSQL deve restare un cambio di configurazione.
+
+  **Fuori perimetro di questa spec** (nessun criterio di accettazione lo richiede): Socialite/SSO,
+  code e worker, API HTTP, pipeline CI. La pipeline CI e un impegno del PRD non coperto da alcun
+  requisito funzionale: va aperta come spec propria o affrontata in `/larapilot-ship`.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` — branch e commit atomici per task, descrizione di PR preparata **in locale**,
+    nessun push automatico
+  - **Prerequisito non standard:** il progetto **non e ancora un repository git**. TASK-00 inizializza
+    il repository, committa lo scheletro esistente e gli artefatti Larapilot, crea `main` e `develop`,
+    poi crea il branch di lavoro
+  - Branch: `feature/US-001-accesso-membri-team` da `develop`
+  - Per task: un solo Conventional Commit nel formato `type(US-001): TASK-NN riassunto`
+  - Push e apertura PR remota: **omessi** (`GITFLOW` non pubblica). Da eseguire solo su richiesta
+    esplicita dell'utente in sessione
+  - Merge su `develop` solo dopo approvazione umana in `/larapilot-review`
+  - `.gitignore` di serie: verificare che `database/database.sqlite`, `/vendor`, `/node_modules` e
+    `.env` siano esclusi prima del primo commit
+
+  ## Test Data Strategy
+
+  - Alex mantiene factory e seeder nello stesso task che modifica migrazioni, modelli o enum
+  - `UserFactory`: campi realistici in italiano, con stati `admin()`, `member()` e `inactive()`
+  - `DatabaseSeeder`: un amministratore con credenziali note per lo sviluppo piu quattro membri con
+    nomi plausibili. Sostituire il "Test User" di serie
+  - Lo scenario dimostrativo completo (progetti, template, release a meta catena, release conclusa)
+    appartiene a **US-011**: qui si seminano solo i membri del team
+  - Verificare `php artisan migrate:fresh --seed` prima di ogni `task-done` che toccchi lo schema
+
+  ## Test Strategy
+
+  - Bar: `NORMAL`. Il repository usa **PHPUnit 12.5**, non Pest: i test sono classi PHPUnit create con
+    `php artisan make:test --phpunit`
+  - **Nessun** Playwright, Laravel Dusk, Pest browser, matrice di viewport o E2E di journey
+  - Test interlacciati con l'implementazione (TASK-04, TASK-06, TASK-09), non accumulati alla fine
+  - Copertura richiesta:
+    - Modello e enum: UUID generato, cast del livello, stati della factory, hashing Argon2id effettivo
+    - `Password::defaults()`: una password debole viene rifiutata dalla validazione
+    - Autenticazione: login valido, credenziali errate, **utente disattivato rifiutato**, reset
+      password, enrolment e challenge 2FA, assenza di rotte pubbliche di registrazione
+    - Autorizzazione: un `Member` riceve 403 su ogni rotta di gestione dei membri, un `Admin` passa;
+      verifica a livello di rotta, non solo di Policy in isolamento
+    - Disattivazione: il membro non accede ma resta leggibile nei riferimenti storici
+  - **Verifica manuale (handoff per l'umano)** sulla shell applicativa, poiche il bar non prevede test
+    browser: layout a 375 / 768 / 1280 px, apertura e chiusura del drawer sotto 1024 px, ritorno del
+    focus sul trigger, skip link raggiungibile con Tab, tema chiaro e scuro. Il contratto e la sezione
+    "Responsive & navigazione" del README dei mockup
+
+  ## Documentation
+
+  Baseline per Technical Documentation in `runtime-delivery.md`: README (prerequisiti, avvio via
+  Laravel Herd, variabili d'ambiente, comandi di test e di seed), nota architetturale iniziale sulla
+  separazione fra tabelle di definizione e di istanza, `CHANGELOG.md` in formato Keep a Changelog.
+  Nessun OpenAPI: la spec non introduce API. I diagrammi Mermaid (ER e macchina a stati) approvati in
+  fase di backlog appartengono a **US-005**, quando modello e transizioni sono completi.
+
+  ## Quality gate
+
+  `larastan/larastan` e dichiarato in `require-dev` ma **non e installato** in `vendor/`: senza
+  `composer install` il comando `php artisan larapilot:quality` non e eseguibile. Risolto in TASK-01.
+  Prima di ogni `task-done`: `vendor/bin/pint --dirty --format agent` e Larastan a livello 5.
+tasks:
+  -
+    id: TASK-00
+    title: 'Inizializzare il repository git e il branch di lavoro'
+    type: Impl
+    status: TODO
+    dependencies: {}
+    body: |
+      ## Description
+      Portare il progetto sotto controllo di versione e preparare Gitflow per questa spec. Il progetto
+      **non e ancora un repository git**: non esiste `.git`, quindi non esistono `main` ne `develop` da
+      cui derivare il branch. Questo task colma il prerequisito prima di qualsiasi modifica al codice.
+
+      ## Files Involved
+      - (solo git e `.gitignore` — nessun file applicativo)
+
+      ## Steps
+      1. Verificare `.gitignore`: `/vendor`, `/node_modules`, `.env`, `database/database.sqlite`,
+         `/storage/*.key` devono essere esclusi. Aggiungere `database/*.sqlite*` se assente (il file WAL e
+         il file SHM di SQLite non devono finire in versione)
+      2. `git init -b main`
+      3. `git add -A && git commit -m "chore: initial commit - scheletro Laravel 13 con Larapilot"` —
+         include lo scheletro, gli artefatti `.larapilot/` (PRD, backlog, spec, mockup) e `.ai/rules/`
+      4. `git checkout -b develop`
+      5. `git checkout -b feature/US-001-accesso-membri-team`
+      6. Redigere titolo e corpo della PR interna verso `develop` e **tenerli in locale**:
+         titolo `US-001: Accesso allo strumento e gestione dei membri del team`; corpo con link al piano
+         e l'elenco dei task previsti
+      7. Commit di ancoraggio del branch (commit vuoto ammesso)
+
+      ## Completion Criteria
+      - [ ] Il repository git esiste, con commit iniziale che include codice e artefatti Larapilot
+      - [ ] `.gitignore` esclude `.env`, `vendor`, `node_modules` e i file del database SQLite
+      - [ ] I branch `main` e `develop` esistono
+      - [ ] Il branch `feature/US-001-accesso-membri-team` esiste in locale e ne deriva da `develop`
+      - [ ] Titolo e corpo della PR interna redatti e tenuti in locale
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli
+
+      ## Git Deliverables
+      - Commit: `chore(US-001): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
+  -
+    id: TASK-01
+    title: 'Installare Livewire 4, Flux e Fortify'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+    body: |
+      ## Description
+      Installare lo stack di interfaccia e autenticazione registrato nel PRD, e completare le dipendenze
+      di sviluppo mancanti. Solo installazione e configurazione: le schermate arrivano nei task successivi.
+
+      ## Files Involved
+      - composer.json / composer.lock
+      - config/fortify.php (pubblicato)
+      - bootstrap/providers.php
+      - app/Providers/FortifyServiceProvider.php
+      - database/migrations/ (migrazioni pubblicate da Fortify)
+      - resources/views/, resources/css/app.css, resources/js/app.js
+      - package.json / package-lock.json
+
+      ## Steps
+      1. `composer install` — `larastan/larastan` e dichiarato in `require-dev` ma non presente in
+         `vendor/`: senza questo passaggio `php artisan larapilot:quality` non e eseguibile
+      2. `composer require livewire/livewire:^4.4 livewire/flux:^2.16`
+      3. `composer require laravel/fortify:^1.38`
+      4. `php artisan fortify:install` (o pubblicazione di config e provider secondo la versione
+         installata); registrare `FortifyServiceProvider` in `bootstrap/providers.php`
+      5. In `config/fortify.php` abilitare **solo** le feature necessarie: `resetPasswords`,
+         `updatePasswords`, `twoFactorAuthentication` con conferma. **Disattivare** `registration`
+         (nessuna registrazione pubblica) ed **eventuali feature passkeys**: Fortify 1.38 installa
+         `laravel/passkeys` come dipendenza, ma le passkey non sono nel perimetro del PRD
+      6. Verificare il layout Flux e le direttive Livewire in `resources/`; installare gli asset frontend
+         con `npm install && npm run build`
+      7. `composer audit` — nessuna vulnerabilita nota
+      8. `php artisan test` — la suite di serie resta verde
+
+      ## Completion Criteria
+      - [ ] Livewire 4, Flux 2 e Fortify 1.38 installati e risolti senza conflitti
+      - [ ] `larastan/larastan` presente in `vendor/` e `php artisan larapilot:quality` eseguibile
+      - [ ] `config/fortify.php` pubblicato, con `registration` e passkeys disattivate
+      - [ ] `FortifyServiceProvider` registrato
+      - [ ] `npm run build` completa senza errori
+      - [ ] `composer audit` non segnala vulnerabilita
+      - [ ] Nessun componente Flux Pro utilizzato
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `chore(US-001): TASK-01 installa Livewire 4, Flux e Fortify`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-02
+    title: 'Baseline di sicurezza e configurazione SQLite'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-01
+    body: |
+      ## Description
+      Applicare la baseline di sicurezza del progetto (Argon2id, regole password globali) e configurare
+      SQLite in modalita WAL con timeout di attesa, per contenere il rischio di concorrenza in scrittura
+      registrato fra i rischi accettati del PRD.
+
+      ## Files Involved
+      - .env / .env.example
+      - config/hashing.php
+      - config/database.php
+      - app/Providers/AppServiceProvider.php
+
+      ## Steps
+      1. Impostare `HASH_DRIVER=argon2id` in `.env` e `.env.example`; verificare `config/hashing.php`.
+         Supporto PHP verificato in fase di piano: `password_algos()` su questo PHP 8.4 include `argon2id`
+      2. In `AppServiceProvider::boot()` registrare le regole password globali:
+         `Password::defaults(fn (): Password => Password::min(8)->mixedCase()->numbers()->symbols()->uncompromised())`
+      3. Nel blocco `sqlite` di `config/database.php` valorizzare le chiavi che Laravel 13 espone
+         nativamente: `'journal_mode' => env('DB_JOURNAL_MODE', 'WAL')`,
+         `'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000)`,
+         `'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL')`
+      4. Documentare le tre variabili in `.env.example` con un commento di una riga sul perche
+      5. Verificare che WAL sia attivo: `php artisan tinker --execute 'echo DB::select("PRAGMA journal_mode")[0]->journal_mode;'`
+      6. `vendor/bin/pint --dirty --format agent`
+
+      ## Completion Criteria
+      - [ ] `HASH_DRIVER=argon2id` attivo e documentato in `.env.example`
+      - [ ] Una password creata dall'applicazione risulta hashata con Argon2id, non con bcrypt
+      - [ ] `Password::defaults()` registrato in `AppServiceProvider::boot()`
+      - [ ] `PRAGMA journal_mode` restituisce `wal`
+      - [ ] `busy_timeout` e `synchronous` configurati e documentati
+      - [ ] Nessuna funzione SQLite-specifica introdotta nel codice applicativo
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-001): TASK-02 baseline di sicurezza Argon2id e SQLite in WAL`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-03
+    title: 'Modello User con UUID, livello applicativo e stato attivo'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-02
+    body: |
+      ## Description
+      Portare `User` alla forma richiesta dal PRD: chiave primaria UUID, livello applicativo come enum
+      nativo, flag di attivazione. Include factory e seeder nello stesso task, come prescritto dalla
+      disciplina di progetto.
+
+      ## Files Involved
+      - app/Models/User.php
+      - app/Enums/UserLevel.php
+      - database/migrations/0001_01_01_000000_create_users_table.php
+      - database/factories/UserFactory.php
+      - database/seeders/DatabaseSeeder.php
+
+      ## Steps
+      1. `php artisan make:enum UserLevel` (o creazione manuale in `app/Enums/`): enum `string` con casi
+         `Admin = 'admin'` e `Member = 'member'`. Chiavi in TitleCase per le convenzioni PHP del progetto
+      2. Modificare la migrazione di serie `create_users_table`:
+         - `users.id`: da `$table->id()` a `$table->uuid('id')->primary()`
+         - aggiungere `$table->string('level')->default('member')` e
+           `$table->boolean('is_active')->default(true)->index()`
+         - **`sessions.user_id`: da `$table->foreignId(...)` a `$table->foreignUuid('user_id')->nullable()->index()`**
+           — senza questa modifica la chiave esterna si rompe in modo silenzioso
+         - `password_reset_tokens` usa l'email come chiave primaria: non richiede modifiche
+         Deroga consapevole a "una migrazione per concern": l'applicazione non e mai stata rilasciata e non
+         esistono dati, quindi modificare la migrazione di serie e piu leggibile di una correttiva
+      3. In `app/Models/User.php` aggiungere il trait `Illuminate\Database\Eloquent\Concerns\HasUuids`
+         (genera UUIDv7, ordinabili e quindi efficienti come indice)
+      4. Estendere gli attributi **mantenendo la convenzione Laravel 13 gia presente nel file**:
+         `#[Fillable(['name', 'email', 'password', 'level', 'is_active'])]` — non reintrodurre `$fillable`
+      5. In `casts()` aggiungere `'level' => UserLevel::class` e `'is_active' => 'boolean'`
+      6. Aggiungere il metodo `isAdministrator(): bool` (nome descrittivo per le convenzioni di progetto),
+         usato dal filtro `before()` della Policy in TASK-08
+      7. `UserFactory`: nomi e email realistici in italiano; stati `admin()`, `member()`, `inactive()`
+      8. `DatabaseSeeder`: sostituire il "Test User" di serie con un amministratore dalle credenziali note
+         per lo sviluppo piu quattro membri con nomi plausibili. Lo scenario dimostrativo completo
+         (progetti, template, release) appartiene a US-011
+      9. `php artisan migrate:fresh --seed`
+      10. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
+
+      ## Completion Criteria
+      - [ ] `users.id` e un UUID e i nuovi record lo ricevono automaticamente
+      - [ ] `sessions.user_id` e una `foreignUuid` e il login mantiene la sessione senza errori
+      - [ ] `App\Enums\UserLevel` esiste con casi `Admin` e `Member`, ed e usato come cast
+      - [ ] `is_active` presente, indicizzato, con default `true`
+      - [ ] `User` usa `HasUuids` e mantiene la convenzione ad attributi `#[Fillable]` / `#[Hidden]`
+      - [ ] `isAdministrator()` restituisce `true` solo per il livello `Admin`
+      - [ ] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
+
+      ## Test Data
+      - [ ] `database/factories/UserFactory.php` aggiornata con stati `admin()`, `member()`, `inactive()`
+      - [ ] `DatabaseSeeder` crea un amministratore e almeno quattro membri con dati realistici in italiano
+      - [ ] Factory e seeder aggiornati in **questo stesso task** delle modifiche a migrazione e modello
+
+      ## Git Deliverables
+      - Commit: `feat(US-001): TASK-03 User con UUID, livello applicativo e stato attivo`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-04
+    title: 'Test: modello User, enum, hashing e regole password'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-03
+    body: |
+      ## Description
+      Coprire il modello `User` e la baseline di sicurezza introdotta nei task precedenti.
+
+      ## Files Involved
+      - tests/Unit/Models/UserTest.php
+      - tests/Feature/Security/PasswordPolicyTest.php
+
+      ## Steps
+      1. Creare i test con `php artisan make:test --phpunit` (il repository usa PHPUnit 12.5, non Pest)
+      2. Riusare `UserFactory` e i suoi stati: non ridefinire dati di test nei file di test
+      3. Coprire:
+         - un utente creato riceve un `id` in formato UUID
+         - `level` viene idratato come istanza di `UserLevel`
+         - `isAdministrator()` e `true` per lo stato `admin()` e `false` per `member()`
+         - lo stato `inactive()` produce `is_active = false`
+         - la password memorizzata e verificabile con `Hash::check()` e l'hash e prodotto da Argon2id
+           (prefisso `$argon2id$`), non da bcrypt
+         - una password debole (es. `password`) viene **rifiutata** da una validazione che usa
+           `Password::defaults()`; una password conforme viene accettata
+      4. `php artisan test --compact --filter=UserTest` e `--filter=PasswordPolicyTest`
+
+      ## Completion Criteria
+      - [ ] I test passano in locale
+      - [ ] La copertura corrisponde al bar `NORMAL`: unit sul modello, feature sulla validazione
+      - [ ] Nessuno strumento browser o E2E introdotto
+
+      ## Git Deliverables
+      - Commit: `test(US-001): TASK-04 copre modello User e regole password`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-05
+    title: 'Autenticazione Fortify: login, reset password, 2FA e blocco degli utenti disattivati'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-04
+    body: |
+      ## Description
+      Rendere operativa l'autenticazione: login, reset password e 2FA TOTP, con schermate proprie in
+      Livewire e Flux allineate al layout auth dello Starter Kit. Nessuna registrazione pubblica, e login
+      rifiutato per gli utenti disattivati.
+
+      ## Files Involved
+      - app/Providers/FortifyServiceProvider.php
+      - config/fortify.php
+      - resources/views/auth/ (login, reset password, conferma password, 2FA challenge, enrolment)
+      - app/Livewire/Auth/ (componenti dei form)
+      - routes/web.php
+
+      ## Steps
+      1. In `FortifyServiceProvider` registrare le viste di login, reset password, conferma password,
+         challenge 2FA ed enrolment 2FA, usando il layout auth del kit come riferimento
+         (`.larapilot/design-systems/starter-kit/html/login.html`)
+      2. Sostituire l'autenticazione con `Fortify::authenticateUsing()`: verificare le credenziali **e**
+         `is_active`. Un utente disattivato riceve un messaggio esplicito ("account disattivato"), distinto
+         dal messaggio di credenziali errate, perche il caso e legittimo e non un tentativo di intrusione
+      3. Verificare che non esista alcuna rotta pubblica di registrazione (`registration` disattivata) e
+         che `/register` restituisca 404
+      4. Attivare 2FA TOTP con conferma: schermata di enrolment con QR e codici di recupero, schermata di
+         challenge al login
+      5. Applicare il middleware `auth` a tutte le rotte applicative: la rotta `/` di serie che restituisce
+         la vista `welcome` va sostituita con un redirect verso il login o verso la home autenticata
+      6. Copy in italiano nei file `lang/` — non incastonato nelle viste (vincolo del PRD)
+      7. Accessibilita sui form: `<label>` associata a ogni campo, errori collegati con
+         `aria-describedby`, focus visibile
+      8. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
+
+      ## Completion Criteria
+      - [ ] Login con email e password funzionante, con messaggio di errore per credenziali errate
+      - [ ] Un utente con `is_active = false` non accede e riceve un messaggio dedicato
+      - [ ] Reset password funzionante end-to-end (mailer `log` in locale)
+      - [ ] 2FA TOTP attivabile, con QR di enrolment e codici di recupero; challenge richiesto al login
+      - [ ] `/register` restituisce 404: nessuna registrazione pubblica
+      - [ ] Nessuna rotta applicativa raggiungibile senza autenticazione; l'anonimo viene rediretto al login
+      - [ ] Le passkey restano disattivate
+      - [ ] I testi dell'interfaccia vivono in `lang/`
+      - [ ] I tentativi di login falliti sono registrati nel log applicativo
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-001): TASK-05 autenticazione Fortify con 2FA e blocco utenti disattivati`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-06
+    title: 'Test: flussi di autenticazione'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-05
+    body: |
+      ## Description
+      Coprire i percorsi di autenticazione, inclusi i casi di rifiuto, che sono la parte in cui una
+      implementazione plausibile ma sbagliata passerebbe inosservata.
+
+      ## Files Involved
+      - tests/Feature/Auth/LoginTest.php
+      - tests/Feature/Auth/PasswordResetTest.php
+      - tests/Feature/Auth/TwoFactorTest.php
+
+      ## Steps
+      1. Creare i test con `php artisan make:test --phpunit`; riusare `UserFactory` e i suoi stati
+      2. Coprire:
+         - login con credenziali valide: sessione autenticata e redirect alla home autenticata
+         - login con password errata: rifiutato, nessuna sessione
+         - **login di un utente `inactive()`: rifiutato anche con password corretta**, con il messaggio
+           dedicato
+         - `GET /register` restituisce 404
+         - una rotta applicativa richiesta da anonimo redirige al login
+         - reset password: richiesta, notifica inviata (`Notification::fake()`), reimpostazione riuscita
+         - la reimpostazione rifiuta una password che viola `Password::defaults()`
+         - 2FA: enrolment produce segreto e codici di recupero; il login di un utente con 2FA confermata
+           richiede il challenge; un codice errato viene rifiutato
+      3. `php artisan test --compact --filter=Auth`
+
+      ## Completion Criteria
+      - [ ] I test passano in locale
+      - [ ] Ogni percorso di rifiuto e coperto, non solo il percorso felice
+      - [ ] Nessuno strumento browser o E2E introdotto
+
+      ## Git Deliverables
+      - Commit: `test(US-001): TASK-06 copre i flussi di autenticazione`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-07
+    title: 'Shell applicativa Starter Kit e esclusione dagli indici'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-06
+    body: |
+      ## Description
+      Costruire il guscio dell'applicazione secondo lo Starter Kit variante `livewire`: layout con sidebar,
+      drawer sotto 1024 px, tema chiaro e scuro, navigazione. E la cornice in cui vivranno tutte le
+      schermate successive, quindi le scelte fatte qui si propagano a tutto il prodotto.
+
+      ## Files Involved
+      - resources/views/components/layouts/app.blade.php
+      - resources/views/components/ (sidebar, navigazione, menu utente)
+      - resources/css/app.css
+      - public/robots.txt
+      - public/favicon.svg
+      - public/images/brand/logo.svg
+      - routes/web.php
+
+      ## Steps
+      1. Layout con sidebar Flux secondo `.larapilot/design-systems/starter-kit/components.md`:
+         sidebar chiara, logo in alto, gruppi di navigazione con etichette maiuscole, menu utente in fondo
+      2. Gruppi di navigazione predisposti: "Operativo" (I miei step, Release, Progetti) e
+         "Configurazione" (Template di workflow, Ruoli, Membri del team). Le voci non ancora implementate
+         restano disabilitate, non nascoste: la struttura del prodotto deve essere leggibile da subito
+      3. **Soglia unica a 1024 px** in tutta l'applicazione: sopra la sidebar e permanente, sotto diventa
+         un drawer aperto dall'hamburger. `tokens.css` del design system usa 768 px e `components.md` usa
+         1024 px: la scelta di progetto e 1024 px, motivata nel README dei mockup
+      4. Comportamento del drawer: `aria-expanded` aggiornato sul trigger, `aria-controls` verso il
+         contenitore, focus intrappolato mentre e aperto, `Esc` chiude, alla chiusura il focus torna sul
+         trigger
+      5. Skip link "Salta al contenuto" come primo elemento focalizzabile; landmark semantici
+         (`header`, `nav`, `main`, `footer`); un solo `h1` per pagina; focus visibile su ogni elemento
+         interattivo
+      6. Tema chiaro e scuro con i token del design system; preferenza persistita sull'account o in
+         `localStorage`; contrasto verificato in entrambi i temi
+      7. Target touch minimo 44x44 px sotto 1024 px; densita desktop consentita da 1024 px
+      8. `prefers-reduced-motion` rispettato
+      9. Asset di brand dai mockup: copiare `favicon.svg` in `public/` e `logo.svg` in
+         `public/images/brand/`; collegare la favicon nel layout con
+         `<link rel="icon" href="/favicon.svg" type="image/svg+xml">`
+      10. Esclusione dagli indici: `public/robots.txt` con `User-agent: *` e `Disallow: /`, piu meta
+          `robots: noindex, nofollow` nel layout come seconda barriera. **Nessun** `sitemap.xml` ne
+          `llms.txt`: esporrebbero un elenco di URL interni (deroga motivata nel README dei mockup)
+      11. `<title>` parlante e unico per pagina, utile per schede e cronologia del browser
+      12. `npm run build`; `vendor/bin/pint --dirty --format agent`
+
+      ## Completion Criteria
+      - [ ] Layout con sidebar conforme al design system Starter Kit, senza componenti Flux Pro
+      - [ ] Sidebar permanente da 1024 px, drawer sotto, con una sola soglia in tutta l'applicazione
+      - [ ] Drawer accessibile: `aria-expanded`, `aria-controls`, focus intrappolato, `Esc` chiude, focus
+            restituito al trigger
+      - [ ] Skip link presente e raggiungibile con Tab come primo elemento
+      - [ ] Landmark semantici corretti e un solo `h1` per pagina
+      - [ ] Tema chiaro e scuro entrambi funzionanti, con preferenza persistita e contrasto verificato
+      - [ ] Target touch di almeno 44x44 px sotto 1024 px
+      - [ ] `favicon.svg` e `logo.svg` in `public/` e collegati nel layout
+      - [ ] `robots.txt` con `Disallow: /` e meta `noindex, nofollow` nel layout
+      - [ ] Nessuno scroll orizzontale a 320, 375, 768, 1024, 1280 px
+      - [ ] Verifica manuale eseguita e annotata (vedi Test Strategy del piano): il bar `NORMAL` non
+            prevede test browser automatici
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-001): TASK-07 shell applicativa e esclusione dagli indici`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-08
+    title: 'Gestione dei membri del team con autorizzazione lato server'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-07
+    body: |
+      ## Description
+      Consentire a un amministratore di creare, modificare e disattivare i membri del team, con
+      autorizzazione applicata a livello di Policy e non solo nascondendo comandi nell'interfaccia.
+
+      ## Files Involved
+      - app/Policies/UserPolicy.php
+      - app/Livewire/Members/ (elenco e form)
+      - app/Http/Requests/ (o regole di validazione nei componenti Livewire)
+      - resources/views/livewire/members/
+      - routes/web.php
+      - lang/it/
+
+      ## Steps
+      1. `php artisan make:policy UserPolicy --model=User`
+      2. Nella Policy definire `before(User $user, string $ability): bool|null` che restituisce `true`
+         quando `$user->isAdministrator()` e `null` altrimenti, cosi che i `Member` cadano sui metodi
+         specifici (vedi Policy Filters nella documentazione Laravel 13). Attenzione alla nota della
+         documentazione: `before()` non viene invocato per ability che non hanno un metodo corrispondente
+         nella Policy, quindi ogni ability usata deve esistere come metodo
+      3. Elenco dei membri: nome, email, livello, stato attivo. Eager loading dove servono relazioni;
+         nessuna query dentro cicli
+      4. Form di creazione: nome, email (univoca), livello (`UserLevel`), password iniziale validata con
+         `Password::defaults()`
+      5. Form di modifica: nome, email, livello. La disattivazione e un'azione distinta e dichiarata, non
+         una spunta nascosta in un form
+      6. **Disattivazione, non cancellazione**: non esporre alcuna azione di eliminazione di un utente. La
+         traccia storica sui rilasci deve restare leggibile (requisito del registro, FR-016)
+      7. Applicare l'autorizzazione sulle rotte con il middleware `can` o `Gate::authorize` nei
+         componenti: un `Member` che invoca direttamente la rotta riceve 403
+      8. Copy in italiano in `lang/`; messaggi di errore che dicono cosa correggere
+      9. Interfaccia conforme al design system Starter Kit; leggibile a 375 px
+      10. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
+
+      ## Completion Criteria
+      - [ ] Un amministratore crea un membro con nome, email e livello
+      - [ ] Un amministratore modifica un membro esistente
+      - [ ] Un amministratore disattiva un membro; nessuna azione di cancellazione e esposta
+      - [ ] Un `Member` che invoca una rotta di gestione riceve 403, anche chiamandola direttamente
+      - [ ] L'email e univoca: il duplicato viene rifiutato in validazione
+      - [ ] La password iniziale rispetta `Password::defaults()`
+      - [ ] Un membro disattivato resta visibile nell'elenco con il proprio stato
+      - [ ] Nessuna query N+1 nell'elenco
+      - [ ] I testi vivono in `lang/`
+
+      ## Test Data
+      - [ ] Nessuna nuova entita: `UserFactory` e `DatabaseSeeder` da TASK-03 restano validi
+      - [ ] Verificare che il seeder produca sia amministratori sia membri, cosi che le schermate di
+            gestione siano valutabili su dati reali
+
+      ## Git Deliverables
+      - Commit: `feat(US-001): TASK-08 gestione dei membri del team con Policy`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-09
+    title: 'Test: autorizzazione e gestione dei membri'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-08
+    body: |
+      ## Description
+      Coprire la Policy e le rotte di gestione dei membri, verificando l'autorizzazione a livello di rotta
+      e non solo la Policy in isolamento: e la differenza fra un controllo reale e un comando nascosto.
+
+      ## Files Involved
+      - tests/Feature/Members/MemberManagementTest.php
+      - tests/Feature/Members/UserPolicyTest.php
+
+      ## Steps
+      1. Creare i test con `php artisan make:test --phpunit`; riusare `UserFactory` e i suoi stati
+      2. Coprire:
+         - un `Admin` accede all'elenco dei membri, un `Member` riceve 403
+         - un `Member` che invoca direttamente le rotte di creazione, modifica e disattivazione riceve 403
+         - un `Admin` crea un membro con dati validi
+         - la creazione con email duplicata viene rifiutata
+         - la creazione con password debole viene rifiutata
+         - un `Admin` disattiva un membro: `is_active` diventa `false` e il record esiste ancora
+         - **il membro disattivato non riesce piu ad autenticarsi** e resta visibile nell'elenco
+         - nessuna rotta di cancellazione di un utente esiste
+         - `before()` della Policy concede all'`Admin` senza duplicare la logica in ogni metodo
+      3. `php artisan test --compact --filter=Member` e `--filter=UserPolicy`
+      4. `php artisan test --compact` — la suite completa resta verde
+
+      ## Completion Criteria
+      - [ ] I test passano in locale
+      - [ ] L'autorizzazione e verificata a livello di rotta, non solo di Policy isolata
+      - [ ] La suite completa e verde
+      - [ ] Nessuno strumento browser o E2E introdotto
+
+      ## Git Deliverables
+      - Commit: `test(US-001): TASK-09 copre autorizzazione e gestione dei membri`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-10
+    title: 'Documentazione baseline e CHANGELOG'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-09
+    body: |
+      ## Description
+      Scrivere la documentazione baseline del progetto. Il README di serie descrive ancora i passaggi di
+      installazione di Larapilot: va sostituito con la documentazione reale dell'applicazione.
+
+      ## Files Involved
+      - README.md
+      - docs/architettura.md (o sezione nel README)
+      - CHANGELOG.md
+      - .env.example
+
+      ## Steps
+      1. README: scopo del prodotto in due righe; prerequisiti (PHP 8.4, Composer, Node); **avvio locale
+         con Laravel Herd** e URL `.test` (nessuna istruzione Sail o Docker: la scelta del PRD e Herd);
+         variabili d'ambiente rilevanti (`HASH_DRIVER`, `DB_JOURNAL_MODE`, `DB_BUSY_TIMEOUT`,
+         `DB_SYNCHRONOUS`, mailer in locale); comandi `php artisan migrate:fresh --seed`,
+         `php artisan test --compact`, `npm run dev`, `php artisan larapilot:quality`; credenziali
+         dell'amministratore di sviluppo prodotte dal seeder
+      2. Nota architetturale: spiegare la separazione fra **tabelle di definizione** (configurazione
+         riusabile) e **tabelle di istanza** (release in corso o conclusa) e la regola dello snapshot — e
+         la parte del sistema che un nuovo arrivato fraintende. I diagrammi Mermaid (ER e macchina a stati)
+         appartengono a US-005, quando modello e transizioni sono completi: qui va il testo
+      3. Annotare i vincoli permanenti: solo Eloquent e migrazioni portabili (SQLite non e definitivo);
+         solo componenti Flux free; nessuna registrazione pubblica; passkey disattivate
+      4. `CHANGELOG.md` in formato Keep a Changelog con la sezione `Unreleased` e le voci di questa spec
+      5. Verificare che `.env.example` sia allineato al `.env` reale, senza segreti
+
+      ## Completion Criteria
+      - [ ] README sostituito: descrive l'applicazione, non l'installazione di Larapilot
+      - [ ] Avvio locale documentato via Herd, senza istruzioni Sail o Docker
+      - [ ] Variabili d'ambiente e comandi di test e seed documentati
+      - [ ] Nota architetturale su definizione/istanza e regola dello snapshot presente
+      - [ ] Vincoli permanenti annotati (portabilita database, Flux free, nessuna registrazione, passkey off)
+      - [ ] `CHANGELOG.md` creato con sezione `Unreleased`
+      - [ ] `.env.example` allineato e privo di segreti
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: finalizzare titolo e corpo della PR locale verso `develop`
+updated_at: '2026-08-12T10:11:39+00:00'

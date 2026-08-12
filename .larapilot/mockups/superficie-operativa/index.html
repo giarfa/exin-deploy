@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>I miei step — Exin Deploy</title>
+  <meta name="description" content="Gli step di rilascio che attendono te, su tutti i progetti.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
+  <link rel="stylesheet" href="starter-kit-tokens.css">
+  <link rel="stylesheet" href="mockup.css">
+</head>
+<body class="sk-mockup">
+  <a href="#contenuto" class="exd-skip-link">Salta al contenuto</a>
+
+  <div class="sk-layout">
+
+    <!-- Sidebar: visibile da 1024px, drawer sotto (vedi README) -->
+    <aside class="sk-sidebar" id="menu-mobile" aria-label="Navigazione principale">
+      <div class="sk-sidebar__header">
+        <a href="index.html" class="sk-sidebar__logo" aria-label="Exin Deploy — vai a I miei step">
+          <img src="logo.svg" alt="Exin Deploy" width="126" height="24" style="display:block">
+        </a>
+      </div>
+
+      <div class="sk-sidebar__group-label">Operativo</div>
+      <nav class="sk-sidebar__nav" aria-label="Sezioni operative">
+        <a href="index.html" class="is-active" aria-current="page">I miei step</a>
+        <a href="dettaglio-release.html">Release</a>
+        <a href="#" aria-disabled="true">Progetti</a>
+      </nav>
+
+      <div class="sk-sidebar__group-label">Configurazione</div>
+      <nav class="sk-sidebar__nav" aria-label="Sezioni di configurazione">
+        <a href="#" aria-disabled="true">Template di workflow</a>
+        <a href="#" aria-disabled="true">Ruoli</a>
+        <a href="#" aria-disabled="true">Membri del team</a>
+      </nav>
+
+      <div class="sk-sidebar__footer">
+        <button type="button" class="sk-sidebar__user" aria-haspopup="menu" aria-expanded="false">
+          <span class="sk-sidebar__avatar" aria-hidden="true">FG</span>
+          <span class="sk-sidebar__user-meta">
+            <span class="sk-sidebar__user-name">Francesco Giarola</span>
+            <span class="sk-sidebar__user-email">Amministratore</span>
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="sk-inset">
+      <header class="sk-inset-header">
+        <button type="button" class="sk-sidebar-toggle" aria-label="Apri il menu di navigazione" aria-expanded="false" aria-controls="menu-mobile">☰</button>
+        <ol class="sk-breadcrumbs" aria-label="Percorso di navigazione">
+          <li><span>I miei step</span></li>
+        </ol>
+      </header>
+
+      <main class="sk-inset-content" id="contenuto">
+
+        <div class="exd-page-head">
+          <h1>I miei step</h1>
+          <p aria-live="polite">2 step attendono te su 2 progetti.</p>
+        </div>
+
+        <!-- Attività di cui l'utente è responsabile: unica azione primaria della schermata -->
+        <div class="exd-tasks">
+
+          <a href="chiusura-step.html" class="exd-task">
+            <div class="exd-task__top">
+              <span class="exd-task__project">Portale Clienti · v2.4.0</span>
+              <span class="exd-status exd-status--active">
+                <span class="exd-status__icon" aria-hidden="true">●</span>
+                Tocca a te
+              </span>
+            </div>
+            <h2 class="exd-task__name">Verifica QA su staging</h2>
+            <p class="exd-task__meta">Step 2 di 5 · come <strong>QA</strong> · aperto da 4 ore</p>
+            <span class="sk-btn sk-btn--primary sk-btn--block exd-task__cta">Apri e compila</span>
+          </a>
+
+          <a href="chiusura-step.html" class="exd-task">
+            <div class="exd-task__top">
+              <span class="exd-task__project">App Preventivi · v1.9.2</span>
+              <span class="exd-status exd-status--active">
+                <span class="exd-status__icon" aria-hidden="true">●</span>
+                Tocca a te
+              </span>
+            </div>
+            <h2 class="exd-task__name">Approvazione di rilascio</h2>
+            <p class="exd-task__meta">Step 4 di 5 · come <strong>Product Manager</strong> · aperto da 20 minuti</p>
+            <span class="sk-btn sk-btn--primary sk-btn--block exd-task__cta">Apri e compila</span>
+          </a>
+
+        </div>
+
+        <!--
+          Blocco di mitigazione del rischio accettato n.1 del PRD (assenza di notifiche):
+          rende visibile su chi è fermo il flusso senza dover aprire ogni release.
+        -->
+        <h2 class="exd-section-title">Release in corso su cui sei coinvolto</h2>
+        <div class="exd-waiting">
+          <div class="exd-waiting__row">
+            <span class="exd-waiting__project">Sito Corporate · v3.1.0</span>
+            <span class="exd-waiting__who">— in attesa di <strong>Davide Rossi</strong> su “Backup pre-rilascio” da 2 giorni</span>
+          </div>
+          <div class="exd-waiting__row">
+            <span class="exd-waiting__project">Portale Clienti · v2.3.1</span>
+            <span class="exd-waiting__who">— in attesa di <strong>Luca Serra</strong> su “Changelog e nota di versione” da 6 ore</span>
+          </div>
+        </div>
+
+        <h2 class="exd-section-title">Stato vuoto (annotazione per Alex)</h2>
+        <div class="exd-empty">
+          <div class="exd-empty__mark" aria-hidden="true">✓</div>
+          <h2>Nessuno step ti sta aspettando</h2>
+          <p>Quando un collega chiude il proprio step e tocca a te, lo trovi qui.</p>
+        </div>
+
+      </main>
+
+      <footer class="sk-inset-content" style="padding-top:0">
+        <p class="exd-frame-note">
+          <strong>Mockup</strong> — anteprima statica della superficie operativa. Questa nota e il blocco
+          “Stato vuoto” esistono solo nel mockup: nell'applicazione lo stato vuoto sostituisce l'elenco
+          quando non ci sono step assegnati. Vedi <code>README.md</code>.
+        </p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

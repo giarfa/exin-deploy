@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portale Clienti v2.4.0 — Exin Deploy</title>
+  <meta name="description" content="Stato della release: catena degli step, responsabili e informazioni fornite.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
+  <link rel="stylesheet" href="starter-kit-tokens.css">
+  <link rel="stylesheet" href="mockup.css">
+</head>
+<body class="sk-mockup">
+  <a href="#contenuto" class="exd-skip-link">Salta al contenuto</a>
+
+  <div class="sk-layout">
+    <aside class="sk-sidebar" id="menu-mobile" aria-label="Navigazione principale">
+      <div class="sk-sidebar__header">
+        <a href="index.html" class="sk-sidebar__logo" aria-label="Exin Deploy — vai a I miei step">
+          <img src="logo.svg" alt="Exin Deploy" width="126" height="24" style="display:block">
+        </a>
+      </div>
+      <div class="sk-sidebar__group-label">Operativo</div>
+      <nav class="sk-sidebar__nav" aria-label="Sezioni operative">
+        <a href="index.html">I miei step</a>
+        <a href="dettaglio-release.html" class="is-active" aria-current="page">Release</a>
+        <a href="#" aria-disabled="true">Progetti</a>
+      </nav>
+      <div class="sk-sidebar__group-label">Configurazione</div>
+      <nav class="sk-sidebar__nav" aria-label="Sezioni di configurazione">
+        <a href="#" aria-disabled="true">Template di workflow</a>
+        <a href="#" aria-disabled="true">Ruoli</a>
+        <a href="#" aria-disabled="true">Membri del team</a>
+      </nav>
+      <div class="sk-sidebar__footer">
+        <button type="button" class="sk-sidebar__user" aria-haspopup="menu" aria-expanded="false">
+          <span class="sk-sidebar__avatar" aria-hidden="true">FG</span>
+          <span class="sk-sidebar__user-meta">
+            <span class="sk-sidebar__user-name">Francesco Giarola</span>
+            <span class="sk-sidebar__user-email">Amministratore</span>
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="sk-inset">
+      <header class="sk-inset-header">
+        <button type="button" class="sk-sidebar-toggle" aria-label="Apri il menu di navigazione" aria-expanded="false" aria-controls="menu-mobile">☰</button>
+        <ol class="sk-breadcrumbs" aria-label="Percorso di navigazione">
+          <li><a href="#">Release</a></li>
+          <li aria-hidden="true">/</li>
+          <li><a href="#">Portale Clienti</a></li>
+          <li aria-hidden="true">/</li>
+          <li><span>v2.4.0</span></li>
+        </ol>
+      </header>
+
+      <main class="sk-inset-content" id="contenuto">
+
+        <div class="exd-page-head">
+          <h1>Portale Clienti · v2.4.0</h1>
+          <p aria-live="polite">Rilascio in corso — step 2 di 5, in attesa di Marta Bellini.</p>
+        </div>
+
+        <div class="exd-split">
+          <div>
+            <h2 class="exd-section-title">Catena degli step</h2>
+
+            <ol class="exd-chain">
+
+              <!-- Completato -->
+              <li class="exd-chain__item exd-chain__item--done">
+                <span class="exd-chain__marker" aria-hidden="true">✓</span>
+                <div class="exd-chain__card">
+                  <div class="exd-chain__head">
+                    <h3 class="exd-chain__name">1. Changelog e nota di versione</h3>
+                    <span class="exd-status exd-status--done">
+                      <span class="exd-status__icon" aria-hidden="true">✓</span>
+                      Completato
+                    </span>
+                  </div>
+                  <p class="exd-chain__owner">Dev Lead — <strong>Luca Serra</strong></p>
+                  <p class="exd-chain__time">Chiuso il 12/08/2026 alle 09:14</p>
+
+                  <dl class="exd-values">
+                    <div>
+                      <dt>Versione rilasciata</dt>
+                      <dd>2.4.0</dd>
+                    </div>
+                    <div>
+                      <dt>Link al changelog</dt>
+                      <dd><a href="#">git.gruppoexcellence.com/portale/releases/v2.4.0</a></dd>
+                    </div>
+                    <div>
+                      <dt>Sintesi delle modifiche</dt>
+                      <dd>Nuovo modulo documenti, correzione del calcolo IVA sulle note di credito, aggiornamento dipendenze di sicurezza.</dd>
+                    </div>
+                    <div>
+                      <dt>Breaking change dichiarati</dt>
+                      <dd>Sì — endpoint <code>/api/v1/docs</code> deprecato</dd>
+                    </div>
+                  </dl>
+                </div>
+              </li>
+
+              <!-- Attivo -->
+              <li class="exd-chain__item exd-chain__item--active">
+                <span class="exd-chain__marker" aria-hidden="true">2</span>
+                <div class="exd-chain__card">
+                  <div class="exd-chain__head">
+                    <h3 class="exd-chain__name">2. Verifica QA su staging</h3>
+                    <span class="exd-status exd-status--active">
+                      <span class="exd-status__icon" aria-hidden="true">●</span>
+                      In corso
+                    </span>
+                  </div>
+                  <p class="exd-chain__owner">QA — <strong>Marta Bellini</strong></p>
+                  <p class="exd-chain__time">Attivo da 4 ore · 5 informazioni richieste</p>
+                  <div class="sk-actions">
+                    <a href="chiusura-step.html" class="sk-btn sk-btn--primary">Apri e compila</a>
+                  </div>
+                  <p class="exd-form-note">
+                    Il pulsante è visibile solo al responsabile dello step o a un amministratore.
+                  </p>
+                </div>
+              </li>
+
+              <!-- Bloccati -->
+              <li class="exd-chain__item exd-chain__item--locked">
+                <span class="exd-chain__marker" aria-hidden="true">3</span>
+                <div class="exd-chain__card">
+                  <div class="exd-chain__head">
+                    <h3 class="exd-chain__name">3. Backup pre-rilascio</h3>
+                    <span class="exd-status exd-status--locked">
+                      <span class="exd-status__icon" aria-hidden="true">◻</span>
+                      Bloccato
+                    </span>
+                  </div>
+                  <p class="exd-chain__owner">DevOps — <strong>Davide Rossi</strong></p>
+                  <p class="exd-chain__time">Si sblocca alla chiusura dello step 2</p>
+                </div>
+              </li>
+
+              <li class="exd-chain__item exd-chain__item--locked">
+                <span class="exd-chain__marker" aria-hidden="true">4</span>
+                <div class="exd-chain__card">
+                  <div class="exd-chain__head">
+                    <h3 class="exd-chain__name">4. Approvazione di rilascio</h3>
+                    <span class="exd-status exd-status--locked">
+                      <span class="exd-status__icon" aria-hidden="true">◻</span>
+                      Bloccato
+                    </span>
+                  </div>
+                  <p class="exd-chain__owner">Product Manager — <strong>Chiara Fumagalli</strong></p>
+                  <p class="exd-chain__time">Si sblocca alla chiusura dello step 3</p>
+                </div>
+              </li>
+
+              <li class="exd-chain__item exd-chain__item--locked">
+                <span class="exd-chain__marker" aria-hidden="true">5</span>
+                <div class="exd-chain__card">
+                  <div class="exd-chain__head">
+                    <h3 class="exd-chain__name">5. Consegna in produzione</h3>
+                    <span class="exd-status exd-status--locked">
+                      <span class="exd-status__icon" aria-hidden="true">◻</span>
+                      Bloccato
+                    </span>
+                  </div>
+                  <p class="exd-chain__owner">DevOps — <strong>Davide Rossi</strong></p>
+                  <p class="exd-chain__time">Ultimo step — la sua chiusura conclude il rilascio</p>
+                </div>
+              </li>
+
+            </ol>
+          </div>
+
+          <div class="exd-split__aside">
+            <h2 class="exd-section-title">Dati della release</h2>
+            <dl class="exd-release-meta">
+              <div><dt>Progetto</dt><dd>Portale Clienti</dd></div>
+              <div><dt>Etichetta</dt><dd>v2.4.0</dd></div>
+              <div><dt>Stato</dt><dd><span class="exd-status exd-status--active"><span class="exd-status__icon" aria-hidden="true">●</span> In corso</span></dd></div>
+              <div><dt>Template</dt><dd>Rilascio standard</dd></div>
+              <div><dt>Avviata da</dt><dd>Francesco Giarola</dd></div>
+              <div><dt>Avviata il</dt><dd>12/08/2026 08:50</dd></div>
+              <div><dt>Step completati</dt><dd>1 di 5</dd></div>
+            </dl>
+            <p class="exd-form-note">
+              Il template è congelato all'avvio: modifiche successive a “Rilascio standard”
+              non alterano questa release.
+            </p>
+          </div>
+        </div>
+
+        <p class="exd-frame-note" style="margin-top:2rem">
+          <strong>Mockup</strong> — vedi <code>desktop.html</code> per il comportamento a 1280&nbsp;px
+          e <code>chiusura-step.html</code> per il form di compilazione.
+        </p>
+
+      </main>
+    </div>
+  </div>
+</body>
+</html>

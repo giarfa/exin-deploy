@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verifica QA su staging — Exin Deploy</title>
+  <meta name="description" content="Compila le informazioni richieste per chiudere lo step e passare al responsabile successivo.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
+  <link rel="stylesheet" href="starter-kit-tokens.css">
+  <link rel="stylesheet" href="mockup.css">
+</head>
+<body class="sk-mockup">
+  <a href="#contenuto" class="exd-skip-link">Salta al contenuto</a>
+
+  <div class="sk-layout">
+    <aside class="sk-sidebar" id="menu-mobile" aria-label="Navigazione principale">
+      <div class="sk-sidebar__header">
+        <a href="index.html" class="sk-sidebar__logo" aria-label="Exin Deploy — vai a I miei step">
+          <img src="logo.svg" alt="Exin Deploy" width="126" height="24" style="display:block">
+        </a>
+      </div>
+      <div class="sk-sidebar__group-label">Operativo</div>
+      <nav class="sk-sidebar__nav" aria-label="Sezioni operative">
+        <a href="index.html" class="is-active" aria-current="page">I miei step</a>
+        <a href="dettaglio-release.html">Release</a>
+        <a href="#" aria-disabled="true">Progetti</a>
+      </nav>
+      <div class="sk-sidebar__group-label">Configurazione</div>
+      <nav class="sk-sidebar__nav" aria-label="Sezioni di configurazione">
+        <a href="#" aria-disabled="true">Template di workflow</a>
+        <a href="#" aria-disabled="true">Ruoli</a>
+        <a href="#" aria-disabled="true">Membri del team</a>
+      </nav>
+      <div class="sk-sidebar__footer">
+        <button type="button" class="sk-sidebar__user" aria-haspopup="menu" aria-expanded="false">
+          <span class="sk-sidebar__avatar" aria-hidden="true">MB</span>
+          <span class="sk-sidebar__user-meta">
+            <span class="sk-sidebar__user-name">Marta Bellini</span>
+            <span class="sk-sidebar__user-email">QA</span>
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="sk-inset">
+      <header class="sk-inset-header">
+        <button type="button" class="sk-sidebar-toggle" aria-label="Apri il menu di navigazione" aria-expanded="false" aria-controls="menu-mobile">☰</button>
+        <ol class="sk-breadcrumbs" aria-label="Percorso di navigazione">
+          <li><a href="dettaglio-release.html">v2.4.0</a></li>
+          <li aria-hidden="true">/</li>
+          <li><span>Step 2</span></li>
+        </ol>
+      </header>
+
+      <main class="sk-inset-content" id="contenuto">
+
+        <div class="exd-page-head">
+          <h1>Verifica QA su staging</h1>
+          <p>Portale Clienti · v2.4.0 · step 2 di 5 · sei il responsabile come <strong>QA</strong></p>
+        </div>
+
+        <form class="exd-form" novalidate>
+
+          <!--
+            Riepilogo errori: mostrato dopo un tentativo di chiusura rifiutato (FR-011).
+            role="alert" lo annuncia agli screen reader; i link portano al campo.
+          -->
+          <div class="exd-alert" role="alert" tabindex="-1">
+            <span aria-hidden="true">⚠</span>
+            <div>
+              <h2>Non è stato possibile chiudere lo step</h2>
+              <p>Due informazioni obbligatorie non sono valide:</p>
+              <ul>
+                <li><a href="#campo-report">Link al report di test</a> — indirizzo non valido</li>
+                <li><a href="#campo-regressioni">Nessuna regressione bloccante</a> — conferma mancante</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="exd-instructions">
+            <p><strong>Istruzioni del template.</strong> Esegui la suite di regressione su staging con i dati
+              di collaudo aggiornati. Allega il report generato dalla pipeline e segnala ogni anomalia,
+              anche non bloccante: verrà valutata in fase di approvazione.</p>
+            <p>Alla chiusura di questo step il flusso passa a <strong>Davide Rossi</strong> (Backup pre-rilascio).</p>
+          </div>
+
+          <!-- Tipo: testo breve, obbligatorio, valido -->
+          <div class="sk-field">
+            <label for="campo-versione">
+              Versione verificata <span class="exd-required" aria-hidden="true">*</span><span class="exd-sr-only"> (obbligatorio)</span>
+            </label>
+            <input type="text" id="campo-versione" name="versione" class="sk-input"
+                   value="2.4.0" required aria-describedby="aiuto-versione">
+            <span class="exd-hint" id="aiuto-versione">Come compare nel tag di rilascio.</span>
+          </div>
+
+          <!-- Tipo: link, obbligatorio, IN ERRORE -->
+          <div class="sk-field">
+            <label for="campo-report">
+              Link al report di test <span class="exd-required" aria-hidden="true">*</span><span class="exd-sr-only"> (obbligatorio)</span>
+            </label>
+            <input type="url" id="campo-report" name="report" class="sk-input exd-input-invalid"
+                   value="ci.gruppoexcellence/report 4471" required
+                   aria-invalid="true" aria-describedby="errore-report aiuto-report">
+            <p class="exd-error" id="errore-report">
+              <span aria-hidden="true">⚠</span>
+              Indirizzo non valido: manca lo schema (<code>https://</code>) e contiene uno spazio.
+            </p>
+            <span class="exd-hint" id="aiuto-report">URL completo del report prodotto dalla pipeline.</span>
+          </div>
+
+          <!-- Tipo: testo lungo, obbligatorio, valido -->
+          <div class="sk-field">
+            <label for="campo-esito">
+              Esito dei test <span class="exd-required" aria-hidden="true">*</span><span class="exd-sr-only"> (obbligatorio)</span>
+            </label>
+            <textarea id="campo-esito" name="esito" class="sk-input" rows="4" required
+                      aria-describedby="aiuto-esito">312 test eseguiti, 310 verdi. Due fallimenti non bloccanti sull'esportazione PDF con allegati oltre 20 MB: già tracciati come EXD-118, non introdotti da questa versione.</textarea>
+            <span class="exd-hint" id="aiuto-esito">Sintesi leggibile anche a distanza di mesi.</span>
+          </div>
+
+          <!-- Tipo: conferma (flag), obbligatorio, IN ERRORE -->
+          <div class="sk-field">
+            <div class="exd-check">
+              <input type="checkbox" id="campo-regressioni" name="regressioni" required
+                     aria-invalid="true" aria-describedby="errore-regressioni">
+              <label for="campo-regressioni">
+                Confermo che non sono state riscontrate regressioni bloccanti
+                <span class="exd-required" aria-hidden="true">*</span><span class="exd-sr-only"> (obbligatorio)</span>
+              </label>
+            </div>
+            <p class="exd-error" id="errore-regressioni">
+              <span aria-hidden="true">⚠</span>
+              Conferma obbligatoria per chiudere lo step.
+            </p>
+          </div>
+
+          <!-- Tipo: testo lungo, opzionale -->
+          <div class="sk-field">
+            <label for="campo-note">Note per il rilascio</label>
+            <textarea id="campo-note" name="note" class="sk-input" rows="3"
+                      placeholder="Facoltativo — segnalazioni utili a chi rilascia"
+                      aria-describedby="aiuto-note"></textarea>
+            <span class="exd-hint" id="aiuto-note">Campo opzionale: la sua assenza non impedisce la chiusura.</span>
+          </div>
+
+          <div class="exd-form-actions">
+            <button type="submit" class="sk-btn sk-btn--primary">Chiudi lo step e prosegui</button>
+            <button type="button" class="sk-btn sk-btn--outline">Salva senza chiudere</button>
+            <a href="dettaglio-release.html" class="sk-btn sk-btn--ghost">Annulla</a>
+          </div>
+
+          <p class="exd-form-note">
+            La chiusura è definitiva: solo un amministratore può riaprire lo step, e l'operazione
+            resta tracciata nel registro. <em>(La riapertura è FR-019, rinviata oltre l'MVP.)</em>
+          </p>
+
+        </form>
+
+        <p class="exd-frame-note" style="margin-top:2rem">
+          <strong>Mockup</strong> — schermata mostrata nello stato “tentativo di chiusura rifiutato”,
+          per fissare il contratto visivo degli errori. Allo stato iniziale il riquadro rosso non esiste
+          e nessun campo è marcato invalido.
+        </p>
+
+      </main>
+    </div>
+  </div>
+</body>
+</html>

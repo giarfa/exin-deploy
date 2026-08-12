@@ -1,0 +1,33 @@
+code: US-011
+title: 'Ambiente dimostrativo coerente'
+epic:
+  code: EP-001
+  title: 'Fondamenta e accesso'
+priority: HIGH
+points: 2
+status: TODO
+body: |
+  #### US-011: Ambiente dimostrativo coerente
+
+  **Epic:** EP-001 | **Priority:** HIGH | **Points:** 2 | **Status:** TODO
+  **Blocked by:** US-006
+  **Traces to:** FR-018 (MoSCoW: Must)
+
+  **Storia utente**
+  Come sviluppatore del progetto,
+  voglio un dataset dimostrativo coerente prodotto dai seeder,
+  così da valutare le schermate reali e scrivere test su dati plausibili invece che su tabelle vuote.
+
+  **Dimostra**
+  Dopo questa spec `php artisan migrate:fresh --seed` produce membri con ruoli assegnati, due progetti,
+  un template realistico, una release a metà catena e una release conclusa con registro popolato.
+
+  **Criteri di accettazione**
+  - [ ] `php artisan migrate:fresh --seed` completa senza errori
+  - [ ] Il dataset comprende un amministratore e almeno quattro membri con ruoli funzionali distinti
+  - [ ] Almeno due progetti attivi con mappatura ruolo→persona completa per il template associato
+  - [ ] Un template "Rilascio standard" con cinque step e campi che coprono tutti e quattro i tipi
+  - [ ] Una release in corso con il primo step completato e valori realistici, e il secondo step attivo
+  - [ ] Una release conclusa con tutti gli step completati e il registro delle transizioni popolato
+  - [ ] I dati sono in italiano e plausibili per il dominio: nessun lorem ipsum, nessun record orfano
+  - [ ] Le factory dei singoli modelli restano di competenza delle rispettive spec: qui si compone lo scenario in `DatabaseSeeder`

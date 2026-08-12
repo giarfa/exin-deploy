@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Exin Deploy">
+  <style>
+    .bg { fill: #171717; }
+    .fg { fill: #fafafa; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #fafafa; }
+      .fg { fill: #171717; }
+    }
+  </style>
+  <rect class="bg" width="32" height="32" rx="7"/>
+  <!-- Tre gradini ascendenti: la catena sequenziale del rilascio -->
+  <rect class="fg" x="7" y="20" width="6" height="5" rx="1.5"/>
+  <rect class="fg" x="13.5" y="15" width="6" height="10" rx="1.5" opacity="0.65"/>
+  <rect class="fg" x="20" y="10" width="6" height="15" rx="1.5" opacity="0.35"/>
+  <!-- Spunta di consegna -->
+  <path class="fg" d="M5.8 10.1l1.4-1.4 1.7 1.7 4.3-4.3 1.4 1.4-5.7 5.7z"/>
+</svg>

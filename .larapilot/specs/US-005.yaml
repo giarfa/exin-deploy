@@ -1,0 +1,42 @@
+code: US-005
+title: 'Chiusura di uno step con validazione e avanzamento sequenziale'
+epic:
+  code: EP-003
+  title: 'Esecuzione del rilascio'
+priority: CRITICAL
+points: 8
+status: TODO
+body: |
+  #### US-005: Chiusura di uno step con validazione e avanzamento sequenziale
+
+  **Epic:** EP-003 | **Priority:** CRITICAL | **Points:** 8 | **Status:** TODO
+  **Blocked by:** US-004
+  **Traces to:** FR-010, FR-011, FR-012, FR-016 (scrittura degli eventi) (MoSCoW: Must)
+
+  **Storia utente**
+  Come Step Owner,
+  voglio compilare le informazioni richieste dal mio step e chiuderlo,
+  così che il flusso passi al responsabile successivo solo quando quei dati esistono davvero.
+
+  **Dimostra**
+  Dopo questa spec, come responsabile dello step attivo compilo i campi e chiudo: lo step successivo si
+  attiva e diventa compilabile dal suo responsabile. Con un campo obbligatorio mancante o un URL
+  malformato la chiusura è rifiutata indicando cosa correggere. Un utente non responsabile non riesce a
+  chiudere lo step nemmeno invocando la rotta direttamente.
+
+  **Criteri di accettazione**
+  - [ ] Il responsabile dello step attivo compila i campi e ne richiede la chiusura
+  - [ ] La chiusura è rifiutata quando un campo obbligatorio è vuoto, indicando quale campo e perché
+  - [ ] La chiusura è rifiutata quando un campo di tipo link contiene un URL malformato
+  - [ ] La chiusura è rifiutata quando un campo di tipo conferma obbligatorio non è spuntato
+  - [ ] Un campo opzionale lasciato vuoto non impedisce la chiusura
+  - [ ] Alla chiusura valida sono registrati valori, autore e istante; lo step passa a completato e il successivo ad attivo
+  - [ ] Chiusura, attivazione dello step successivo e scrittura dell'evento avvengono in una sola transazione
+  - [ ] Esiste al massimo uno step attivo per release in ogni momento (verificato da test)
+  - [ ] Due richieste concorrenti di chiusura dello stesso step producono un solo avanzamento e un solo evento, con lock pessimistico sulla riga della release (verificato da test)
+  - [ ] Uno step bloccato non è compilabile né chiudibile, nemmeno invocando la rotta direttamente
+  - [ ] Uno step completato è in sola lettura
+  - [ ] Solo il responsabile assegnato o un amministratore possono compilare e chiudere: controllo a livello di Policy lato server
+  - [ ] Un tentativo non autorizzato è rifiutato con 403, registrato nel log applicativo e nel registro delle transizioni
+  - [ ] Interfaccia conforme al mockup `.larapilot/mockups/superficie-operativa/chiusura-step.html`: errori collegati al campo con `aria-describedby`, riepilogo errori con `role="alert"`, obbligatorietà annunciata a parole
+  - [ ] Nota architetturale estesa con diagramma Mermaid della macchina a stati e diagramma ER che distingue tabelle di definizione e di istanza

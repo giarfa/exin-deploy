@@ -1,0 +1,39 @@
+code: US-003
+title: 'Template di workflow con step ordinati e campi richiesti'
+epic:
+  code: EP-002
+  title: 'Configurazione del processo'
+priority: HIGH
+points: 13
+status: TODO
+body: |
+  #### US-003: Template di workflow con step ordinati e campi richiesti
+
+  **Epic:** EP-002 | **Priority:** HIGH | **Points:** 13 | **Status:** TODO
+  **Blocked by:** US-002
+  **Traces to:** FR-006, FR-007, FR-008 (MoSCoW: Must)
+
+  **Storia utente**
+  Come Release Owner,
+  voglio configurare template di workflow riutilizzabili — una sequenza ordinata di step, ciascuno con un ruolo responsabile e l'elenco delle informazioni da fornire —
+  così che il processo di rilascio sia esplicito, autoesplicativo e ripetibile su tutti i progetti.
+
+  **Dimostra**
+  Dopo questa spec creo il template "Rilascio standard" con cinque step ordinati, assegno un ruolo a
+  ciascuno, definisco i campi richiesti nei quattro tipi previsti, riordino gli step, e il template
+  risulta associabile ai progetti come predefinito.
+
+  **Criteri di accettazione**
+  - [ ] Un amministratore crea, modifica e disattiva template (nome, descrizione, flag di predefinito)
+  - [ ] Un solo template può essere predefinito: impostarne uno nuovo rimuove il flag dal precedente
+  - [ ] Il template predefinito è proposto in automatico alla creazione di un progetto, e resta sostituibile
+  - [ ] Un amministratore aggiunge step al template con nome, istruzioni per chi lo esegue e ruolo responsabile
+  - [ ] Gli step hanno una posizione ordinata e sono riordinabili
+  - [ ] Dopo un riordino o una cancellazione le posizioni restano contigue e senza duplicati (verificato da test)
+  - [ ] Per ogni step si definiscono i campi richiesti: etichetta, tipo, obbligatorietà, posizione e testo di aiuto opzionale
+  - [ ] I tipi supportati sono esattamente quattro: testo breve, testo lungo, link, conferma
+  - [ ] Il tipo di campo è modellato come enum PHP nativo: un valore fuori dall'enum è rifiutato
+  - [ ] Un template senza step non è utilizzabile per avviare una release, con messaggio esplicito
+  - [ ] Il sistema segnala i ruoli previsti dal template e non ancora assegnati sul progetto associato
+  - [ ] Un `member` non accede alla configurazione dei template (Policy lato server)
+  - [ ] Factory e seeder producono il template "Rilascio standard" con cinque step realistici e i relativi campi

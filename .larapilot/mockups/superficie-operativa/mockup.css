@@ -1,0 +1,471 @@
+/**
+ * Exin Deploy — superficie operativa
+ * Estensioni mobile-first sopra starter-kit-tokens.css.
+ * NON modifica i token del design system: aggiunge solo i componenti
+ * di dominio (catena di step, card di attesa, stati, campi in lettura).
+ *
+ * Prefisso `exd-` per tutto ciò che è specifico di questo prodotto.
+ */
+
+/* ---------------------------------------------------------------------------
+   1. Correzioni mobile-first sul design system
+   --------------------------------------------------------------------------- */
+
+/* Soglia sidebar: components.md del design system prescrive >=1024px,
+   mentre tokens.css spedisce 768px. Adottiamo 1024px (vedi README). */
+@media (max-width: 1023px) {
+  .sk-sidebar { display: none; }
+  .sk-sidebar-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2.75rem; height: 2.75rem;
+    border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+    background: var(--background); color: var(--foreground);
+    font-size: 1rem; cursor: pointer;
+  }
+  .sk-inset-header { padding: 0 1rem; }
+  .sk-inset-content { padding: 1rem; }
+}
+
+/* Target touch >= 44x44 px su mobile; densità desktop da 1024px. */
+.sk-btn { min-height: 2.75rem; }
+.sk-input { min-height: 2.75rem; font-size: 1rem; }
+
+@media (min-width: 1024px) {
+  .sk-btn { min-height: 2.25rem; }
+  .sk-input { min-height: 2.25rem; font-size: 0.875rem; }
+}
+
+/* Focus visibile su ogni elemento interattivo, non solo su input e bottoni. */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+  border-radius: calc(var(--radius) - 4px);
+}
+
+.exd-skip-link {
+  position: absolute; left: 0.5rem; top: -3rem;
+  z-index: 50; padding: 0.625rem 1rem;
+  background: var(--primary); color: var(--primary-foreground);
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 0.875rem; font-weight: 500; text-decoration: none;
+  transition: top 0.15s;
+}
+
+.exd-skip-link:focus { top: 0.5rem; }
+
+/* Testo per soli screen reader: l'asterisco visivo è decorativo (aria-hidden),
+   quindi l'obbligatorietà va annunciata a parole. */
+.exd-sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   2. Intestazione di pagina
+   --------------------------------------------------------------------------- */
+
+.exd-page-head { margin-bottom: 1.25rem; }
+
+.exd-page-head h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em;
+}
+
+.exd-page-head p {
+  margin: 0; color: var(--muted-foreground); font-size: 0.875rem;
+}
+
+@media (min-width: 1024px) {
+  .exd-page-head h1 { font-size: 1.5rem; }
+}
+
+.exd-section-title {
+  margin: 2rem 0 0.75rem;
+  font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted-foreground);
+}
+
+/* ---------------------------------------------------------------------------
+   3. Stati — mai comunicati dal solo colore: icona + etichetta testuale
+   --------------------------------------------------------------------------- */
+
+.exd-status {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border); border-radius: calc(var(--radius) - 4px);
+  font-size: 0.75rem; font-weight: 500; white-space: nowrap;
+}
+
+.exd-status__icon { font-size: 0.75rem; line-height: 1; }
+
+.exd-status--done {
+  background: var(--secondary); color: var(--muted-foreground);
+}
+
+.exd-status--active {
+  background: color-mix(in oklch, var(--foreground) 8%, transparent);
+  border-color: var(--foreground);
+  color: var(--foreground);
+}
+
+.exd-status--locked {
+  background: transparent; color: var(--muted-foreground);
+  border-style: dashed;
+}
+
+.exd-status--closed {
+  background: var(--primary); border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* ---------------------------------------------------------------------------
+   4. "I miei step" — card di attività
+   --------------------------------------------------------------------------- */
+
+.exd-tasks { display: grid; gap: 0.75rem; }
+
+.exd-task {
+  display: block;
+  padding: 1rem;
+  background: var(--card); color: var(--card-foreground);
+  border: 1px solid var(--border); border-left: 3px solid var(--foreground);
+  border-radius: var(--radius);
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+.exd-task:hover { border-color: var(--ring); border-left-color: var(--foreground); }
+
+.exd-task__top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; margin-bottom: 0.5rem;
+}
+
+.exd-task__project {
+  font-size: 0.75rem; font-weight: 500; color: var(--muted-foreground);
+}
+
+.exd-task__name {
+  margin: 0 0 0.375rem;
+  font-size: 1rem; font-weight: 600; color: var(--foreground);
+}
+
+.exd-task__meta {
+  margin: 0 0 0.875rem;
+  font-size: 0.8125rem; color: var(--muted-foreground);
+}
+
+.exd-task__cta { pointer-events: none; }
+
+/* Riga di sola lettura: release in cui l'utente è coinvolto ma non è il turno suo */
+.exd-waiting { display: grid; gap: 0.5rem; }
+
+.exd-waiting__row {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--card); font-size: 0.8125rem;
+}
+
+.exd-waiting__project { font-weight: 600; }
+.exd-waiting__who { color: var(--muted-foreground); }
+.exd-waiting__who strong { color: var(--foreground); font-weight: 500; }
+
+/* ---------------------------------------------------------------------------
+   5. Catena degli step — timeline verticale (mobile e desktop)
+   --------------------------------------------------------------------------- */
+
+.exd-chain { list-style: none; margin: 0; padding: 0; }
+
+.exd-chain__item {
+  position: relative;
+  padding: 0 0 1.25rem 2.5rem;
+}
+
+/* Linea di collegamento verticale, nascosta sull'ultimo elemento */
+.exd-chain__item::before {
+  content: ''; position: absolute;
+  left: 0.8125rem; top: 1.875rem; bottom: 0;
+  width: 2px; background: var(--border);
+}
+
+.exd-chain__item:last-child { padding-bottom: 0; }
+.exd-chain__item:last-child::before { display: none; }
+
+.exd-chain__marker {
+  position: absolute; left: 0; top: 0.125rem;
+  width: 1.75rem; height: 1.75rem;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  font-size: 0.75rem; font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--background); color: var(--muted-foreground);
+}
+
+.exd-chain__item--done .exd-chain__marker {
+  background: var(--secondary); color: var(--muted-foreground);
+}
+
+.exd-chain__item--active .exd-chain__marker {
+  background: var(--primary); color: var(--primary-foreground);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+
+.exd-chain__item--locked .exd-chain__marker { border-style: dashed; }
+
+.exd-chain__card {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--card); padding: 0.875rem 1rem;
+}
+
+.exd-chain__item--active .exd-chain__card { border-color: var(--foreground); }
+.exd-chain__item--locked .exd-chain__card { background: transparent; border-style: dashed; }
+
+.exd-chain__head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.exd-chain__name {
+  margin: 0; font-size: 0.9375rem; font-weight: 600;
+}
+
+.exd-chain__item--locked .exd-chain__name { color: var(--muted-foreground); }
+
+.exd-chain__owner {
+  margin: 0.25rem 0 0; font-size: 0.8125rem; color: var(--muted-foreground);
+}
+
+.exd-chain__owner strong { color: var(--foreground); font-weight: 500; }
+
+.exd-chain__time {
+  margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--muted-foreground);
+}
+
+/* ---------------------------------------------------------------------------
+   6. Valori dei campi in sola lettura (step già chiuso)
+   --------------------------------------------------------------------------- */
+
+.exd-values {
+  margin: 0.75rem 0 0; padding: 0.75rem 0 0;
+  border-top: 1px solid var(--border);
+  display: grid; gap: 0.625rem;
+}
+
+.exd-values > div { display: grid; gap: 0.125rem; }
+
+.exd-values dt {
+  font-size: 0.6875rem; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted-foreground);
+}
+
+.exd-values dd { margin: 0; font-size: 0.8125rem; word-break: break-word; }
+.exd-values a { color: var(--foreground); }
+
+@media (min-width: 1024px) {
+  .exd-values { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem 1.5rem; }
+}
+
+/* ---------------------------------------------------------------------------
+   7. Form di chiusura step
+   --------------------------------------------------------------------------- */
+
+.exd-form { max-width: 42rem; }
+
+.exd-instructions {
+  margin: 0 0 1.5rem; padding: 0.875rem 1rem;
+  border: 1px solid var(--border); border-left: 3px solid var(--muted-foreground);
+  border-radius: var(--radius);
+  background: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.exd-instructions p { margin: 0; }
+.exd-instructions p + p { margin-top: 0.5rem; }
+
+.sk-field label .exd-required {
+  color: var(--destructive); margin-left: 0.125rem;
+}
+
+.exd-hint {
+  display: block; margin-top: 0.375rem;
+  font-size: 0.75rem; color: var(--muted-foreground);
+}
+
+.exd-input-invalid {
+  border-color: var(--destructive);
+}
+
+.exd-input-invalid:focus-visible {
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 35%, transparent);
+}
+
+.exd-error {
+  display: flex; align-items: flex-start; gap: 0.375rem;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem; font-weight: 500; color: var(--destructive);
+}
+
+.exd-alert {
+  display: flex; align-items: flex-start; gap: 0.625rem;
+  margin: 0 0 1.5rem; padding: 0.875rem 1rem;
+  border: 1px solid var(--destructive); border-radius: var(--radius);
+  background: color-mix(in oklch, var(--destructive) 10%, transparent);
+  font-size: 0.8125rem;
+}
+
+.exd-alert h2 { margin: 0 0 0.25rem; font-size: 0.875rem; font-weight: 600; }
+.exd-alert p { margin: 0; }
+.exd-alert ul { margin: 0.375rem 0 0; padding-left: 1.125rem; }
+
+textarea.sk-input { min-height: 6rem; resize: vertical; line-height: 1.5; }
+
+.exd-check {
+  display: flex; align-items: flex-start; gap: 0.625rem;
+  padding: 0.75rem; min-height: 2.75rem;
+  border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px);
+  background: var(--background);
+}
+
+.exd-check input { width: 1.25rem; height: 1.25rem; margin: 0.0625rem 0 0; accent-color: var(--primary); flex-shrink: 0; }
+.exd-check label { margin: 0; font-weight: 400; font-size: 0.875rem; }
+
+.exd-form-actions {
+  display: grid; gap: 0.5rem;
+  margin-top: 1.75rem; padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (min-width: 640px) {
+  .exd-form-actions { display: flex; align-items: center; gap: 0.75rem; }
+  .exd-form-actions .sk-btn--primary { order: 2; margin-left: auto; }
+}
+
+.exd-form-note {
+  margin: 0.875rem 0 0; font-size: 0.75rem; color: var(--muted-foreground);
+}
+
+/* ---------------------------------------------------------------------------
+   8. Meta della release e stato vuoto
+   --------------------------------------------------------------------------- */
+
+.exd-release-meta {
+  display: grid; gap: 0.625rem;
+  margin: 0 0 1.5rem; padding: 1rem;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--card); font-size: 0.8125rem;
+}
+
+.exd-release-meta > div { display: flex; justify-content: space-between; gap: 1rem; }
+.exd-release-meta dt { color: var(--muted-foreground); }
+.exd-release-meta dd { margin: 0; font-weight: 500; text-align: right; }
+
+.exd-empty {
+  padding: 2.5rem 1.5rem; text-align: center;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+}
+
+.exd-empty__mark { font-size: 1.5rem; }
+.exd-empty h2 { margin: 0.5rem 0 0.25rem; font-size: 1rem; font-weight: 600; }
+.exd-empty p { margin: 0; font-size: 0.8125rem; color: var(--muted-foreground); }
+
+/* ---------------------------------------------------------------------------
+   9. Layout desktop a due colonne (dettaglio release)
+   --------------------------------------------------------------------------- */
+
+.exd-split { display: block; }
+
+@media (min-width: 1024px) {
+  .exd-split {
+    display: grid; grid-template-columns: minmax(0, 1fr) 18rem;
+    gap: 2rem; align-items: start;
+  }
+  .exd-split__aside { position: sticky; top: 1.5rem; }
+  .exd-release-meta { margin-bottom: 1rem; }
+}
+
+/* ---------------------------------------------------------------------------
+   10. Elenco release — card impilate su mobile, tabella da 1024px
+        Nessuno scroll orizzontale: la tabella non "si stringe", cambia forma.
+   --------------------------------------------------------------------------- */
+
+.exd-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+
+.exd-table thead { display: none; }
+.exd-table tbody { display: grid; gap: 0.75rem; }
+
+.exd-table tr {
+  display: grid; gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--card);
+}
+
+.exd-table td { display: flex; justify-content: space-between; gap: 1rem; padding: 0; border: 0; }
+
+.exd-table td::before {
+  content: attr(data-label);
+  color: var(--muted-foreground); flex-shrink: 0;
+}
+
+.exd-table td[data-label='Progetto'] { font-size: 0.9375rem; font-weight: 600; }
+.exd-table td[data-label='Progetto']::before { display: none; }
+
+@media (min-width: 1024px) {
+  .exd-table { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .exd-table thead { display: table-header-group; background: var(--muted); }
+  .exd-table tbody { display: table-row-group; }
+
+  .exd-table th {
+    text-align: left; padding: 0.625rem 0.875rem;
+    font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted-foreground);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .exd-table tr {
+    display: table-row; padding: 0; border: 0; border-radius: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .exd-table tbody tr:last-child { border-bottom: 0; }
+  .exd-table tbody tr:hover { background: var(--accent); }
+
+  .exd-table td {
+    display: table-cell; padding: 0.75rem 0.875rem;
+    vertical-align: middle;
+  }
+
+  .exd-table td::before { display: none; }
+  .exd-table td[data-label='Progetto'] { font-size: 0.8125rem; font-weight: 500; }
+}
+
+.exd-table a { color: var(--foreground); font-weight: 500; }
+
+/* ---------------------------------------------------------------------------
+   11. Cornice di anteprima (solo mockup, non va implementata)
+   --------------------------------------------------------------------------- */
+
+.exd-frame-note {
+  max-width: 42rem; margin: 0 auto 1rem; padding: 0.75rem 1rem;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  background: var(--muted); color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.exd-frame-note strong { color: var(--foreground); }
+
+/* Rispetta la preferenza di movimento ridotto: qui non ci sono animazioni
+   oltre alle transizioni brevi, che vengono comunque azzerate. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

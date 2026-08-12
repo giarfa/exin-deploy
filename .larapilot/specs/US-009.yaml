@@ -1,0 +1,33 @@
+code: US-009
+title: 'Elenco e storico delle release'
+epic:
+  code: EP-004
+  title: 'Visibilità e tracciabilità'
+priority: HIGH
+points: 3
+status: TODO
+body: |
+  #### US-009: Elenco e storico delle release
+
+  **Epic:** EP-004 | **Priority:** HIGH | **Points:** 3 | **Status:** TODO
+  **Blocked by:** US-006
+  **Traces to:** FR-015 (MoSCoW: Must)
+
+  **Storia utente**
+  Come Release Owner,
+  voglio elencare le release filtrandole per progetto e per stato, e accedere allo storico dei rilasci conclusi,
+  così da avere una vista d'insieme e poter ricostruire un rilascio passato.
+
+  **Dimostra**
+  Dopo questa spec elenco le release in corso con step corrente e responsabile in attesa, passo a quelle
+  concluse con data e autore della consegna, e filtro per progetto.
+
+  **Criteri di accettazione**
+  - [ ] Elenco delle release con progetto, etichetta, stato, step corrente e responsabile in attesa
+  - [ ] Filtro per stato (in corso / concluse) e per progetto
+  - [ ] Le release concluse mostrano autore e istante della consegna
+  - [ ] Lo storico è consultabile a tempo indeterminato, senza limite implicito di data
+  - [ ] Ordinamento predefinito dalle più recenti alle più vecchie
+  - [ ] Indici su `release.project_id` e `release.status` creati nella stessa migrazione dello schema
+  - [ ] Nessuna query N+1 (verificato)
+  - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/desktop.html`: card impilate sotto 1024 px, tabella da 1024 px, nessuno scroll orizzontale a nessun breakpoint

@@ -1,0 +1,32 @@
+code: US-006
+title: 'Conclusione della release come consegna in produzione'
+epic:
+  code: EP-003
+  title: 'Esecuzione del rilascio'
+priority: HIGH
+points: 3
+status: TODO
+body: |
+  #### US-006: Conclusione della release come consegna in produzione
+
+  **Epic:** EP-003 | **Priority:** HIGH | **Points:** 3 | **Status:** TODO
+  **Blocked by:** US-005
+  **Traces to:** FR-017 (MoSCoW: Must)
+
+  **Storia utente**
+  Come Release Owner,
+  voglio che la chiusura dell'ultimo step concluda la release registrando chi ha consegnato e quando,
+  così che ogni rilascio lasci una prova documentata e non più alterabile.
+
+  **Dimostra**
+  Dopo questa spec chiudo l'ultimo step della catena: la release passa a conclusa con autore e istante
+  della consegna, non compare più tra quelle in corso e ogni tentativo di modifica è rifiutato.
+
+  **Criteri di accettazione**
+  - [ ] La chiusura dell'ultimo step marca la release come conclusa, con autore e istante della consegna
+  - [ ] Una release conclusa non ha alcuno step attivo (verificato da test)
+  - [ ] Una release conclusa è in sola lettura: nessuno step è compilabile o riapribile, nemmeno da un amministratore
+  - [ ] Il tentativo di chiudere o modificare uno step di una release conclusa è rifiutato con esito 403 o 409
+  - [ ] La conclusione è registrata nel registro delle transizioni
+  - [ ] Una release conclusa non compare tra quelle in corso e resta consultabile a tempo indeterminato
+  - [ ] La riapertura di uno step da parte di un amministratore resta esclusa da questo rilascio (FR-019, rinviata alle fasi successive) e il messaggio all'utente non promette il contrario

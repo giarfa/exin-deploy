@@ -1,0 +1,34 @@
+code: US-010
+title: 'Registro consultabile delle transizioni'
+epic:
+  code: EP-004
+  title: 'Visibilità e tracciabilità'
+priority: HIGH
+points: 5
+status: TODO
+body: |
+  #### US-010: Registro consultabile delle transizioni
+
+  **Epic:** EP-004 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+  **Blocked by:** US-005
+  **Traces to:** FR-016 (MoSCoW: Must) — la scrittura degli eventi è consegnata in US-005; questa spec copre la consultazione e le garanzie di immutabilità
+
+  **Storia utente**
+  Come Release Owner,
+  voglio consultare la cronologia completa e non alterabile di una release,
+  così che la tracciabilità del processo sia una prova e non un racconto.
+
+  **Dimostra**
+  Dopo questa spec apro il registro di una release e vedo in ordine cronologico avvio, chiusure di step
+  con attore e istante, attivazioni, tentativi non autorizzati e conclusione. Nessuna funzione
+  dell'interfaccia permette di modificare o cancellare una voce.
+
+  **Criteri di accettazione**
+  - [ ] Vista cronologica degli eventi di una release: avvio, chiusura di step, attivazione dello step successivo, conclusione, tentativo non autorizzato
+  - [ ] Ogni voce riporta attore, istante e riferimento allo step interessato
+  - [ ] Nessuna rotta, comando o funzione dell'interfaccia consente la modifica o la cancellazione di una voce (verificato da test)
+  - [ ] Il modello degli eventi non espone operazioni di aggiornamento o cancellazione
+  - [ ] Gli istanti sono memorizzati in UTC e mostrati nel fuso dell'applicazione, coerentemente su tutte le viste
+  - [ ] I tentativi di chiusura non autorizzati compaiono nel registro con l'indicazione dell'attore
+  - [ ] Il registro è consultabile da ogni membro autenticato; le voci relative a tentativi non autorizzati sono visibili solo agli amministratori
+  - [ ] Nessuna query N+1 (verificato)

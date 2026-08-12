@@ -1,0 +1,28 @@
+project_kind: Personal
+delivery_target: MVP
+budget_sensitivity: Relaxed
+frontend_topology: Laravel-coupled
+deadlines: 'nessuna scadenza o milestone fissa dichiarata'
+data_store: "SQLite (scelta dell'utente, rischio di concorrenza in scrittura accettato e annotato in `### Rischi accettati`)"
+hierarchy_pattern: 'nessuna gerarchia — gli step sono una lista ordinata per posizione, non un albero'
+search: 'nessun motore di ricerca — filtri SQL su progetto e stato sono sufficienti ai volumi previsti'
+admin_panel: 'Starter Kit (livewire)'
+local_dev: '**Laravel Herd** — PHP e Composer gestiti da Herd, sito su dominio `.test` senza avviare server a mano. Nessuno scaffolding Sail o Docker da aggiungere.'
+cli_tooling: 'solo comandi Artisan applicativi; nessuna CLI esterna in Bash o Go, nessuna automazione Git o script di server nel perimetro MVP'
+settings:
+  effort: STANDARD
+  backlog: STANDARD
+  git_mode: GITFLOW
+  testing: NORMAL
+  auto_approve: 'NO'
+  lucille: 'YES'
+  github: 'NO'
+  gitlab: 'NO'
+  bitbucket: 'NO'
+  notifications: 'NO'
+  notify_slack: 'NO'
+  notify_discord: 'NO'
+  notify_telegram: 'NO'
+source: choices.yaml
+updated_at: '2026-08-12T09:12:00+00:00'
+deploy_platform: 'Server interno aziendale (rete interna / VPN)'
