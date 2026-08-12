@@ -558,12 +558,12 @@ tasks:
       10. Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Unico percorso di avvio, con tutte le precondizioni prima di qualsiasi scrittura
-      - [ ] Snapshot completo di step e campi in due sole scritture di massa
-      - [ ] Responsabile risolto e nome del ruolo congelato su ogni step
-      - [ ] Primo step attivo, gli altri bloccati, release `in_corso`, evento di avvio registrato
-      - [ ] Numero di query indipendente dal numero di step e di campi
-      - [ ] Pint e Larastan verdi, suite verde
+      - [x] Unico percorso di avvio, con tutte le precondizioni prima di qualsiasi scrittura
+      - [x] Snapshot completo di step e campi in due sole scritture di massa
+      - [x] Responsabile risolto e nome del ruolo congelato su ogni step
+      - [x] Primo step attivo, gli altri bloccati, release `in_corso`, evento di avvio registrato
+      - [x] Numero di query indipendente dal numero di step e di campi
+      - [x] Pint e Larastan verdi, suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -573,9 +573,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-04
+    commit:
+      sha: 0520080dfc2657c59b1006d7d7d80697c9faf81b
+      short_sha: '0520080'
+      subject: 'feat(US-004): TASK-05 avvio della release con snapshot congelato'
+      committed_at: '2026-08-13T00:24:50+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Test: snapshot congelato, precondizioni rifiutate ed evento di avvio'
@@ -848,4 +854,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:22:48+00:00'
+updated_at: '2026-08-12T22:24:50+00:00'
