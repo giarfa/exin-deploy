@@ -2,6 +2,7 @@
 
 use App\Actions\Projects\CreateProject;
 use App\Models\Project;
+use App\Models\WorkflowTemplate;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -28,8 +29,14 @@ new class extends Component
 
     public string $description = '';
 
+    /** Template scelto; stringa vuota significa "nessun template". */
+    public string $workflowTemplateId = '';
+
     /** Esito della creazione: quanti ruoli non e stato possibile precompilare. */
     public ?int $skippedRoles = null;
+
+    /** Nome del template applicato alla creazione, `null` se nessuno. */
+    public ?string $appliedTemplate = null;
 
     /**
      * @return array<string, array<int, mixed>>
@@ -44,6 +51,10 @@ new class extends Component
                 Rule::unique('projects', 'slug')->ignore($this->editingId),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
+            // Validato contro le **sole opzioni in elenco** e non contro l'intera
+            // tabella: un template disattivato e non gia associato a questo
+            // progetto non e scegliibile nemmeno indicandone l'identificativo.
+            'workflowTemplateId' => ['nullable', 'string', Rule::in($this->selectableTemplates->pluck('id')->all())],
         ];
     }
 
@@ -56,7 +67,29 @@ new class extends Component
             'name' => __('projects.name'),
             'slug' => __('projects.slug'),
             'description' => __('projects.project_description'),
+            'workflowTemplateId' => __('projects.workflow_template'),
         ];
+    }
+
+    /**
+     * Template proponibili: quelli attivi, piu quello attualmente associato al
+     * progetto in modifica anche se disattivato — nasconderlo mostrerebbe
+     * un'associazione diversa da quella reale.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, WorkflowTemplate>
+     */
+    #[Computed]
+    public function selectableTemplates()
+    {
+        $current = $this->editingId
+            ? Project::whereKey($this->editingId)->value('workflow_template_id')
+            : null;
+
+        return WorkflowTemplate::query()
+            ->select(['id', 'name', 'is_active'])
+            ->where(fn ($query) => $query->where('is_active', true)->orWhere('id', $current))
+            ->orderBy('name')
+            ->get();
     }
 
     /**
@@ -76,8 +109,17 @@ new class extends Component
     #[Computed]
     public function projects()
     {
+        // Eager loading obbligatorio: la segnalazione dei ruoli scoperti legge
+        // template, step e assegnazioni per ogni riga. Senza queste relazioni
+        // precaricate l'elenco farebbe query proporzionali al numero di progetti.
         return Project::query()
             ->withCount('assignments')
+            ->with([
+                'workflowTemplate:id,name,is_active',
+                'workflowTemplate.stepDefinitions:id,workflow_template_id,role_id',
+                'workflowTemplate.stepDefinitions.role:id,name',
+                'assignments:id,project_id,role_id',
+            ])
             ->orderBy('name')
             ->get();
     }
@@ -86,8 +128,15 @@ new class extends Component
     {
         Gate::authorize('create', Project::class);
 
-        $this->reset(['editingId', 'name', 'slug', 'description', 'skippedRoles']);
+        $this->reset(['editingId', 'name', 'slug', 'description', 'skippedRoles', 'appliedTemplate']);
         $this->resetValidation();
+
+        // Il predefinito e il valore **proposto**, non un legame: resta sostituibile.
+        $this->workflowTemplateId = (string) WorkflowTemplate::query()
+            ->active()
+            ->where('is_default', true)
+            ->value('id');
+
         $this->showingForm = true;
     }
 
@@ -101,7 +150,9 @@ new class extends Component
         $this->name = $project->name;
         $this->slug = $project->slug;
         $this->description = (string) $project->description;
+        $this->workflowTemplateId = (string) $project->workflow_template_id;
         $this->skippedRoles = null;
+        $this->appliedTemplate = null;
         $this->resetValidation();
         $this->showingForm = true;
     }
@@ -109,7 +160,7 @@ new class extends Component
     public function closeForm(): void
     {
         $this->showingForm = false;
-        $this->reset(['editingId', 'name', 'slug', 'description']);
+        $this->reset(['editingId', 'name', 'slug', 'description', 'workflowTemplateId']);
         $this->resetValidation();
     }
 
@@ -125,16 +176,21 @@ new class extends Component
             'name' => $validated['name'],
             'slug' => $validated['slug'],
             'description' => $validated['description'] !== '' ? $validated['description'] : null,
+            'workflow_template_id' => $validated['workflowTemplateId'] !== '' ? $validated['workflowTemplateId'] : null,
         ];
 
         if ($project) {
             $project->update($attributes);
             $this->skippedRoles = null;
+            $this->appliedTemplate = null;
         } else {
-            $this->skippedRoles = $createProject->handle($attributes + ['is_active' => true])['skipped'];
+            $result = $createProject->handle($attributes + ['is_active' => true]);
+
+            $this->skippedRoles = $result['skipped'];
+            $this->appliedTemplate = $result['template']?->name;
         }
 
-        unset($this->projects);
+        unset($this->projects, $this->selectableTemplates);
         $this->closeForm();
     }
 
@@ -175,6 +231,14 @@ new class extends Component
             @else
                 {{ __('projects.created_with_defaults') }}
             @endif
+
+            <div class="mt-1">
+                @if ($appliedTemplate)
+                    {{ __('projects.created_with_template', ['template' => $appliedTemplate]) }}
+                @else
+                    {{ __('projects.created_without_template') }}
+                @endif
+            </div>
         </flux:callout>
     @endif
 
@@ -191,6 +255,17 @@ new class extends Component
                             :description="__('projects.slug_help')" required />
 
                 <flux:textarea wire:model="description" :label="__('projects.project_description')" rows="3" />
+
+                <flux:select wire:model="workflowTemplateId" :label="__('projects.workflow_template')"
+                             :description="__('projects.workflow_template_help')">
+                    <flux:select.option value="">{{ __('projects.no_template_option') }}</flux:select.option>
+
+                    @foreach ($this->selectableTemplates as $template)
+                        <flux:select.option value="{{ $template->id }}">
+                            {{ $template->name }}{{ $template->is_active ? '' : ' — '.__('projects.inactive') }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
 
                 <div class="flex flex-wrap gap-3">
                     <flux:button type="submit" variant="primary">{{ __('projects.save') }}</flux:button>
@@ -216,9 +291,18 @@ new class extends Component
             <flux:table.rows>
                 @foreach ($this->projects as $project)
                     <flux:table.row :key="$project->id">
+                        {{-- Template e ruoli scoperti stanno dentro le celle esistenti e non
+                             in due colonne nuove: a 375 px una tabella a sei colonne
+                             obbligherebbe allo scorrimento orizzontale, e la segnalazione
+                             che deve farsi notare finirebbe fuori schermo. --}}
                         <flux:table.cell variant="strong">
                             {{ $project->name }}
                             <flux:text class="mt-0.5 font-mono text-xs">{{ $project->slug }}</flux:text>
+
+                            <flux:text class="mt-1 inline-flex items-center gap-1.5 text-xs">
+                                <flux:icon name="queue-list" variant="mini" class="size-4 shrink-0" />
+                                {{ $project->workflowTemplate?->name ?? __('projects.no_template') }}
+                            </flux:text>
                         </flux:table.cell>
 
                         <flux:table.cell>
@@ -235,6 +319,22 @@ new class extends Component
 
                         <flux:table.cell class="text-sm">
                             {{ trans_choice('projects.assignments_count', $project->assignments_count, ['count' => $project->assignments_count]) }}
+
+                            @php($uncovered = $project->uncoveredRoles())
+
+                            @if ($uncovered->isNotEmpty())
+                                <flux:text class="mt-1 inline-flex items-center gap-1.5 text-xs">
+                                    <flux:icon name="exclamation-triangle" variant="mini" class="size-4 shrink-0" />
+                                    {{ trans_choice('projects.uncovered_roles_badge', $uncovered->count(), ['count' => $uncovered->count()]) }}
+                                </flux:text>
+                            @endif
+
+                            @if ($project->workflowTemplate && $reason = $project->workflowTemplate->unusableReason())
+                                <flux:text class="mt-1 inline-flex items-center gap-1.5 text-xs">
+                                    <flux:icon name="no-symbol" variant="mini" class="size-4 shrink-0" />
+                                    {{ __($reason) }}
+                                </flux:text>
+                            @endif
                         </flux:table.cell>
 
                         <flux:table.cell class="text-end whitespace-nowrap">

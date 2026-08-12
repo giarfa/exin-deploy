@@ -33,6 +33,44 @@ new class extends Component
 
     public ?string $feedback = null;
 
+    /**
+     * Ruoli previsti dal template e senza responsabile su questo progetto.
+     *
+     * Le relazioni sono precaricate qui una volta sola: `uncoveredRoles()` non
+     * deve interrogare il database mentre la vista disegna il banner.
+     *
+     * @return \Illuminate\Support\Collection<int, Role>
+     */
+    #[Computed]
+    public function uncoveredRoles()
+    {
+        $this->project->loadMissing([
+            'workflowTemplate.stepDefinitions.role:id,name',
+            'assignments:id,project_id,role_id',
+        ]);
+
+        return $this->project->uncoveredRoles();
+    }
+
+    /**
+     * Numero di ruoli ricoperti da ciascuna persona su questo progetto,
+     * indicizzato per identificativo della persona.
+     *
+     * Il cumulo di ruoli e voluto: il vincolo unico e su (progetto, ruolo) e non
+     * esiste su (progetto, persona). Vedendo la stessa persona su piu righe senza
+     * spiegazione sembrerebbe un difetto, e qualcuno "correggerebbe" il dato.
+     *
+     * @return \Illuminate\Support\Collection<string, int>
+     */
+    #[Computed]
+    public function rolesPerUser()
+    {
+        return $this->assignments
+            ->groupBy('user_id')
+            ->map(fn ($group): int => $group->count())
+            ->filter(fn (int $count): bool => $count > 1);
+    }
+
     public function mount(): void
     {
         $this->selections = $this->roles
@@ -141,7 +179,8 @@ new class extends Component
             }
         });
 
-        unset($this->assignments, $this->assignableUsers);
+        unset($this->assignments, $this->assignableUsers, $this->uncoveredRoles, $this->rolesPerUser);
+        $this->project->unsetRelation('assignments');
 
         $this->feedback = __('projects.assignment_saved');
     }
@@ -161,6 +200,22 @@ new class extends Component
     @if ($feedback)
         <flux:callout variant="success" icon="check-circle" class="mt-6" aria-live="polite">
             {{ $feedback }}
+        </flux:callout>
+    @endif
+
+    @if ($this->uncoveredRoles->isNotEmpty())
+        {{-- La segnalazione nomina i ruoli e la conseguenza: senza il "cosa
+             succede se lo lascio cosi" resterebbe un avviso da ignorare. --}}
+        <flux:callout variant="warning" icon="exclamation-triangle" class="mt-6">
+            {{ trans_choice('projects.uncovered_roles', $this->uncoveredRoles->count(), [
+                'roles' => $this->uncoveredRoles->pluck('name')->join(', ', ' e '),
+            ]) }}
+        </flux:callout>
+    @endif
+
+    @if ($project->workflowTemplate && $templateReason = $project->workflowTemplate->unusableReason())
+        <flux:callout variant="warning" icon="exclamation-triangle" class="mt-6">
+            {{ $project->workflowTemplate->name }} — {{ __($templateReason) }}
         </flux:callout>
     @endif
 
@@ -203,6 +258,18 @@ new class extends Component
                         <flux:text class="inline-flex items-center gap-1.5 text-xs">
                             <flux:icon name="exclamation-triangle" variant="mini" class="size-4 shrink-0" />
                             {{ $assignment->user->name }} — {{ __('projects.inactive_person_note') }}
+                        </flux:text>
+                    @endif
+
+                    {{-- Il cumulo di ruoli sulla stessa persona e intenzionale: detto
+                         qui, la ripetizione si legge come scelta e non come difetto. --}}
+                    @if ($assignment && $this->rolesPerUser->has($assignment->user_id))
+                        <flux:text class="inline-flex items-center gap-1.5 text-xs">
+                            <flux:icon name="information-circle" variant="mini" class="size-4 shrink-0" />
+                            {{ __('projects.multiple_roles', [
+                                'name' => $assignment->user->name,
+                                'count' => $this->rolesPerUser[$assignment->user_id],
+                            ]) }}
                         </flux:text>
                     @endif
                 </flux:card>

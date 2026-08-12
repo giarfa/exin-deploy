@@ -962,13 +962,13 @@ tasks:
       10. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Aggiunta, modifica, cancellazione e riordino dei campi funzionanti
-      - [ ] Le opzioni del tipo derivano da `FieldType::cases()`: nessun elenco duplicato nella vista
-      - [ ] Un tipo fuori dall'enum e rifiutato lato server
-      - [ ] Obbligatorieta e tipo leggibili senza affidarsi al colore
-      - [ ] Uno step di un altro template non e raggiungibile cambiando identificativo nell'indirizzo
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px
-      - [ ] Pint e Larastan verdi
+      - [x] Aggiunta, modifica, cancellazione e riordino dei campi funzionanti
+      - [x] Le opzioni del tipo derivano da `FieldType::cases()`: nessun elenco duplicato nella vista
+      - [x] Un tipo fuori dall'enum e rifiutato lato server
+      - [x] Obbligatorieta e tipo leggibili senza affidarsi al colore
+      - [x] Uno step di un altro template non e raggiungibile cambiando identificativo nell'indirizzo
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -978,9 +978,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-11
+    commit:
+      sha: 7d69de72ecb0d770ed1fe802abf5cdd0a4e49b86
+      short_sha: 7d69de7
+      subject: 'feat(US-003): TASK-12 schermata dei campi richiesti'
+      committed_at: '2026-08-12T18:28:36+02:00'
+      url: null
   -
     id: TASK-13
     title: 'Progetti: scelta del template e segnalazioni sulla mappatura dei responsabili'
@@ -1214,4 +1220,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:25:00+00:00'
+updated_at: '2026-08-12T16:28:36+00:00'
