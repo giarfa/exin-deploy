@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\DefaultRoleAssignment;
+use App\Models\Project;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -32,4 +35,29 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/membri', 'members.index')
         ->can('viewAny', User::class)
         ->name('members.index');
+
+    /*
+     * Configurazione del processo: ruoli funzionali, progetti e mappature
+     * ruolo -> persona. Superficie riservata agli amministratori, protetta due
+     * volte come la gestione dei membri.
+     */
+    Route::livewire('/ruoli', 'roles.index')
+        ->can('viewAny', Role::class)
+        ->name('roles.index');
+
+    Route::livewire('/progetti', 'projects.index')
+        ->can('viewAny', Project::class)
+        ->name('projects.index');
+
+    /*
+     * Il binding e sull'identificativo e non sullo slug (vedi Project::getRouteKeyName):
+     * lo slug e modificabile e un collegamento salvato si romperebbe alla rinomina.
+     */
+    Route::livewire('/progetti/{project}/responsabili', 'projects.assignments')
+        ->can('manageAssignments', 'project')
+        ->name('projects.assignments');
+
+    Route::livewire('/responsabili-predefiniti', 'default-assignments.index')
+        ->can('viewAny', DefaultRoleAssignment::class)
+        ->name('default-assignments.index');
 });

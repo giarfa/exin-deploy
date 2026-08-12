@@ -35,6 +35,14 @@ return [
     'uuid' => 'Il campo :attribute deve essere un UUID valido.',
 
     /*
+     * Regola App\Rules\AssignableUser: chi ricopre un ruolo deve poter accedere.
+     */
+    'assignable_user' => [
+        'missing' => 'La persona selezionata non esiste piu.',
+        'inactive' => ':name e disattivato e non puo ricoprire un ruolo: riattivalo dalla gestione dei membri oppure scegli un\'altra persona.',
+    ],
+
+    /*
      * Requisiti della regola Password::defaults() registrata in AppServiceProvider.
      */
     'password' => [

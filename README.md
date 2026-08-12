@@ -42,6 +42,12 @@ Il seeder crea il team dimostrativo. Tutti gli account condividono la password
 (`p.venturi@gruppoexcellence.com`) e volutamente **disattivato**, per poter verificare
 il rifiuto dell'accesso.
 
+Semina inoltre la configurazione di processo: cinque ruoli funzionali, la mappatura
+predefinita del team e due progetti. Uno dei due (`gestionale-magazzino`) ha una
+sostituzione rispetto alla predefinita, cosi che la differenza fra le due mappature sia
+visibile senza doverla ricreare a mano. Lo scenario di esecuzione — template, release in
+corso, release conclusa — arriva con US-011.
+
 Non ci sono istruzioni Sail o Docker: l'ambiente locale scelto nel PRD e Herd.
 
 ## Variabili d'ambiente rilevanti
@@ -102,6 +108,35 @@ ha al massimo **uno** step attivo per volta.
 
 I diagrammi (entita-relazioni e macchina a stati) arrivano con US-005, quando modello e
 transizioni sono completi.
+
+### Configurazione del processo
+
+Le entita di definizione presenti oggi:
+
+| Entita | Contenuto | Regole |
+| --- | --- | --- |
+| `Role` | ruolo funzionale (Dev Lead, QA, DevOps, ...) | nome univoco; non cancellabile se referenziato, sempre disattivabile |
+| `Project` | progetto su cui si rilascia | slug univoco a livello di schema; mai cancellabile, solo disattivabile |
+| `DefaultRoleAssignment` | ruolo → persona predefinita del team | una sola persona per ruolo |
+| `ProjectRoleAssignment` | ruolo → persona su un progetto | una sola persona per coppia progetto/ruolo |
+
+**La mappatura predefinita non e retroattiva.** Alla creazione di un progetto,
+`App\Actions\Projects\CreateProject` copia la mappatura predefinita sul progetto, dentro una
+sola transazione. Da quel momento le due mappature sono indipendenti: modificare quella del
+progetto non tocca la predefinita, e modificare la predefinita non tocca i progetti gia
+creati. E il punto che si fraintende piu spesso, ed e dichiarato anche nell'interfaccia.
+
+Non vengono copiate le predefinite il cui ruolo o la cui persona risultano disattivati: la
+schermata riporta quanti ruoli sono rimasti scoperti, perche una release avviata con ruoli
+scoperti si bloccherebbe.
+
+La precompilazione e una **Action esplicita e non un observer** sul modello: con un observer
+ogni `Project::factory()->create()` di test o di seeder erediterebbe mappature a sorpresa.
+
+**Chi ricopre un ruolo deve poter accedere.** `App\Rules\AssignableUser`, condivisa dalle due
+schermate di mappatura, rifiuta le persone disattivate. Una persona assegnata e disattivata in
+seguito **non** viene rimossa — cancellare una traccia sarebbe peggio — ma e segnalata nella
+riga, con icona e parola.
 
 ### Autenticazione e autorizzazione
 

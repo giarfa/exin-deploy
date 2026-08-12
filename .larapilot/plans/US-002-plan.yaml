@@ -182,7 +182,7 @@ tasks:
     id: TASK-00
     title: 'Integrare US-001 in develop e creare il branch di lavoro'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
     body: |
       ## Description
@@ -208,11 +208,11 @@ tasks:
       7. Commit di ancoraggio del branch (commit vuoto ammesso)
 
       ## Completion Criteria
-      - [ ] Nessuna modifica pendente nell'albero di lavoro prima del merge
-      - [ ] `develop` contiene i commit di US-001 e la suite di test e verde su `develop`
-      - [ ] Il branch `feature/US-002-ruoli-progetti-responsabili` esiste in locale e deriva da `develop`
-      - [ ] Titolo e corpo della PR interna redatti e tenuti in locale
-      - [ ] Nessun push eseguito
+      - [x] Nessuna modifica pendente nell'albero di lavoro prima del merge
+      - [x] `develop` contiene i commit di US-001 e la suite di test e verde su `develop`
+      - [x] Il branch `feature/US-002-ruoli-progetti-responsabili` esiste in locale e deriva da `develop`
+      - [x] Titolo e corpo della PR interna redatti e tenuti in locale
+      - [x] Nessun push eseguito
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -221,11 +221,17 @@ tasks:
       - Commit: `chore(US-002): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
+    commit:
+      sha: a76e6a9c23efab5bd8e20e7ad0ca1cb2fa985eea
+      short_sha: a76e6a9
+      subject: 'chore(US-002): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-12T16:35:55+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Modello Role con migrazione, factory e seeder'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |
@@ -260,27 +266,33 @@ tasks:
       9. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `roles` esiste con chiave primaria UUID, `name` unico e `is_active` indicizzato
-      - [ ] Un ruolo creato riceve automaticamente un id in formato UUID
-      - [ ] `Role::isReferenced()` esiste, e documentato come punto di estensione e restituisce `false` finche non
+      - [x] `roles` esiste con chiave primaria UUID, `name` unico e `is_active` indicizzato
+      - [x] Un ruolo creato riceve automaticamente un id in formato UUID
+      - [x] `Role::isReferenced()` esiste, e documentato come punto di estensione e restituisce `false` finche non
             esistono tabelle referenzianti
-      - [ ] `migrate:fresh --seed` completa senza errori
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `migrate:fresh --seed` completa senza errori
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] `database/factories/RoleFactory.php` creata, con stato `inactive()` e nomi di dominio
-      - [ ] `DatabaseSeeder` crea i cinque ruoli funzionali con nomi fissi
-      - [ ] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
+      - [x] `database/factories/RoleFactory.php` creata, con stato `inactive()` e nomi di dominio
+      - [x] `DatabaseSeeder` crea i cinque ruoli funzionali con nomi fissi
+      - [x] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
 
       ## Git Deliverables
       - Commit: `feat(US-002): TASK-01 catalogo dei ruoli funzionali`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 5cb6901f603038a210a18838466956d2e69bc5b2
+      short_sha: 5cb6901
+      subject: 'feat(US-002): TASK-01 catalogo dei ruoli funzionali'
+      committed_at: '2026-08-12T16:38:41+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Modello Project con slug univoco, migrazione, factory e seeder'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |
@@ -312,26 +324,32 @@ tasks:
       8. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `projects` esiste con chiave primaria UUID, `slug` con indice unico e `is_active` indicizzato
-      - [ ] Un progetto creato riceve automaticamente un id in formato UUID
-      - [ ] Nessuna colonna verso il template di workflow (appartiene a US-003)
-      - [ ] `migrate:fresh --seed` completa senza errori
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `projects` esiste con chiave primaria UUID, `slug` con indice unico e `is_active` indicizzato
+      - [x] Un progetto creato riceve automaticamente un id in formato UUID
+      - [x] Nessuna colonna verso il template di workflow (appartiene a US-003)
+      - [x] `migrate:fresh --seed` completa senza errori
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] `database/factories/ProjectFactory.php` creata, con slug unico derivato dal nome e stato `inactive()`
-      - [ ] `DatabaseSeeder` crea due progetti fissi
-      - [ ] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
+      - [x] `database/factories/ProjectFactory.php` creata, con slug unico derivato dal nome e stato `inactive()`
+      - [x] `DatabaseSeeder` crea due progetti fissi
+      - [x] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
 
       ## Git Deliverables
       - Commit: `feat(US-002): TASK-02 progetti con slug univoco`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 9cf3e4083b8d9b402cacadb82eeddbadef699443
+      short_sha: 9cf3e40
+      subject: 'feat(US-002): TASK-02 progetti con slug univoco'
+      committed_at: '2026-08-12T16:40:04+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Mappature ruolo-persona: predefinita di team e di progetto'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
       - TASK-02
@@ -385,28 +403,34 @@ tasks:
       11. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `default_role_assignments` esiste con `role_id` unico e chiavi esterne in `restrict`
-      - [ ] `project_role_assignments` esiste con unicita su `(project_id, role_id)` e indice su `user_id`
-      - [ ] `foreign_key_constraints` verificato attivo sulla connessione SQLite
-      - [ ] `Role::isReferenced()` restituisce `true` quando il ruolo e usato da una delle due mappature
-      - [ ] Le relazioni Eloquent sono dichiarate su `Role`, `Project` e `User`
-      - [ ] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `default_role_assignments` esiste con `role_id` unico e chiavi esterne in `restrict`
+      - [x] `project_role_assignments` esiste con unicita su `(project_id, role_id)` e indice su `user_id`
+      - [x] `foreign_key_constraints` verificato attivo sulla connessione SQLite
+      - [x] `Role::isReferenced()` restituisce `true` quando il ruolo e usato da una delle due mappature
+      - [x] Le relazioni Eloquent sono dichiarate su `Role`, `Project` e `User`
+      - [x] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] `DefaultRoleAssignmentFactory` e `ProjectRoleAssignmentFactory` create con relazioni coerenti
-      - [ ] `DatabaseSeeder` semina mappatura predefinita completa e due progetti, di cui uno con una sostituzione
-      - [ ] Factory e seeder aggiornati in **questo stesso task** delle migrazioni e dei modelli
+      - [x] `DefaultRoleAssignmentFactory` e `ProjectRoleAssignmentFactory` create con relazioni coerenti
+      - [x] `DatabaseSeeder` semina mappatura predefinita completa e due progetti, di cui uno con una sostituzione
+      - [x] Factory e seeder aggiornati in **questo stesso task** delle migrazioni e dei modelli
 
       ## Git Deliverables
       - Commit: `feat(US-002): TASK-03 mappature ruolo-persona di team e di progetto`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 9b2d4a3bd58f260f178f3fdf87d206021bbae1a4
+      short_sha: 9b2d4a3
+      subject: 'feat(US-002): TASK-03 mappature ruolo-persona di team e di progetto'
+      committed_at: '2026-08-12T16:42:45+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: modelli, vincoli di schema e non cancellabilita del ruolo referenziato'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
     body: |
@@ -437,20 +461,26 @@ tasks:
       8. Non introdurre Playwright, Dusk, Pest browser o suite di viewport
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] Ogni vincolo di unicita richiesto dai criteri di accettazione e verificato a livello di database
-      - [ ] La non cancellabilita del ruolo referenziato e verificata come vincolo di schema, non solo applicativo
-      - [ ] La copertura corrisponde al bar `NORMAL`
+      - [x] I test passano in locale
+      - [x] Ogni vincolo di unicita richiesto dai criteri di accettazione e verificato a livello di database
+      - [x] La non cancellabilita del ruolo referenziato e verificata come vincolo di schema, non solo applicativo
+      - [x] La copertura corrisponde al bar `NORMAL`
 
       ## Git Deliverables
       - Commit: `test(US-002): TASK-04 copre modelli e vincoli di schema`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: c2318487c70d4b3b96910182c305aacfe35493c2
+      short_sha: c231848
+      subject: 'test(US-002): TASK-04 copre modelli e vincoli di schema'
+      committed_at: '2026-08-12T16:43:53+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Action di creazione progetto con precompilazione della mappatura predefinita'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
     body: |
@@ -484,12 +514,12 @@ tasks:
       6. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `CreateProject` crea progetto e assegnazioni in **una sola transazione**
-      - [ ] Le predefinite con ruolo o persona disattivata non vengono copiate, e il conteggio restituito lo riflette
-      - [ ] Nessuna query per riga nella copiatura
-      - [ ] `AssignableUser` rifiuta una persona disattivata con messaggio esplicito in italiano
-      - [ ] Nessun observer o evento di modello introdotto per la precompilazione
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `CreateProject` crea progetto e assegnazioni in **una sola transazione**
+      - [x] Le predefinite con ruolo o persona disattivata non vengono copiate, e il conteggio restituito lo riflette
+      - [x] Nessuna query per riga nella copiatura
+      - [x] `AssignableUser` rifiuta una persona disattivata con messaggio esplicito in italiano
+      - [x] Nessun observer o evento di modello introdotto per la precompilazione
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -498,11 +528,17 @@ tasks:
       - Commit: `feat(US-002): TASK-05 precompilazione della mappatura predefinita sui nuovi progetti`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 95499ee9a01036b3c040fbdf3e74a098776b57a6
+      short_sha: 95499ee
+      subject: 'feat(US-002): TASK-05 precompilazione della mappatura predefinita sui nuovi progetti'
+      committed_at: '2026-08-12T16:45:38+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Test: precompilazione e indipendenza delle due mappature'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
     body: |
@@ -527,20 +563,26 @@ tasks:
       5. Non introdurre strumenti browser o E2E
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] L'indipendenza fra le due mappature e verificata in **entrambe** le direzioni
-      - [ ] L'atomicita della creazione e verificata
-      - [ ] La copertura corrisponde al bar `NORMAL`
+      - [x] I test passano in locale
+      - [x] L'indipendenza fra le due mappature e verificata in **entrambe** le direzioni
+      - [x] L'atomicita della creazione e verificata
+      - [x] La copertura corrisponde al bar `NORMAL`
 
       ## Git Deliverables
       - Commit: `test(US-002): TASK-06 copre precompilazione e indipendenza delle mappature`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: ccb0c52c4a8428042523f20ae3386455a5b2cacf
+      short_sha: ccb0c52
+      subject: 'test(US-002): TASK-06 copre precompilazione e indipendenza delle mappature'
+      committed_at: '2026-08-12T16:47:05+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Policy di configurazione, rotte e navigazione'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
     body: |
@@ -584,13 +626,13 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Tre Policy registrate e applicate, con `delete` fuori dal filtro `before()` dove il vincolo vale anche
+      - [x] Tre Policy registrate e applicate, con `delete` fuori dal filtro `before()` dove il vincolo vale anche
             per gli amministratori
-      - [ ] Le quattro rotte esistono, sono sotto `auth` e protette dal middleware `can`
-      - [ ] Un `member` riceve 403 su tutte e quattro le rotte
-      - [ ] La navigazione mostra le voci di configurazione solo a chi e autorizzato, senza duplicati fra gruppi
-      - [ ] Nessun testo dell'interfaccia incastonato nelle viste: tutto in `lang/it/`
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] Le quattro rotte esistono, sono sotto `auth` e protette dal middleware `can`
+      - [x] Un `member` riceve 403 su tutte e quattro le rotte
+      - [x] La navigazione mostra le voci di configurazione solo a chi e autorizzato, senza duplicati fra gruppi
+      - [x] Nessun testo dell'interfaccia incastonato nelle viste: tutto in `lang/it/`
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -599,11 +641,17 @@ tasks:
       - Commit: `feat(US-002): TASK-07 autorizzazione, rotte e navigazione della configurazione`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: dd53ae8931a010d27ed88df6a1d19c183be805f7
+      short_sha: dd53ae8
+      subject: 'feat(US-002): TASK-07 autorizzazione, rotte e navigazione della configurazione'
+      committed_at: '2026-08-12T16:48:44+02:00'
+      url: null
   -
     id: TASK-08
     title: 'Schermata di gestione dei ruoli funzionali'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
     body: |
@@ -633,14 +681,14 @@ tasks:
       8. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Un amministratore crea, modifica e disattiva un ruolo
-      - [ ] Un nome di ruolo duplicato e rifiutato in validazione con messaggio
-      - [ ] La cancellazione di un ruolo referenziato e rifiutata con **messaggio esplicito**, e il ruolo resta
+      - [x] Un amministratore crea, modifica e disattiva un ruolo
+      - [x] Un nome di ruolo duplicato e rifiutato in validazione con messaggio
+      - [x] La cancellazione di un ruolo referenziato e rifiutata con **messaggio esplicito**, e il ruolo resta
             disattivabile
-      - [ ] La cancellazione di un ruolo non referenziato funziona
-      - [ ] Ogni azione Livewire e protetta da `Gate::authorize`
-      - [ ] Schermata usabile a 375, 768 e 1280 px (verifica manuale ammessa al bar `NORMAL`)
-      - [ ] Nessun componente Flux Pro utilizzato
+      - [x] La cancellazione di un ruolo non referenziato funziona
+      - [x] Ogni azione Livewire e protetta da `Gate::authorize`
+      - [x] Schermata usabile a 375, 768 e 1280 px (verifica manuale ammessa al bar `NORMAL`)
+      - [x] Nessun componente Flux Pro utilizzato
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -649,11 +697,17 @@ tasks:
       - Commit: `feat(US-002): TASK-08 gestione dei ruoli funzionali`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: fc53b3818392be0e5d46f7627f4b98b284b5ab51
+      short_sha: fc53b38
+      subject: 'feat(US-002): TASK-08 gestione dei ruoli funzionali'
+      committed_at: '2026-08-12T16:51:11+02:00'
+      url: null
   -
     id: TASK-09
     title: 'Schermate dei progetti e dei responsabili di progetto'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
       - TASK-05
@@ -693,14 +747,14 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Un amministratore crea, modifica e disattiva un progetto
-      - [ ] Uno slug duplicato e rifiutato in validazione con messaggio, prima del vincolo di database
-      - [ ] Un progetto appena creato mostra la mappatura predefinita gia precompilata
-      - [ ] Modificare la mappatura del progetto non altera quella predefinita
-      - [ ] Assegnare una persona disattivata e rifiutato con messaggio esplicito
-      - [ ] Nessuna azione di cancellazione progetto esposta
-      - [ ] Nessuna query dentro cicli Blade: `withCount` sull'elenco, `with` annidato sulla pagina responsabili
-      - [ ] Schermate usabili a 375, 768 e 1280 px
+      - [x] Un amministratore crea, modifica e disattiva un progetto
+      - [x] Uno slug duplicato e rifiutato in validazione con messaggio, prima del vincolo di database
+      - [x] Un progetto appena creato mostra la mappatura predefinita gia precompilata
+      - [x] Modificare la mappatura del progetto non altera quella predefinita
+      - [x] Assegnare una persona disattivata e rifiutato con messaggio esplicito
+      - [x] Nessuna azione di cancellazione progetto esposta
+      - [x] Nessuna query dentro cicli Blade: `withCount` sull'elenco, `with` annidato sulla pagina responsabili
+      - [x] Schermate usabili a 375, 768 e 1280 px
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -709,11 +763,17 @@ tasks:
       - Commit: `feat(US-002): TASK-09 progetti e responsabili di progetto`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: a57c8eb1b94c58498abc24ebbd43b1aeaa793cd5
+      short_sha: a57c8eb
+      subject: 'feat(US-002): TASK-09 progetti e responsabili di progetto'
+      committed_at: '2026-08-12T16:53:36+02:00'
+      url: null
   -
     id: TASK-10
     title: 'Schermata della mappatura predefinita di team'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
     body: |
@@ -740,12 +800,12 @@ tasks:
       9. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Un amministratore definisce, modifica e rimuove la persona predefinita di ogni ruolo
-      - [ ] Un solo record predefinito per ruolo, coerente con il vincolo di schema
-      - [ ] Assegnare una persona disattivata e rifiutato con messaggio esplicito
-      - [ ] La schermata dichiara che la mappatura si applica ai progetti futuri, non a quelli esistenti
-      - [ ] Modificare la predefinita non altera i progetti gia creati
-      - [ ] Schermata usabile a 375, 768 e 1280 px
+      - [x] Un amministratore definisce, modifica e rimuove la persona predefinita di ogni ruolo
+      - [x] Un solo record predefinito per ruolo, coerente con il vincolo di schema
+      - [x] Assegnare una persona disattivata e rifiutato con messaggio esplicito
+      - [x] La schermata dichiara che la mappatura si applica ai progetti futuri, non a quelli esistenti
+      - [x] Modificare la predefinita non altera i progetti gia creati
+      - [x] Schermata usabile a 375, 768 e 1280 px
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -754,11 +814,17 @@ tasks:
       - Commit: `feat(US-002): TASK-10 mappatura predefinita di team`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: a8801885d93782da75a7a7848ed9cc7d5f79a829
+      short_sha: a880188
+      subject: 'feat(US-002): TASK-10 mappatura predefinita di team'
+      committed_at: '2026-08-12T16:54:36+02:00'
+      url: null
   -
     id: TASK-11
     title: 'Test: autorizzazione e flussi di configurazione'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-08
       - TASK-09
@@ -796,22 +862,28 @@ tasks:
       9. Non introdurre Playwright, Dusk, Pest browser o suite di viewport
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] L'autorizzazione e verificata sia a livello di rotta sia a livello di azione Livewire
-      - [ ] Ogni criterio di accettazione della spec ha almeno un test corrispondente, esclusi quelli di sola
+      - [x] I test passano in locale
+      - [x] L'autorizzazione e verificata sia a livello di rotta sia a livello di azione Livewire
+      - [x] Ogni criterio di accettazione della spec ha almeno un test corrispondente, esclusi quelli di sola
             verifica manuale
-      - [ ] L'intera suite del progetto resta verde
-      - [ ] La copertura corrisponde al bar `NORMAL`
+      - [x] L'intera suite del progetto resta verde
+      - [x] La copertura corrisponde al bar `NORMAL`
 
       ## Git Deliverables
       - Commit: `test(US-002): TASK-11 copre autorizzazione e flussi di configurazione`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: ebde806ed73883565937dad41617ba3bdd66ad45
+      short_sha: ebde806
+      subject: 'test(US-002): TASK-11 copre autorizzazione e flussi di configurazione'
+      committed_at: '2026-08-12T16:57:20+02:00'
+      url: null
   -
     id: TASK-12
     title: 'Documentazione baseline e CHANGELOG'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-11
     body: |
@@ -839,10 +911,10 @@ tasks:
       7. `php artisan test --compact` — suite completa verde prima della consegna in revisione
 
       ## Completion Criteria
-      - [ ] README aggiornato con la configurazione del processo e la natura non retroattiva della precompilazione
-      - [ ] Nota architetturale estesa alle nuove entita di definizione
-      - [ ] CHANGELOG aggiornato nella sezione Unreleased
-      - [ ] Suite completa verde, Pint e Larastan livello 5 verdi
+      - [x] README aggiornato con la configurazione del processo e la natura non retroattiva della precompilazione
+      - [x] Nota architetturale estesa alle nuove entita di definizione
+      - [x] CHANGELOG aggiornato nella sezione Unreleased
+      - [x] Suite completa verde, Pint e Larastan livello 5 verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -851,4 +923,10 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:25:59+00:00'
+    commit:
+      sha: 041e1847311ec7bc1f7864db588eb111197485f9
+      short_sha: '041e184'
+      subject: 'docs(US-002): TASK-12 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-12T16:58:43+02:00'
+      url: null
+updated_at: '2026-08-12T14:58:44+00:00'
