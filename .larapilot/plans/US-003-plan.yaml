@@ -350,26 +350,32 @@ tasks:
       7. `php artisan migrate:fresh --seed`, `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Il concern rinumera senza violare l'indice unico e dentro una sola transazione
-      - [ ] `position` e `integer` con segno, e il PHPDoc spiega perche
-      - [ ] Vincolo unico `(workflow_template_id, position)` a livello di schema
-      - [ ] `role_id` in `restrictOnDelete`
-      - [ ] `WorkflowTemplate::stepDefinitions()` restituisce gli step gia ordinati per posizione
-      - [ ] `StepDefinitionFactory` genera step consecutivi sullo stesso template senza collisioni
-      - [ ] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
+      - [x] Il concern rinumera senza violare l'indice unico e dentro una sola transazione
+      - [x] `position` e `integer` con segno, e il PHPDoc spiega perche
+      - [x] Vincolo unico `(workflow_template_id, position)` a livello di schema
+      - [x] `role_id` in `restrictOnDelete`
+      - [x] `WorkflowTemplate::stepDefinitions()` restituisce gli step gia ordinati per posizione
+      - [x] `StepDefinitionFactory` genera step consecutivi sullo stesso template senza collisioni
+      - [x] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
 
       ## Test Data
-      - [ ] `database/factories/StepDefinitionFactory.php` creata, con posizionamento in coda e nomi di dominio
-      - [ ] Seeder aggiornato in TASK-14, dove template, step e campi formano uno scenario coerente
+      - [x] `database/factories/StepDefinitionFactory.php` creata, con posizionamento in coda e nomi di dominio
+      - [x] Seeder aggiornato in TASK-14, dove template, step e campi formano uno scenario coerente
 
       ## Git Deliverables
       - Commit: `feat(US-003): TASK-02 step del template con ordinamento condiviso`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: 449272a983e8f0f8c9df4e5daa09d506571656f7
+      short_sha: 449272a
+      subject: 'feat(US-003): TASK-02 step del template con ordinamento condiviso'
+      committed_at: '2026-08-12T18:08:06+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Modello FieldDefinition con migrazione, factory e punto di estensione del ruolo'
@@ -1154,4 +1160,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:03:59+00:00'
+updated_at: '2026-08-12T16:08:07+00:00'

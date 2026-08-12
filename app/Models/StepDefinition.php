@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Passaggio ordinato di un template di workflow: cosa va fatto, chi ne risponde e
@@ -62,6 +63,17 @@ class StepDefinition extends Model
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Campi informativi richiesti per chiudere lo step, sempre in ordine di
+     * compilazione.
+     *
+     * @return HasMany<FieldDefinition, $this>
+     */
+    public function fieldDefinitions(): HasMany
+    {
+        return $this->hasMany(FieldDefinition::class)->orderBy('position');
     }
 
     /**
