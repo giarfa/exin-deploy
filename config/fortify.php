@@ -73,7 +73,7 @@ return [
     |
     */
 
-    'home' => '/home',
+    'home' => '/',
 
     /*
     |--------------------------------------------------------------------------
@@ -117,7 +117,8 @@ return [
     'limiters' => [
         'login' => 'login',
         'two-factor' => 'two-factor',
-        'passkeys' => 'passkeys',
+        // Nessun limiter 'passkeys': la feature e disattivata e il rate limiter
+        // corrispondente e stato rimosso da FortifyServiceProvider.
     ],
 
     /*
