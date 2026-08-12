@@ -14,6 +14,7 @@ return [
     'nav_projects' => 'Progetti',
     'nav_templates' => 'Template di workflow',
     'nav_roles' => 'Ruoli',
+    'nav_default_assignments' => 'Responsabili predefiniti',
     'nav_members' => 'Membri del team',
     'nav_planned' => 'in arrivo',
 

@@ -538,7 +538,7 @@ tasks:
     id: TASK-06
     title: 'Test: precompilazione e indipendenza delle due mappature'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
     body: |
@@ -563,15 +563,21 @@ tasks:
       5. Non introdurre strumenti browser o E2E
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] L'indipendenza fra le due mappature e verificata in **entrambe** le direzioni
-      - [ ] L'atomicita della creazione e verificata
-      - [ ] La copertura corrisponde al bar `NORMAL`
+      - [x] I test passano in locale
+      - [x] L'indipendenza fra le due mappature e verificata in **entrambe** le direzioni
+      - [x] L'atomicita della creazione e verificata
+      - [x] La copertura corrisponde al bar `NORMAL`
 
       ## Git Deliverables
       - Commit: `test(US-002): TASK-06 copre precompilazione e indipendenza delle mappature`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: ccb0c52c4a8428042523f20ae3386455a5b2cacf
+      short_sha: ccb0c52
+      subject: 'test(US-002): TASK-06 copre precompilazione e indipendenza delle mappature'
+      committed_at: '2026-08-12T16:47:05+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Policy di configurazione, rotte e navigazione'
@@ -887,4 +893,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:45:38+00:00'
+updated_at: '2026-08-12T14:47:05+00:00'

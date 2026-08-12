@@ -40,13 +40,28 @@
                 {{-- Voci non ancora implementate: disabilitate, non nascoste, perche la
                      struttura del prodotto deve essere leggibile da subito. --}}
                 <x-nav.planned icon="rocket-launch">{{ __('app.nav_releases') }}</x-nav.planned>
-                <x-nav.planned icon="folder">{{ __('app.nav_projects') }}</x-nav.planned>
             </flux:navlist.group>
 
             @can('viewAny', App\Models\User::class)
                 <flux:navlist.group :heading="__('app.nav_configuration')">
+                    {{-- I progetti sono configurazione e stanno in questo gruppo soltanto:
+                         la stessa voce in due gruppi diversi confonde la navigazione. --}}
+                    <flux:navlist.item icon="folder" :href="route('projects.index')"
+                                       :current="request()->routeIs('projects.*')">
+                        {{ __('app.nav_projects') }}
+                    </flux:navlist.item>
+
                     <x-nav.planned icon="queue-list">{{ __('app.nav_templates') }}</x-nav.planned>
-                    <x-nav.planned icon="identification">{{ __('app.nav_roles') }}</x-nav.planned>
+
+                    <flux:navlist.item icon="identification" :href="route('roles.index')"
+                                       :current="request()->routeIs('roles.*')">
+                        {{ __('app.nav_roles') }}
+                    </flux:navlist.item>
+
+                    <flux:navlist.item icon="user-group" :href="route('default-assignments.index')"
+                                       :current="request()->routeIs('default-assignments.*')">
+                        {{ __('app.nav_default_assignments') }}
+                    </flux:navlist.item>
 
                     <flux:navlist.item icon="users" :href="route('members.index')"
                                        :current="request()->routeIs('members.*')">
