@@ -1,2 +1,5 @@
 User-agent: *
-Disallow:
+Disallow: /
+
+# Strumento interno non pubblico: nessun sitemap e nessun llms.txt, sarebbero
+# un elenco di URL interni offerto a chiunque.
