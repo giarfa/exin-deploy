@@ -120,6 +120,91 @@ class Project extends Model
     }
 
     /**
+     * Responsabili previsti dal processo che risultano disattivati.
+     *
+     * Un membro disattivato non accede piu: lo step gli verrebbe assegnato e
+     * resterebbe fermo. La mappatura resta valida per lo storico, ma per una
+     * nuova release va aggiornata prima.
+     *
+     * Stessa avvertenza di `uncoveredRoles()`: con le relazioni gia precaricate
+     * questo metodo **non** interroga il database, e `loadMissing` e la rete di
+     * sicurezza per l'uso su un singolo progetto — non una licenza a chiamarlo
+     * dentro un ciclo senza eager loading.
+     *
+     * @return Collection<int, User>
+     */
+    public function inactiveResponsibles(): Collection
+    {
+        $this->loadMissing(['workflowTemplate.stepDefinitions', 'assignments.user']);
+
+        $template = $this->workflowTemplate;
+
+        if ($template === null) {
+            return collect();
+        }
+
+        $neededRoles = $template->stepDefinitions->pluck('role_id')->unique();
+
+        return $this->assignments
+            ->whereIn('role_id', $neededRoles)
+            ->pluck('user')
+            ->filter()
+            ->reject(fn (User $user): bool => $user->is_active)
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
+    }
+
+    /**
+     * Motivo per cui non si puo avviare una release sul progetto, `null` quando
+     * si puo.
+     *
+     * Vive sul modello e non sul componente di avvio perche serve in due posti —
+     * la schermata di avvio e l'elenco progetti, che disabilita il comando con il
+     * motivo accanto — e due copie della stessa regola divergerebbero.
+     *
+     * Un motivo alla volta, nell'ordine in cui vanno risolti: elencarli tutti
+     * insieme non aiuterebbe, perche il secondo si vede solo dopo aver sistemato
+     * il primo. Le precondizioni sono le stesse verificate da
+     * `App\Actions\Releases\StartRelease`, che resta l'unico percorso che decide
+     * davvero: qui si anticipa il rifiuto, non lo si sostituisce.
+     */
+    public function startBlocker(): ?string
+    {
+        if (! $this->is_active) {
+            return __('releases.blocked_inactive_project');
+        }
+
+        $template = $this->workflowTemplate;
+
+        if ($template === null) {
+            return __('releases.blocked_without_template');
+        }
+
+        if (! $template->isUsable()) {
+            return __((string) $template->unusableReason());
+        }
+
+        $uncovered = $this->uncoveredRoles();
+
+        if ($uncovered->isNotEmpty()) {
+            return trans_choice('releases.blocked_uncovered_roles', $uncovered->count(), [
+                'roles' => $uncovered->pluck('name')->implode(', '),
+            ]);
+        }
+
+        $inactive = $this->inactiveResponsibles();
+
+        if ($inactive->isNotEmpty()) {
+            return trans_choice('releases.blocked_inactive_responsibles', $inactive->count(), [
+                'members' => $inactive->pluck('name')->implode(', '),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
      * Il binding di rotta resta sull'identificativo e non sullo slug: lo slug e
      * modificabile, quindi un collegamento gia diffuso si romperebbe alla prima
      * rinomina. Lo slug e un identificativo leggibile, non un indirizzo stabile.

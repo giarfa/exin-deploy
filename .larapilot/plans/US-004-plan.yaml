@@ -703,10 +703,10 @@ tasks:
       6. Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] `ReleasePolicy` con filtro amministratore e `delete` negato a tutti
-      - [ ] Rotta di avvio protetta dal middleware di autorizzazione
-      - [ ] La navigazione non promette pagine inesistenti, e il motivo e scritto
-      - [ ] Pint e Larastan verdi, suite verde
+      - [x] `ReleasePolicy` con filtro amministratore e `delete` negato a tutti
+      - [x] Rotta di avvio protetta dal middleware di autorizzazione
+      - [x] La navigazione non promette pagine inesistenti, e il motivo e scritto
+      - [x] Pint e Larastan verdi, suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -716,9 +716,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
+    commit:
+      sha: 4821257bd61232f875426ec560f01deba15c6a5a
+      short_sha: '4821257'
+      subject: 'feat(US-004): TASK-08 autorizzazione e rotta di avvio della release'
+      committed_at: '2026-08-13T00:30:16+02:00'
+      url: null
   -
     id: TASK-09
     title: 'Schermata di avvio con conferma della catena congelata'
@@ -866,4 +872,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:29:11+00:00'
+updated_at: '2026-08-12T22:30:17+00:00'

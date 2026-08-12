@@ -109,16 +109,18 @@ new class extends Component
     #[Computed]
     public function projects()
     {
-        // Eager loading obbligatorio: la segnalazione dei ruoli scoperti legge
-        // template, step e assegnazioni per ogni riga. Senza queste relazioni
-        // precaricate l'elenco farebbe query proporzionali al numero di progetti.
+        // Eager loading obbligatorio: la segnalazione dei ruoli scoperti e il
+        // motivo che disabilita l'avvio leggono template, step, assegnazioni e i
+        // relativi responsabili per ogni riga. Senza queste relazioni precaricate
+        // l'elenco farebbe query proporzionali al numero di progetti.
         return Project::query()
             ->withCount('assignments')
             ->with([
                 'workflowTemplate:id,name,is_active',
                 'workflowTemplate.stepDefinitions:id,workflow_template_id,role_id',
                 'workflowTemplate.stepDefinitions.role:id,name',
-                'assignments:id,project_id,role_id',
+                'assignments:id,project_id,role_id,user_id',
+                'assignments.user:id,name,is_active',
             ])
             ->orderBy('name')
             ->get();
@@ -337,23 +339,50 @@ new class extends Component
                             @endif
                         </flux:table.cell>
 
-                        <flux:table.cell class="text-end whitespace-nowrap">
-                            <flux:button :href="route('projects.assignments', $project)" size="sm" variant="ghost">
-                                {{ __('projects.manage_assignments') }}
-                            </flux:button>
+                        <flux:table.cell>
+                            {{-- I comandi vanno a capo invece di allargare la cella: con
+                                 l'avvio della release sono quattro, e tenerli su una riga
+                                 sola obbligherebbe allo scorrimento orizzontale a 375 px.
+                                 A schermo largo lo spazio basta e restano comunque
+                                 allineati a destra su una riga. --}}
+                            <div class="flex flex-wrap justify-end gap-1">
+                                {{-- Il comando di avvio vive qui, dove l'amministratore vede gia
+                                     template associato e ruoli scoperti. Quando il progetto non e
+                                     avviabile e disabilitato con il motivo accanto, invece di
+                                     portare a una pagina che rifiuta.
 
-                            <flux:button wire:click="openEditForm('{{ $project->id }}')" size="sm" variant="ghost">
-                                {{ __('projects.edit') }}
-                            </flux:button>
+                                     `startBlocker()` riusa le relazioni gia precaricate
+                                     dall'elenco: nessuna query per riga. --}}
+                                @php($blocker = $project->startBlocker())
 
-                            <flux:button
-                                wire:click="toggleActivation('{{ $project->id }}')"
-                                wire:confirm="{{ $project->is_active ? __('projects.confirm_deactivate', ['name' => $project->name]) : __('projects.confirm_activate', ['name' => $project->name]) }}"
-                                size="sm"
-                                variant="ghost"
-                            >
-                                {{ $project->is_active ? __('projects.deactivate') : __('projects.activate') }}
-                            </flux:button>
+                                <flux:button
+                                    :href="$blocker ? null : route('releases.start', $project)"
+                                    :disabled="(bool) $blocker"
+                                    :title="$blocker"
+                                    size="sm"
+                                    variant="ghost"
+                                    icon="rocket-launch"
+                                >
+                                    {{ __('releases.start_from_project') }}
+                                </flux:button>
+
+                                <flux:button :href="route('projects.assignments', $project)" size="sm" variant="ghost">
+                                    {{ __('projects.manage_assignments') }}
+                                </flux:button>
+
+                                <flux:button wire:click="openEditForm('{{ $project->id }}')" size="sm" variant="ghost">
+                                    {{ __('projects.edit') }}
+                                </flux:button>
+
+                                <flux:button
+                                    wire:click="toggleActivation('{{ $project->id }}')"
+                                    wire:confirm="{{ $project->is_active ? __('projects.confirm_deactivate', ['name' => $project->name]) : __('projects.confirm_activate', ['name' => $project->name]) }}"
+                                    size="sm"
+                                    variant="ghost"
+                                >
+                                    {{ $project->is_active ? __('projects.deactivate') : __('projects.activate') }}
+                                </flux:button>
+                            </div>
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach
