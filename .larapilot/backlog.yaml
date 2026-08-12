@@ -160,7 +160,7 @@ specs:
       title: 'Esecuzione del rilascio'
     priority: HIGH
     points: 5
-    status: 'IN PROGRESS'
+    status: REVIEW
     body: |
       #### US-004: Avvio di una release con snapshot congelato del workflow
 
@@ -193,6 +193,7 @@ specs:
     status_history:
       - { status: PLANNED, at: '2026-08-12T22:09:39+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-12T22:12:48+00:00' }
+      - { status: REVIEW, at: '2026-08-12T22:52:07+00:00' }
     rework: false
   -
     code: US-005
