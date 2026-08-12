@@ -715,21 +715,27 @@ tasks:
       7. `php artisan test --compact --filter='DefaultWorkflowTemplate|TemplateUsability|ProjectTemplateAssociation'`
 
       ## Completion Criteria
-      - [ ] Non esistono due predefiniti in nessuna sequenza di operazioni provata
-      - [ ] Il rifiuto sul template disattivato e coperto
-      - [ ] Le tre situazioni di utilizzabilita sono distinte da messaggi diversi
-      - [ ] Proposta, sostituzione e assenza di predefinito coperte alla creazione del progetto
-      - [ ] `uncoveredRoles()` corretta e a query costanti
-      - [ ] Suite verde
+      - [x] Non esistono due predefiniti in nessuna sequenza di operazioni provata
+      - [x] Il rifiuto sul template disattivato e coperto
+      - [x] Le tre situazioni di utilizzabilita sono distinte da messaggi diversi
+      - [x] Proposta, sostituzione e assenza di predefinito coperte alla creazione del progetto
+      - [x] `uncoveredRoles()` corretta e a query costanti
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-003): TASK-08 copre predefinito, utilizzabilita e associazione al progetto`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
+    commit:
+      sha: b4a032bde1b21234e0b02997195f70a64639aa94
+      short_sha: b4a032b
+      subject: 'test(US-003): TASK-08 copre predefinito, utilizzabilita e associazione al progetto'
+      committed_at: '2026-08-12T18:19:54+02:00'
+      url: null
   -
     id: TASK-09
     title: 'Policy dei template, rotte annidate e navigazione'
@@ -1190,4 +1196,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:17:44+00:00'
+updated_at: '2026-08-12T16:19:54+00:00'
