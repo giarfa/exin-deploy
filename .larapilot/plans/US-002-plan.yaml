@@ -349,7 +349,7 @@ tasks:
     id: TASK-03
     title: 'Mappature ruolo-persona: predefinita di team e di progetto'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
       - TASK-02
@@ -403,28 +403,34 @@ tasks:
       11. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `default_role_assignments` esiste con `role_id` unico e chiavi esterne in `restrict`
-      - [ ] `project_role_assignments` esiste con unicita su `(project_id, role_id)` e indice su `user_id`
-      - [ ] `foreign_key_constraints` verificato attivo sulla connessione SQLite
-      - [ ] `Role::isReferenced()` restituisce `true` quando il ruolo e usato da una delle due mappature
-      - [ ] Le relazioni Eloquent sono dichiarate su `Role`, `Project` e `User`
-      - [ ] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `default_role_assignments` esiste con `role_id` unico e chiavi esterne in `restrict`
+      - [x] `project_role_assignments` esiste con unicita su `(project_id, role_id)` e indice su `user_id`
+      - [x] `foreign_key_constraints` verificato attivo sulla connessione SQLite
+      - [x] `Role::isReferenced()` restituisce `true` quando il ruolo e usato da una delle due mappature
+      - [x] Le relazioni Eloquent sono dichiarate su `Role`, `Project` e `User`
+      - [x] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] `DefaultRoleAssignmentFactory` e `ProjectRoleAssignmentFactory` create con relazioni coerenti
-      - [ ] `DatabaseSeeder` semina mappatura predefinita completa e due progetti, di cui uno con una sostituzione
-      - [ ] Factory e seeder aggiornati in **questo stesso task** delle migrazioni e dei modelli
+      - [x] `DefaultRoleAssignmentFactory` e `ProjectRoleAssignmentFactory` create con relazioni coerenti
+      - [x] `DatabaseSeeder` semina mappatura predefinita completa e due progetti, di cui uno con una sostituzione
+      - [x] Factory e seeder aggiornati in **questo stesso task** delle migrazioni e dei modelli
 
       ## Git Deliverables
       - Commit: `feat(US-002): TASK-03 mappature ruolo-persona di team e di progetto`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 9b2d4a3bd58f260f178f3fdf87d206021bbae1a4
+      short_sha: 9b2d4a3
+      subject: 'feat(US-002): TASK-03 mappature ruolo-persona di team e di progetto'
+      committed_at: '2026-08-12T16:42:45+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: modelli, vincoli di schema e non cancellabilita del ruolo referenziato'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
     body: |
@@ -455,15 +461,21 @@ tasks:
       8. Non introdurre Playwright, Dusk, Pest browser o suite di viewport
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] Ogni vincolo di unicita richiesto dai criteri di accettazione e verificato a livello di database
-      - [ ] La non cancellabilita del ruolo referenziato e verificata come vincolo di schema, non solo applicativo
-      - [ ] La copertura corrisponde al bar `NORMAL`
+      - [x] I test passano in locale
+      - [x] Ogni vincolo di unicita richiesto dai criteri di accettazione e verificato a livello di database
+      - [x] La non cancellabilita del ruolo referenziato e verificata come vincolo di schema, non solo applicativo
+      - [x] La copertura corrisponde al bar `NORMAL`
 
       ## Git Deliverables
       - Commit: `test(US-002): TASK-04 copre modelli e vincoli di schema`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: c2318487c70d4b3b96910182c305aacfe35493c2
+      short_sha: c231848
+      subject: 'test(US-002): TASK-04 copre modelli e vincoli di schema'
+      committed_at: '2026-08-12T16:43:53+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Action di creazione progetto con precompilazione della mappatura predefinita'
@@ -869,4 +881,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:40:04+00:00'
+updated_at: '2026-08-12T14:43:54+00:00'
