@@ -776,12 +776,12 @@ tasks:
       6. `php artisan route:list --except-vendor`, `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Tre rotte registrate, tutte con middleware `can` e binding sull'identificativo
-      - [ ] `scopeBindings()` sulla rotta annidata dei campi
-      - [ ] Ogni ability usata esiste come metodo nella Policy
-      - [ ] `delete()` nega a tutti ed e fuori dal filtro `before()`
-      - [ ] La voce di navigazione "Template di workflow" non e piu marcata "in arrivo"
-      - [ ] Pint e Larastan verdi
+      - [x] Tre rotte registrate, tutte con middleware `can` e binding sull'identificativo
+      - [x] `scopeBindings()` sulla rotta annidata dei campi
+      - [x] Ogni ability usata esiste come metodo nella Policy
+      - [x] `delete()` nega a tutti ed e fuori dal filtro `before()`
+      - [x] La voce di navigazione "Template di workflow" non e piu marcata "in arrivo"
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -791,9 +791,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
+    commit:
+      sha: b0fa14bf4dcc8e5f8515eec62bc06f4862fb17f3
+      short_sha: b0fa14b
+      subject: 'feat(US-003): TASK-09 autorizzazione, rotte e navigazione dei template'
+      committed_at: '2026-08-12T18:21:07+02:00'
+      url: null
   -
     id: TASK-10
     title: 'Schermata di elenco e configurazione dei template'
@@ -1196,4 +1202,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:19:54+00:00'
+updated_at: '2026-08-12T16:21:07+00:00'
