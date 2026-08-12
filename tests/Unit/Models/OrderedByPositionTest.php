@@ -197,7 +197,9 @@ class OrderedByPositionTest extends TestCase
      * Le posizioni della sequenza sono esattamente `1..N`: senza duplicati e
      * senza salti.
      *
-     * @param  Collection<int, Model>  $sequence
+     * @template TModel of Model
+     *
+     * @param  Collection<int, TModel>  $sequence
      */
     private function assertContiguous(Collection $sequence): void
     {

@@ -38,7 +38,7 @@ class FieldTypeTest extends TestCase
 
     public function test_a_value_outside_the_enum_is_rejected(): void
     {
-        $this->assertNull(FieldType::tryFrom('firma_digitale'));
+        $this->assertNotContains('firma_digitale', array_column(FieldType::cases(), 'value'));
 
         $this->expectException(ValueError::class);
 

@@ -59,6 +59,79 @@ class WorkflowTemplate extends Model
     }
 
     /**
+     * Indica se il template puo essere usato per avviare una release: attivo e
+     * con almeno uno step.
+     *
+     * Qui alimenta le segnalazioni nelle schermate di configurazione; **US-004**
+     * lo invochera come precondizione dell'avvio di una release. Definirlo una
+     * volta sola evita che la regola venga riscritta in due posti e diverga.
+     */
+    public function isUsable(): bool
+    {
+        return $this->is_active && $this->stepCount() > 0;
+    }
+
+    /**
+     * Chiave di traduzione del motivo per cui il template non e utilizzabile,
+     * `null` quando lo e.
+     *
+     * Il motivo e distinto e non generico: "disattivato" e "senza step" si
+     * risolvono in due modi diversi, e un messaggio unico costringerebbe chi
+     * configura a indovinare quale dei due sta bloccando l'avvio.
+     */
+    public function unusableReason(): ?string
+    {
+        if (! $this->is_active) {
+            return 'templates.unusable_inactive';
+        }
+
+        if ($this->stepCount() === 0) {
+            return 'templates.unusable_without_steps';
+        }
+
+        return null;
+    }
+
+    /**
+     * Disattiva o riattiva il template.
+     *
+     * Disattivare il predefinito ne rimuove il flag: proporre ai nuovi progetti
+     * un template inutilizzabile sarebbe un errore silenzioso. E l'unica
+     * scrittura di `is_default` fuori da `SetDefaultWorkflowTemplate`, e azzera
+     * soltanto — non puo quindi creare un secondo predefinito. Una sola `update`:
+     * l'operazione e atomica senza bisogno di una transazione esplicita.
+     */
+    public function toggleActivation(): void
+    {
+        $deactivating = $this->is_active;
+
+        $this->update([
+            'is_active' => ! $this->is_active,
+            'is_default' => $deactivating ? false : $this->is_default,
+        ]);
+    }
+
+    /**
+     * Numero di step del template, riusando il conteggio gia caricato quando c'e.
+     *
+     * Stessa lezione di `Role::referenceCounts()`: un metodo chiamato per riga in
+     * elenco non deve produrre una query per riga, altrimenti il `withCount()`
+     * messo per evitare l'N+1 non serve a nulla.
+     */
+    private function stepCount(): int
+    {
+        if (array_key_exists('step_definitions_count', $this->attributes)) {
+            return (int) $this->attributes['step_definitions_count'];
+        }
+
+        if ($this->relationLoaded('stepDefinitions')) {
+            return $this->stepDefinitions->count();
+        }
+
+        return $this->stepDefinitions()->count();
+    }
+
+    /**
      * Template attivi, gli unici proponibili su un progetto.
      */
     #[Scope]

@@ -524,20 +524,26 @@ tasks:
       6. `php artisan test --compact --filter=OrderedByPosition`
 
       ## Completion Criteria
-      - [ ] L'invariante `1..N` e verificata dopo ogni operazione, non solo alla fine
-      - [ ] Coperti gli estremi: primo elemento verso l'alto e ultimo verso il basso non cambiano nulla
-      - [ ] Verificato l'isolamento fra sequenze di padri diversi
-      - [ ] Lo stesso test copre step e campi
-      - [ ] Suite verde
+      - [x] L'invariante `1..N` e verificata dopo ogni operazione, non solo alla fine
+      - [x] Coperti gli estremi: primo elemento verso l'alto e ultimo verso il basso non cambiano nulla
+      - [x] Verificato l'isolamento fra sequenze di padri diversi
+      - [x] Lo stesso test copre step e campi
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-003): TASK-05 copre contiguita e unicita delle posizioni`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-04
+    commit:
+      sha: e3cbe4ca5031850131a4fc6142c25c3e1b671ff7
+      short_sha: e3cbe4c
+      subject: 'test(US-003): TASK-05 copre contiguita e unicita delle posizioni'
+      committed_at: '2026-08-12T18:12:50+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Action del template predefinito unico e utilizzabilita del template'
@@ -1172,4 +1178,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:11:47+00:00'
+updated_at: '2026-08-12T16:12:50+00:00'
