@@ -581,7 +581,7 @@ tasks:
     id: TASK-08
     title: 'Gestione dei membri del team con autorizzazione lato server'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
     body: |
@@ -619,25 +619,31 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
 
       ## Completion Criteria
-      - [ ] Un amministratore crea un membro con nome, email e livello
-      - [ ] Un amministratore modifica un membro esistente
-      - [ ] Un amministratore disattiva un membro; nessuna azione di cancellazione e esposta
-      - [ ] Un `Member` che invoca una rotta di gestione riceve 403, anche chiamandola direttamente
-      - [ ] L'email e univoca: il duplicato viene rifiutato in validazione
-      - [ ] La password iniziale rispetta `Password::defaults()`
-      - [ ] Un membro disattivato resta visibile nell'elenco con il proprio stato
-      - [ ] Nessuna query N+1 nell'elenco
-      - [ ] I testi vivono in `lang/`
+      - [x] Un amministratore crea un membro con nome, email e livello
+      - [x] Un amministratore modifica un membro esistente
+      - [x] Un amministratore disattiva un membro; nessuna azione di cancellazione e esposta
+      - [x] Un `Member` che invoca una rotta di gestione riceve 403, anche chiamandola direttamente
+      - [x] L'email e univoca: il duplicato viene rifiutato in validazione
+      - [x] La password iniziale rispetta `Password::defaults()`
+      - [x] Un membro disattivato resta visibile nell'elenco con il proprio stato
+      - [x] Nessuna query N+1 nell'elenco
+      - [x] I testi vivono in `lang/`
 
       ## Test Data
-      - [ ] Nessuna nuova entita: `UserFactory` e `DatabaseSeeder` da TASK-03 restano validi
-      - [ ] Verificare che il seeder produca sia amministratori sia membri, cosi che le schermate di
+      - [x] Nessuna nuova entita: `UserFactory` e `DatabaseSeeder` da TASK-03 restano validi
+      - [x] Verificare che il seeder produca sia amministratori sia membri, cosi che le schermate di
             gestione siano valutabili su dati reali
 
       ## Git Deliverables
       - Commit: `feat(US-001): TASK-08 gestione dei membri del team con Policy`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: ac64c0b8097fb30e8b709e41183683e9e24d807b
+      short_sha: ac64c0b
+      subject: 'feat(US-001): TASK-08 gestione dei membri del team con Policy'
+      committed_at: '2026-08-12T12:47:15+02:00'
+      url: null
   -
     id: TASK-09
     title: 'Test: autorizzazione e gestione dei membri'
@@ -729,4 +735,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:43:25+00:00'
+updated_at: '2026-08-12T10:47:15+00:00'
