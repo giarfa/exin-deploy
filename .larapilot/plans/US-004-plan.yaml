@@ -303,24 +303,30 @@ tasks:
          `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] `ReleaseStatus` con due soli casi ed etichette italiane
-      - [ ] Tabella `releases` con unicita `(project_id, label)` e indice su `status` creati nella stessa migrazione
-      - [ ] Modello con cast dichiarati anche in PHPDoc e relazioni verso progetto, template e autore
-      - [ ] `ReleaseFactory` produce etichette plausibili e uno stato `completed()`
-      - [ ] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+      - [x] `ReleaseStatus` con due soli casi ed etichette italiane
+      - [x] Tabella `releases` con unicita `(project_id, label)` e indice su `status` creati nella stessa migrazione
+      - [x] Modello con cast dichiarati anche in PHPDoc e relazioni verso progetto, template e autore
+      - [x] `ReleaseFactory` produce etichette plausibili e uno stato `completed()`
+      - [x] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
 
       ## Test Data
-      - [ ] `database/factories/ReleaseFactory.php` creata nello stesso task della migrazione
-      - [ ] Seeder non toccato: lo scenario di esecuzione e perimetro dichiarato di US-011
+      - [x] `database/factories/ReleaseFactory.php` creata nello stesso task della migrazione
+      - [x] Seeder non toccato: lo scenario di esecuzione e perimetro dichiarato di US-011
 
       ## Git Deliverables
       - Commit: `feat(US-004): TASK-01 modello della release e stato del rilascio`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: dcb065aa99e3015404d3f87af237b59148ff9b2a
+      short_sha: dcb065a
+      subject: 'feat(US-004): TASK-01 modello della release e stato del rilascio'
+      committed_at: '2026-08-13T00:16:29+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Snapshot della catena: ReleaseStep e ReleaseStepField'
@@ -824,4 +830,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:13:36+00:00'
+updated_at: '2026-08-12T22:16:29+00:00'

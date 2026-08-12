@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Rilascio avviato su un progetto: il contenitore dello snapshot congelato del
@@ -78,6 +79,19 @@ class Release extends Model
     public function workflowTemplate(): BelongsTo
     {
         return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    /**
+     * Catena congelata degli step, sempre in ordine di esecuzione.
+     *
+     * E l'**unica** fonte di verita dell'esecuzione: nessun percorso deve risalire
+     * a `workflowTemplate->stepDefinitions` per sapere come procede questa release.
+     *
+     * @return HasMany<ReleaseStep, $this>
+     */
+    public function steps(): HasMany
+    {
+        return $this->hasMany(ReleaseStep::class)->orderBy('position');
     }
 
     /**

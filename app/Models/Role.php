@@ -33,8 +33,7 @@ class Role extends Model
     /**
      * Relazioni che rendono un ruolo non cancellabile.
      *
-     * Punto di estensione unico della regola: US-004 aggiungera `releaseSteps`
-     * (step di release gia avviate). Chi introduce una nuova tabella che
+     * Punto di estensione unico della regola. Chi introduce una nuova tabella che
      * referenzia i ruoli aggiunge il nome della relazione qui, e la regola vale
      * ovunque senza altre modifiche.
      *
@@ -44,7 +43,7 @@ class Role extends Model
      *
      * @var list<string>
      */
-    private const REFERENCING_RELATIONS = ['projectAssignments', 'defaultAssignment', 'stepDefinitions'];
+    private const REFERENCING_RELATIONS = ['projectAssignments', 'defaultAssignment', 'stepDefinitions', 'releaseSteps'];
 
     /**
      * Get the attributes that should be cast.
@@ -86,6 +85,21 @@ class Role extends Model
     public function stepDefinitions(): HasMany
     {
         return $this->hasMany(StepDefinition::class);
+    }
+
+    /**
+     * Step di release gia avviate che hanno congelato questo ruolo.
+     *
+     * E il riferimento piu forte di tutti: cancellare il ruolo renderebbe
+     * illeggibile lo storico dei rilasci gia eseguiti. Lo step conserva comunque
+     * il nome del ruolo in `role_name`, ma la riga non si cancella lo stesso —
+     * `restrict` sullo schema e l'ultima difesa.
+     *
+     * @return HasMany<ReleaseStep, $this>
+     */
+    public function releaseSteps(): HasMany
+    {
+        return $this->hasMany(ReleaseStep::class);
     }
 
     /**
@@ -148,6 +162,12 @@ class Role extends Model
         if ($counts['stepDefinitions'] > 0) {
             $parts[] = trans_choice('roles.used_templates', $counts['stepDefinitions'], [
                 'count' => $counts['stepDefinitions'],
+            ]);
+        }
+
+        if ($counts['releaseSteps'] > 0) {
+            $parts[] = trans_choice('roles.used_releases', $counts['releaseSteps'], [
+                'count' => $counts['releaseSteps'],
             ]);
         }
 

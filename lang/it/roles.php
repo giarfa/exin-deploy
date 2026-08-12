@@ -29,6 +29,7 @@ return [
     'unused' => 'Non ancora usato',
     'used_projects' => ':count progetto|:count progetti',
     'used_templates' => ':count step di template|:count step di template',
+    'used_releases' => ':count step di release|:count step di release',
     'used_default' => 'mappatura predefinita',
 
     'confirm_deactivate' => 'Disattivare :name? Non sara piu proponibile nelle nuove assegnazioni, ma resta leggibile dove e gia stato usato.',
