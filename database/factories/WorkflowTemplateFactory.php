@@ -63,6 +63,14 @@ class WorkflowTemplateFactory extends Factory
     }
 
     /**
+     * Template gia utilizzabile, con una sequenza di step in ordine.
+     */
+    public function withSteps(int $count = 3): static
+    {
+        return $this->has(StepDefinitionFactory::new()->count($count), 'stepDefinitions');
+    }
+
+    /**
      * Template predefinito, proposto alla creazione di un nuovo progetto.
      *
      * Lo stato scrive il flag direttamente: e una scorciatoia per predisporre

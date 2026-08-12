@@ -275,15 +275,15 @@ tasks:
       7. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `FieldType` ha esattamente quattro casi, chiavi TitleCase ed `label()` in italiano
-      - [ ] Migrazione con nome univoco e flag indicizzati, reversibile
-      - [ ] `WorkflowTemplateFactory` produce nomi non collidenti e ha gli stati `inactive()` e `isDefault()`
-      - [ ] `migrate:fresh --seed` chiude senza errori e la suite resta verde
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `FieldType` ha esattamente quattro casi, chiavi TitleCase ed `label()` in italiano
+      - [x] Migrazione con nome univoco e flag indicizzati, reversibile
+      - [x] `WorkflowTemplateFactory` produce nomi non collidenti e ha gli stati `inactive()` e `isDefault()`
+      - [x] `migrate:fresh --seed` chiude senza errori e la suite resta verde
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] `database/factories/WorkflowTemplateFactory.php` creata, con stati `inactive()` e `isDefault()`
-      - [ ] Seeder non ancora toccato: il dataset dimostrativo del template arriva in TASK-14, quando esistono step
+      - [x] `database/factories/WorkflowTemplateFactory.php` creata, con stati `inactive()` e `isDefault()`
+      - [x] Seeder non ancora toccato: il dataset dimostrativo del template arriva in TASK-14, quando esistono step
             e campi da comporre in uno scenario coerente
 
       ## Git Deliverables
@@ -291,9 +291,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: 23aa4ea390f6e7f86ce1f52035fe07f0fd207cb3
+      short_sha: 23aa4ea
+      subject: 'feat(US-003): TASK-01 enum del tipo di campo e modello del template'
+      committed_at: '2026-08-12T18:03:59+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Concern OrderedByPosition e modello StepDefinition con migrazione e factory'
@@ -1148,4 +1154,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:02:37+00:00'
+updated_at: '2026-08-12T16:03:59+00:00'
