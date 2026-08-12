@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Project;
+use App\Models\WorkflowTemplate;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -49,6 +50,22 @@ class ProjectFactory extends Factory
             'description' => 'Rilasci del progetto '.$name.$suffix.'.',
             'is_active' => true,
         ];
+    }
+
+    /**
+     * Progetto con un processo di rilascio associato.
+     *
+     * Non e lo stato predefinito: senza questa scelta esplicita i progetti nascono
+     * senza template, cosi che i test scritti prima di US-003 continuino a
+     * descrivere lo stesso scenario.
+     */
+    public function withTemplate(?WorkflowTemplate $template = null): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'workflow_template_id' => $template instanceof WorkflowTemplate
+                ? $template->id
+                : WorkflowTemplateFactory::new()->withSteps(),
+        ]);
     }
 
     /**

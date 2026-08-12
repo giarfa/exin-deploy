@@ -59,6 +59,19 @@ class WorkflowTemplate extends Model
     }
 
     /**
+     * Progetti che hanno adottato questo processo.
+     *
+     * Serve a dire in elenco quanti progetti verrebbero toccati da una
+     * disattivazione: e l'informazione che rende consapevole quella scelta.
+     *
+     * @return HasMany<Project, $this>
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class);
+    }
+
+    /**
      * Indica se il template puo essere usato per avviare una release: attivo e
      * con almeno uno step.
      *
