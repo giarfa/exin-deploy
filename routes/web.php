@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -22,4 +23,13 @@ Route::middleware('auth')->group(function (): void {
     Route::view('/impostazioni/sicurezza', 'settings.two-factor')
         ->middleware('password.confirm')
         ->name('settings.two-factor');
+
+    /*
+     * Gestione dei membri. L'autorizzazione e applicata due volte, e non e
+     * ridondanza: il middleware blocca la rotta, le Gate dentro il componente
+     * blocca le singole azioni Livewire, che non ripassano da qui.
+     */
+    Route::livewire('/membri', 'members.index')
+        ->can('viewAny', User::class)
+        ->name('members.index');
 });

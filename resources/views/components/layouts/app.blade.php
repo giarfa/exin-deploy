@@ -43,11 +43,17 @@
                 <x-nav.planned icon="folder">{{ __('app.nav_projects') }}</x-nav.planned>
             </flux:navlist.group>
 
-            <flux:navlist.group :heading="__('app.nav_configuration')">
-                <x-nav.planned icon="queue-list">{{ __('app.nav_templates') }}</x-nav.planned>
-                <x-nav.planned icon="identification">{{ __('app.nav_roles') }}</x-nav.planned>
-                <x-nav.planned icon="users">{{ __('app.nav_members') }}</x-nav.planned>
-            </flux:navlist.group>
+            @can('viewAny', App\Models\User::class)
+                <flux:navlist.group :heading="__('app.nav_configuration')">
+                    <x-nav.planned icon="queue-list">{{ __('app.nav_templates') }}</x-nav.planned>
+                    <x-nav.planned icon="identification">{{ __('app.nav_roles') }}</x-nav.planned>
+
+                    <flux:navlist.item icon="users" :href="route('members.index')"
+                                       :current="request()->routeIs('members.*')">
+                        {{ __('app.nav_members') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+            @endcan
         </flux:navlist>
 
         <flux:spacer />

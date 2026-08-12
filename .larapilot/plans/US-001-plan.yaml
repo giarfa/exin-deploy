@@ -503,7 +503,7 @@ tasks:
     id: TASK-07
     title: 'Shell applicativa Starter Kit e esclusione dagli indici'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-06
     body: |
@@ -550,18 +550,18 @@ tasks:
       12. `npm run build`; `vendor/bin/pint --dirty --format agent`
 
       ## Completion Criteria
-      - [ ] Layout con sidebar conforme al design system Starter Kit, senza componenti Flux Pro
-      - [ ] Sidebar permanente da 1024 px, drawer sotto, con una sola soglia in tutta l'applicazione
-      - [ ] Drawer accessibile: `aria-expanded`, `aria-controls`, focus intrappolato, `Esc` chiude, focus
+      - [x] Layout con sidebar conforme al design system Starter Kit, senza componenti Flux Pro
+      - [x] Sidebar permanente da 1024 px, drawer sotto, con una sola soglia in tutta l'applicazione
+      - [x] Drawer accessibile: `aria-expanded`, `aria-controls`, focus intrappolato, `Esc` chiude, focus
             restituito al trigger
-      - [ ] Skip link presente e raggiungibile con Tab come primo elemento
-      - [ ] Landmark semantici corretti e un solo `h1` per pagina
-      - [ ] Tema chiaro e scuro entrambi funzionanti, con preferenza persistita e contrasto verificato
-      - [ ] Target touch di almeno 44x44 px sotto 1024 px
-      - [ ] `favicon.svg` e `logo.svg` in `public/` e collegati nel layout
-      - [ ] `robots.txt` con `Disallow: /` e meta `noindex, nofollow` nel layout
-      - [ ] Nessuno scroll orizzontale a 320, 375, 768, 1024, 1280 px
-      - [ ] Verifica manuale eseguita e annotata (vedi Test Strategy del piano): il bar `NORMAL` non
+      - [x] Skip link presente e raggiungibile con Tab come primo elemento
+      - [x] Landmark semantici corretti e un solo `h1` per pagina
+      - [x] Tema chiaro e scuro entrambi funzionanti, con preferenza persistita e contrasto verificato
+      - [x] Target touch di almeno 44x44 px sotto 1024 px
+      - [x] `favicon.svg` e `logo.svg` in `public/` e collegati nel layout
+      - [x] `robots.txt` con `Disallow: /` e meta `noindex, nofollow` nel layout
+      - [x] Nessuno scroll orizzontale a 320, 375, 768, 1024, 1280 px
+      - [x] Verifica manuale eseguita e annotata (vedi Test Strategy del piano): il bar `NORMAL` non
             prevede test browser automatici
 
       ## Test Data
@@ -571,6 +571,12 @@ tasks:
       - Commit: `feat(US-001): TASK-07 shell applicativa e esclusione dagli indici`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: a84717c59027a2595f50824b7d30c459d7f318fa
+      short_sha: a84717c
+      subject: 'feat(US-001): TASK-07 shell applicativa e esclusione dagli indici'
+      committed_at: '2026-08-12T12:43:24+02:00'
+      url: null
   -
     id: TASK-08
     title: 'Gestione dei membri del team con autorizzazione lato server'
@@ -723,4 +729,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:39:33+00:00'
+updated_at: '2026-08-12T10:43:25+00:00'
