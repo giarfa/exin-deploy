@@ -656,19 +656,25 @@ tasks:
       5. `php artisan test --compact --filter=Release`
 
       ## Completion Criteria
-      - [ ] Un test fallisce se l'esecuzione tocca una tabella di definizione
-      - [ ] La release resta leggibile dopo la cancellazione degli step di definizione
-      - [ ] Query di avvio e di lettura costanti rispetto alla lunghezza della catena
-      - [ ] Suite verde
+      - [x] Un test fallisce se l'esecuzione tocca una tabella di definizione
+      - [x] La release resta leggibile dopo la cancellazione degli step di definizione
+      - [x] Query di avvio e di lettura costanti rispetto alla lunghezza della catena
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-004): TASK-07 copre isolamento dalle definizioni e costo delle query`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-06
+    commit:
+      sha: c365a68336257c646fea54c1a2ba9b8e44a436b1
+      short_sha: c365a68
+      subject: 'test(US-004): TASK-07 copre isolamento dalle definizioni e costo delle query'
+      committed_at: '2026-08-13T00:29:10+02:00'
+      url: null
   -
     id: TASK-08
     title: 'Policy delle release, rotta di avvio e autorizzazione'
@@ -860,4 +866,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:27:02+00:00'
+updated_at: '2026-08-12T22:29:11+00:00'

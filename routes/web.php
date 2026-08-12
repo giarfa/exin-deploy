@@ -2,6 +2,7 @@
 
 use App\Models\DefaultRoleAssignment;
 use App\Models\Project;
+use App\Models\Release;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -88,6 +89,16 @@ Route::middleware('auth')->group(function (): void {
         ->can('manageSteps', 'template')
         ->scopeBindings()
         ->name('templates.fields');
+
+    /*
+     * Avvio di una release. L'autorizzazione decide sul **progetto** perche al
+     * momento del controllo la release non esiste ancora; il doppio livello vale
+     * come altrove — il middleware blocca la rotta, la Gate dentro il componente
+     * blocca l'azione Livewire, che non ripassa da qui.
+     */
+    Route::livewire('/progetti/{project}/rilascio', 'releases.start')
+        ->can('create', [Release::class, 'project'])
+        ->name('releases.start');
 
     Route::livewire('/responsabili-predefiniti', 'default-assignments.index')
         ->can('viewAny', DefaultRoleAssignment::class)
