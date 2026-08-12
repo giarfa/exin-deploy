@@ -108,7 +108,7 @@ specs:
       title: 'Configurazione del processo'
     priority: HIGH
     points: 13
-    status: TODO
+    status: PLANNED
     body: |
       #### US-003: Template di workflow con step ordinati e campi richiesti
 
@@ -140,6 +140,9 @@ specs:
       - [ ] Il sistema segnala i ruoli previsti dal template e non ancora assegnati sul progetto associato
       - [ ] Un `member` non accede alla configurazione dei template (Policy lato server)
       - [ ] Factory e seeder producono il template "Rilascio standard" con cinque step realistici e i relativi campi
+    status_history:
+      - { status: PLANNED, at: '2026-08-12T15:55:01+00:00' }
+    rework: false
   -
     code: US-004
     title: 'Avvio di una release con snapshot congelato del workflow'
