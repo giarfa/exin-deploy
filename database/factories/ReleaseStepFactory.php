@@ -136,7 +136,13 @@ class ReleaseStepFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => ReleaseStepStatus::Completed,
-            'completed_by' => $attributes['assigned_user_id'] ?? User::factory(),
+            /*
+             * Closure e non `$attributes['assigned_user_id']` diretto: allo stato
+             * gli attributi arrivano **non espansi**, quindi li quel valore e
+             * ancora l'oggetto factory e produrrebbe una seconda persona diversa
+             * dal responsabile. Chi chiude uno step e il suo responsabile.
+             */
+            'completed_by' => fn (array $attributes): string => (string) $attributes['assigned_user_id'],
             'completed_at' => now(),
         ]);
     }

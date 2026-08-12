@@ -22,7 +22,6 @@ return [
     // prima renderebbe anche per `n == 0` — cioe "1 step" su un template vuoto.
     'precondition_steps' => '{0} nessuno step|{1} :count step da congelare|[2,*] :count step da congelare',
     'precondition_roles_ok' => 'Tutti i ruoli previsti hanno un responsabile',
-    'ready' => 'Il progetto e pronto: puoi avviare la release.',
 
     'blocked_heading' => 'Non puoi ancora avviare una release',
     'blocked_without_template' => 'Il progetto non ha un processo di rilascio associato. Associane uno dalla pagina dei progetti.',
@@ -41,9 +40,11 @@ return [
     'responsible' => 'Responsabile',
     'start_another' => 'Avvia un\'altra release',
 
-    'status_blocked' => 'Bloccato',
-    'status_active' => 'Attivo',
-    'status_completed' => 'Completato',
+    /*
+     * Gli stati della catena non hanno chiavi qui: le etichette vivono su
+     * `App\Enums\ReleaseStepStatus::label()`, dove sta anche il vocabolario.
+     * Duplicarle darebbe due fonti per la stessa parola, destinate a divergere.
+     */
 
     'duplicate_label' => 'Esiste gia una release con etichetta :label su questo progetto.',
 ];

@@ -313,6 +313,14 @@ riga, con icona e parola.
     `update()` e `delete()` sollevano `ReleaseEventIsAppendOnly` dal modello, e lo schema
     non offre nemmeno la colonna che dichiarerebbe possibile la modifica. Un registro
     correggibile a posteriori non e una prova.
+    **Portata esatta**: la garanzia vale per ogni scrittura che passa da un modello, non
+    per le scritture di massa del query builder (`ReleaseEvent::query()->update()`,
+    `DB::table('release_events')->delete()`), che per costruzione non attraversano gli
+    eventi Eloquent, ne per la cascata quando sparisce la release a cui l'evento si
+    riferisce. Chiudere anche quelle richiederebbe un trigger di database, incompatibile
+    con il vincolo 1. La difesa contro la cancellazione e altrove: `ReleasePolicy::delete()`
+    la nega a chiunque, amministratori inclusi, e nessun percorso applicativo cancella
+    eventi. Chi introdurra il primo deve passare da quell'eccezione, non aggirarla.
 11. **`releases.completed_by` e `completed_at` nascono vuote.** Sono create da US-004 e
     riempite da US-006, quando la chiusura dell'ultimo step conclude la release:
     aggiungerle dopo sarebbe una seconda migrazione sulla stessa tabella per una semantica

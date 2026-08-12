@@ -56,19 +56,26 @@ class StartRelease
     {
         return DB::transaction(function () use ($project, $label, $actor): Release {
             /*
+             * Il progetto viene **riletto**, non solo ricaricato nelle relazioni.
+             *
+             * Rileggere le sole relazioni lascerebbe in memoria gli attributi che
+             * il chiamante teneva da prima — `is_active` e soprattutto
+             * `workflow_template_id`, da cui l'eager loading risale al processo.
+             * Un componente che avesse letto il progetto prima di una sostituzione
+             * del template ne congelerebbe uno che non e piu il suo, e lo
+             * scriverebbe pure in `releases.workflow_template_id`.
+             *
              * Un solo caricamento, con tutto cio che serve: da qui in poi nessuna
              * query per step o per campo, qualunque sia la lunghezza della catena.
-             *
-             * `load` e non `loadMissing`: il progetto puo arrivare da un componente
-             * che lo teneva in memoria, e uno snapshot costruito su relazioni
-             * obsolete congelerebbe un processo che non esiste piu. Il costo e lo
-             * stesso, il rischio no.
              */
-            $project->load([
-                'workflowTemplate.stepDefinitions.role',
-                'workflowTemplate.stepDefinitions.fieldDefinitions',
-                'assignments.user',
-            ]);
+            $project = Project::query()
+                ->whereKey($project->getKey())
+                ->with([
+                    'workflowTemplate.stepDefinitions.role',
+                    'workflowTemplate.stepDefinitions.fieldDefinitions',
+                    'assignments.user',
+                ])
+                ->firstOrFail();
 
             $template = $this->usableTemplate($project);
             $responsibles = $this->responsibles($project, $template);

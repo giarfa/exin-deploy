@@ -14,6 +14,7 @@ use App\Models\WorkflowTemplate;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -124,16 +125,28 @@ class SnapshotIsolationTest extends TestCase
         $this->assertNotSame($original, Role::query()->whereKey($step->role_id)->value('name'));
     }
 
-    public function test_reading_a_release_never_touches_a_definition_table(): void
+    public function test_the_screen_that_reads_a_release_never_touches_a_definition_table(): void
     {
-        // E la regola numero uno di `.ai/rules/app.md`, e non si dimostra
-        // guardando il codice: senza questo test la prima lettura comoda di
-        // `stepDefinitions` dentro l'esecuzione la aggira senza che nessuno se ne
-        // accorga.
+        /*
+         * E la regola numero uno di `.ai/rules/app.md`, e non si dimostra
+         * guardando il codice.
+         *
+         * Il test osserva la **schermata**, non una query scritta qui dentro: una
+         * lettura costruita dal test dimostrerebbe soltanto che il test non tocca
+         * le definizioni, e resterebbe verde anche se domani il pannello di
+         * conferma leggesse `stepDefinitions`. Cosi invece quel cambiamento la fa
+         * fallire, che e il punto.
+         */
         $project = $this->projectReadyToRelease();
+        $this->actingAs(User::factory()->admin()->create());
 
-        $release = app(StartRelease::class)->handle($project, 'v2.4.0', User::factory()->admin()->create());
+        $component = Livewire::test('releases.start', ['project' => $project])
+            ->set('label', 'v2.4.0')
+            ->call('start')
+            ->assertHasNoErrors();
 
+        // L'ascolto comincia **dopo** l'avvio: durante l'avvio le tabelle di
+        // definizione vengono lette per forza, ed e proprio quella la copia.
         $touched = [];
         $observed = 0;
 
@@ -147,34 +160,41 @@ class SnapshotIsolationTest extends TestCase
             }
         });
 
-        $steps = Release::query()
-            ->whereKey($release->id)
-            ->with(['steps.fields', 'steps.assignedUser'])
-            ->firstOrFail()
-            ->steps;
+        // Un nuovo ciclo di richiesta: le proprieta calcolate vengono rivalutate,
+        // quindi la catena congelata viene riletta davvero.
+        $component->call('$refresh')->assertSee(__('releases.chain_heading'));
 
-        // Ogni attributo letto e raccolto: e la lettura a poter far scattare un
-        // caricamento pigro, e quindi una query che il test deve poter vedere.
-        $read = $steps
-            ->map(fn ($step): string => implode(' / ', [
-                $step->name,
-                $step->role_name,
-                $step->assignedUser->name,
-                $step->fields->pluck('label')->implode(', '),
-            ]))
-            ->all();
-
-        $this->assertCount($steps->count(), $read);
-
-        // Senza questa riga il test passerebbe anche se l'osservatore non vedesse
-        // nulla, cioe dimostrando zero.
         $this->assertGreaterThan(0, $observed, 'Nessuna query osservata: il test non sta misurando niente.');
 
         $this->assertSame(
             [],
             array_values(array_unique($touched)),
-            'La lettura di una release ha interrogato una tabella di definizione: lo snapshot non e piu la sola fonte di verita.'
+            'La schermata di una release ha interrogato una tabella di definizione: lo snapshot non e piu la sola fonte di verita.'
         );
+    }
+
+    public function test_the_frozen_chain_is_readable_without_any_definition_table(): void
+    {
+        // Seconda prova dello stesso criterio, per la strada opposta: se il
+        // percorso di lettura dipendesse dalle definizioni, cancellarle lo
+        // romperebbe. Qui la schermata continua a mostrare la catena intera.
+        $project = $this->projectReadyToRelease();
+        $this->actingAs(User::factory()->admin()->create());
+
+        $component = Livewire::test('releases.start', ['project' => $project])
+            ->set('label', 'v2.4.0')
+            ->call('start');
+
+        $release = Release::query()->where('project_id', $project->id)->firstOrFail();
+        $names = $release->steps()->pluck('name');
+
+        StepDefinition::where('workflow_template_id', $project->workflow_template_id)->delete();
+
+        $component->call('$refresh');
+
+        foreach ($names as $name) {
+            $component->assertSee($name);
+        }
     }
 
     /**

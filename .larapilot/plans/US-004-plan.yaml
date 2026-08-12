@@ -867,11 +867,11 @@ tasks:
       7. Pint (nessun PHP toccato, ma il gate resta), `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] README descrive le tabelle di istanza e la regola dello snapshot con esempi concreti
-      - [ ] Le scelte permanenti di questa spec sono annotate fra i vincoli
-      - [ ] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
-      - [ ] I comandi documentati sono stati eseguiti come scritti
-      - [ ] Suite verde
+      - [x] README descrive le tabelle di istanza e la regola dello snapshot con esempi concreti
+      - [x] Le scelte permanenti di questa spec sono annotate fra i vincoli
+      - [x] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
+      - [x] I comandi documentati sono stati eseguiti come scritti
+      - [x] Suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -881,7 +881,13 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione finale della PR interna verso `develop`, tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:36:00+00:00'
+    commit:
+      sha: b30f5fb0e0e702dbcd39ded884daf32ffc96145e
+      short_sha: b30f5fb
+      subject: 'docs(US-004): TASK-11 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-13T00:38:05+02:00'
+      url: null
+updated_at: '2026-08-12T22:38:05+00:00'

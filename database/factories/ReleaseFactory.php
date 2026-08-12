@@ -100,7 +100,14 @@ class ReleaseFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => ReleaseStatus::Completed,
-            'completed_by' => $attributes['started_by'] ?? User::factory()->admin(),
+            /*
+             * Closure e non `$attributes['started_by']` diretto: allo stato gli
+             * attributi arrivano **non espansi**, quindi li quel valore e ancora
+             * l'oggetto factory e produrrebbe una seconda persona diversa. La
+             * closure viene valutata dopo l'espansione, quando la chiave contiene
+             * gia l'identificativo di chi ha avviato.
+             */
+            'completed_by' => fn (array $attributes): string => (string) $attributes['started_by'],
             'completed_at' => now(),
         ]);
     }

@@ -69,7 +69,8 @@ class ReleaseStepTest extends TestCase
         $completed = ReleaseStep::factory()->completed()->create()->fresh();
 
         $this->assertSame(ReleaseStepStatus::Completed, $completed->status);
-        $this->assertNotNull($completed->completed_by);
+        // Chi chiude uno step e il suo responsabile, non una terza persona.
+        $this->assertSame($completed->assigned_user_id, $completed->completed_by);
         $this->assertNotNull($completed->completed_at);
     }
 

@@ -47,6 +47,24 @@ class ReleasePolicyTest extends TestCase
         $this->assertSame(0, Release::count());
     }
 
+    public function test_a_member_cannot_invoke_the_other_livewire_actions_either(): void
+    {
+        $project = $this->projectReadyToRelease();
+
+        $this->actingAs(User::factory()->admin()->create());
+
+        $component = Livewire::test('releases.start', ['project' => $project])
+            ->set('label', 'v2.4.0')
+            ->call('start');
+
+        // Chi perde l'autorizzazione mentre la pagina e aperta non deve poter
+        // rileggere lo stato del progetto: le azioni Livewire non ripassano dal
+        // middleware della rotta, quindi ognuna ha il proprio controllo.
+        $this->actingAs(User::factory()->member()->create());
+
+        $component->call('startAnother')->assertForbidden();
+    }
+
     public function test_an_administrator_can_open_the_start_page(): void
     {
         $project = $this->projectReadyToRelease();

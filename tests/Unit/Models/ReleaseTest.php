@@ -44,7 +44,10 @@ class ReleaseTest extends TestCase
         $release = Release::factory()->completed()->create()->fresh();
 
         $this->assertSame(ReleaseStatus::Completed, $release->status);
-        $this->assertNotNull($release->completedBy);
+        // Chi conclude e chi ha avviato, non una terza persona comparsa dal nulla:
+        // uno scostamento qui produrrebbe dati di prova che raccontano il falso a
+        // chi implementera la conclusione (US-006).
+        $this->assertSame($release->started_by, $release->completed_by);
         $this->assertInstanceOf(Carbon::class, $release->completed_at);
     }
 

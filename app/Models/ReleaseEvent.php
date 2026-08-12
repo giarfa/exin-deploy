@@ -19,6 +19,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Il rifiuto e applicato dal modello (`booted()`) e dichiarato dallo schema, che
  * non ha nemmeno la colonna `updated_at`.
  *
+ * La portata esatta della garanzia — cosa e chiuso e cosa resta aperto, e perche —
+ * e scritta su `App\Exceptions\ReleaseEventIsAppendOnly`. In breve: vale per ogni
+ * scrittura che passa da un modello, non per le scritture di massa del query
+ * builder, che non attraversano gli eventi Eloquent.
+ *
  * Questa spec vi scrive un solo tipo di evento — l'avvio della release. Il
  * vocabolario completo vive in `App\Enums\ReleaseEventAction`; la consultazione
  * del registro appartiene a US-010.
@@ -39,7 +44,7 @@ class ReleaseEvent extends Model
     public const UPDATED_AT = null;
 
     /**
-     * Rifiuta modifica e cancellazione, qualunque sia il percorso.
+     * Rifiuta modifica e cancellazione su ogni percorso che passa da un modello.
      */
     protected static function booted(): void
     {

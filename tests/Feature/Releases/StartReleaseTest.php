@@ -329,16 +329,21 @@ class StartReleaseTest extends TestCase
      */
     private function assertRefusedWithoutWriting(string $exception, callable $start, ?string $mentions = null): void
     {
+        $thrown = null;
+
         try {
             $start();
+        } catch (Throwable $caught) {
+            // Il `fail()` non puo stare dentro il `try`: solleva a sua volta, e il
+            // `catch` lo inghiottirebbe riportando un errore che non e quello vero.
+            $thrown = $caught;
+        }
 
-            $this->fail("Atteso [{$exception}], nessuna eccezione sollevata.");
-        } catch (Throwable $thrown) {
-            $this->assertInstanceOf($exception, $thrown);
+        $this->assertNotNull($thrown, "Atteso [{$exception}], nessuna eccezione sollevata.");
+        $this->assertInstanceOf($exception, $thrown);
 
-            if ($mentions !== null) {
-                $this->assertStringContainsString($mentions, $thrown->getMessage());
-            }
+        if ($mentions !== null) {
+            $this->assertStringContainsString($mentions, $thrown->getMessage());
         }
 
         $this->assertSame(0, Release::count());

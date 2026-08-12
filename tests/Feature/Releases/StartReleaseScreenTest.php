@@ -171,6 +171,31 @@ class StartReleaseScreenTest extends TestCase
         $this->assertSame(0, Release::count());
     }
 
+    public function test_a_refusal_arriving_after_the_summary_names_the_role_that_blocked_it(): void
+    {
+        $project = $this->projectReadyToRelease();
+
+        $orphan = Role::query()->whereKey(
+            $project->workflowTemplate->stepDefinitions->first()->role_id
+        )->first();
+
+        $component = Livewire::test('releases.start', ['project' => $project]);
+
+        // Il responsabile sparisce **dopo** che la schermata ha letto le
+        // precondizioni: e la finestra fra controllo e scrittura. Il messaggio
+        // nasce dall'eccezione, che porta con se il ruolo scoperto, e non da un
+        // ricalcolo dello stato corrente — cosi dice cosa ha bloccato quel
+        // tentativo anche se nel frattempo la causa fosse stata risolta.
+        $project->assignments->firstWhere('role_id', $orphan->id)->delete();
+
+        $component->set('label', 'v2.4.0')
+            ->call('start')
+            ->assertHasNoErrors()
+            ->assertSee($orphan->name);
+
+        $this->assertSame(0, Release::count());
+    }
+
     public function test_the_start_command_appears_on_the_project_list_for_administrators(): void
     {
         $ready = $this->projectReadyToRelease();
@@ -214,6 +239,29 @@ class StartReleaseScreenTest extends TestCase
         );
     }
 
+    public function test_the_confirmation_panel_does_not_query_per_step(): void
+    {
+        // Il pannello mostra responsabile e stato di ogni step: senza eager
+        // loading il costo crescerebbe con la lunghezza della catena, ed e il
+        // rischio strutturale che il PRD indica per le catene annidate.
+        $short = Livewire::test('releases.start', ['project' => $this->projectReadyToRelease(steps: 2)])
+            ->set('label', 'v2.4.0')
+            ->call('start');
+
+        $long = Livewire::test('releases.start', ['project' => $this->projectReadyToRelease(steps: 6)])
+            ->set('label', 'v2.4.0')
+            ->call('start');
+
+        $shortCost = $this->queriesWhile(fn () => $short->call('$refresh'));
+        $longCost = $this->queriesWhile(fn () => $long->call('$refresh'));
+
+        $this->assertSame(
+            $shortCost,
+            $longCost,
+            "Il pannello e costato {$shortCost} query su due step e {$longCost} su sei: manca un eager loading."
+        );
+    }
+
     /**
      * Numero di query eseguite durante la chiamata.
      */
@@ -234,10 +282,10 @@ class StartReleaseScreenTest extends TestCase
      * Progetto pronto a rilasciare: processo utilizzabile con tre step e un
      * responsabile per ogni ruolo previsto.
      */
-    private function projectReadyToRelease(): Project
+    private function projectReadyToRelease(int $steps = 3): Project
     {
         $template = WorkflowTemplate::factory()->create();
-        $roles = Role::factory()->count(3)->create();
+        $roles = Role::factory()->count($steps)->create();
 
         foreach ($roles as $position => $role) {
             $step = StepDefinition::factory()->for($template)->create([

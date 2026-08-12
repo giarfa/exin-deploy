@@ -142,25 +142,37 @@ new class extends Component
 
         $validated = $this->validate();
 
+        /*
+         * Il riepilogo mostrato sopra legge lo stato di un istante prima: fra
+         * quella lettura e la scrittura il progetto puo essere stato disattivato,
+         * il template svuotato o un responsabile rimosso. L'Action decide sul dato
+         * fresco e rifiuta; senza queste catture il rifiuto diventerebbe un 500.
+         *
+         * Il messaggio viene ricavato dall'eccezione e non ricalcolato dallo stato
+         * corrente: ricalcolarlo direbbe cosa manca **adesso**, e se nel frattempo
+         * qualcun altro avesse sistemato la causa il messaggio finirebbe per
+         * indicare il problema sbagliato — o nessuno.
+         */
         try {
             $release = $startRelease->handle($this->project, $validated['label'], auth()->user());
-        } catch (
-            InactiveProjectCannotStartRelease
-            |ProjectWithoutUsableTemplate
-            |RolesWithoutResponsible
-            |InactiveResponsibleOnProject
-        ) {
-            /*
-             * Il riepilogo qui sopra legge lo stato di un istante prima: fra
-             * quella lettura e la scrittura il progetto puo essere stato
-             * disattivato, il template svuotato o un responsabile rimosso.
-             * L'Action decide sul dato fresco e rifiuta; senza questa cattura il
-             * rifiuto diventerebbe un 500.
-             */
-            $this->project->refresh();
-            unset($this->uncoveredRoles, $this->inactiveResponsibles, $this->blockingReason);
+        } catch (InactiveProjectCannotStartRelease) {
+            $this->refuse(__('releases.blocked_inactive_project'));
 
-            $this->operationError = $this->blockingReason ?? __('releases.blocked_without_template');
+            return;
+        } catch (ProjectWithoutUsableTemplate $refused) {
+            $this->refuse(__($refused->reasonKey));
+
+            return;
+        } catch (RolesWithoutResponsible $refused) {
+            $this->refuse(trans_choice('releases.blocked_uncovered_roles', count($refused->roleNames), [
+                'roles' => implode(', ', $refused->roleNames),
+            ]));
+
+            return;
+        } catch (InactiveResponsibleOnProject $refused) {
+            $this->refuse(trans_choice('releases.blocked_inactive_responsibles', count($refused->memberNames), [
+                'members' => implode(', ', $refused->memberNames),
+            ]));
 
             return;
         } catch (UniqueConstraintViolationException) {
@@ -180,17 +192,37 @@ new class extends Component
     }
 
     /**
-     * Torna al modulo di avvio dopo una release conclusa con successo.
+     * Registra il rifiuto e riallinea il riepilogo delle precondizioni.
+     */
+    private function refuse(string $message): void
+    {
+        $this->operationError = $message;
+
+        // Le precondizioni mostrate erano di un istante prima: dopo un rifiuto
+        // vanno rilette, altrimenti la schermata continuerebbe a dire che tutto
+        // e a posto sotto un messaggio che dice il contrario.
+        $this->project->refresh();
+        unset($this->uncoveredRoles, $this->inactiveResponsibles, $this->blockingReason);
+    }
+
+    /**
+     * Torna al modulo di avvio dopo una release avviata con successo.
      */
     public function startAnother(): void
     {
+        // Anche qui, e non solo su `start()`: le azioni Livewire non ripassano dal
+        // middleware della rotta, e questo metodo e invocabile dal client. Chi ha
+        // perso l'autorizzazione mentre la pagina era aperta non deve poter
+        // rileggere lo stato del progetto.
+        Gate::authorize('create', [Release::class, $this->project]);
+
         $this->startedId = null;
         $this->startedLabel = null;
         $this->operationError = null;
-        $this->project->refresh()->load([
-            'workflowTemplate.stepDefinitions.role',
-            'assignments.user',
-        ]);
+
+        // `refresh()` ricarica anche le relazioni gia caricate: un `load()` qui
+        // rifarebbe le stesse query una seconda volta.
+        $this->project->refresh();
 
         unset($this->uncoveredRoles, $this->inactiveResponsibles, $this->blockingReason, $this->startedChain);
     }
