@@ -835,14 +835,14 @@ tasks:
       9. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Creazione, modifica e disattivazione funzionanti, con nome univoco validato
-      - [ ] Impostazione del predefinito passa dalla Action e il precedente perde il flag
-      - [ ] Un template senza step e segnalato con messaggio esplicito
-      - [ ] Elenco a query costanti rispetto al numero di template
-      - [ ] Stato leggibile senza affidarsi al colore
-      - [ ] Nessun testo incastonato nella vista: tutto da `lang/it/templates.php`
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px senza scorrimento orizzontale
-      - [ ] Pint e Larastan verdi
+      - [x] Creazione, modifica e disattivazione funzionanti, con nome univoco validato
+      - [x] Impostazione del predefinito passa dalla Action e il precedente perde il flag
+      - [x] Un template senza step e segnalato con messaggio esplicito
+      - [x] Elenco a query costanti rispetto al numero di template
+      - [x] Stato leggibile senza affidarsi al colore
+      - [x] Nessun testo incastonato nella vista: tutto da `lang/it/templates.php`
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px senza scorrimento orizzontale
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -852,9 +852,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-09
+    commit:
+      sha: 334fe698b1b5885194747c732c456f3c98f43348
+      short_sha: 334fe69
+      subject: 'feat(US-003): TASK-10 schermata dei template di workflow'
+      committed_at: '2026-08-12T18:22:37+02:00'
+      url: null
   -
     id: TASK-11
     title: 'Schermata degli step di un template con riordino'
@@ -1202,4 +1208,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:21:07+00:00'
+updated_at: '2026-08-12T16:22:37+00:00'
