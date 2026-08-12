@@ -381,25 +381,31 @@ tasks:
       9. `php artisan migrate:fresh --seed`, Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Le due tabelle esistono con unicita di posizione e indici di lettura previsti dal PRD
-      - [ ] `role_name` congelato accanto a `role_id`, con il motivo nel PHPDoc
-      - [ ] I modelli non usano `OrderedByPosition` e ne spiegano il perche
-      - [ ] Un ruolo referenziato da uno step di release non e cancellabile, e l'elenco ruoli non introduce N+1
-      - [ ] Factory con gli stati previsti per step e per i quattro tipi di campo
-      - [ ] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+      - [x] Le due tabelle esistono con unicita di posizione e indici di lettura previsti dal PRD
+      - [x] `role_name` congelato accanto a `role_id`, con il motivo nel PHPDoc
+      - [x] I modelli non usano `OrderedByPosition` e ne spiegano il perche
+      - [x] Un ruolo referenziato da uno step di release non e cancellabile, e l'elenco ruoli non introduce N+1
+      - [x] Factory con gli stati previsti per step e per i quattro tipi di campo
+      - [x] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
 
       ## Test Data
-      - [ ] `ReleaseStepFactory` e `ReleaseStepFieldFactory` create nello stesso task delle migrazioni
-      - [ ] Seeder non toccato: composizione dello scenario di esecuzione in US-011
+      - [x] `ReleaseStepFactory` e `ReleaseStepFieldFactory` create nello stesso task delle migrazioni
+      - [x] Seeder non toccato: composizione dello scenario di esecuzione in US-011
 
       ## Git Deliverables
       - Commit: `feat(US-004): TASK-02 snapshot degli step e dei campi di una release`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: 37a7990eb4f34332e68321f294fdc96878bb889e
+      short_sha: 37a7990
+      subject: 'feat(US-004): TASK-02 snapshot degli step e dei campi di una release'
+      committed_at: '2026-08-13T00:19:25+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Registro delle transizioni in sola aggiunta'
@@ -830,4 +836,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:16:29+00:00'
+updated_at: '2026-08-12T22:19:26+00:00'
