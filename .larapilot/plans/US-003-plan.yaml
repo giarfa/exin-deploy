@@ -416,16 +416,16 @@ tasks:
       7. `php artisan migrate:fresh --seed`, `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `FieldDefinition` usa `OrderedByPosition` senza duplicare logica di ordinamento
-      - [ ] `type` castato a `FieldType` e `is_required` a booleano, entrambi annotati in PHPDoc
-      - [ ] Vincolo unico `(step_definition_id, position)` a livello di schema
-      - [ ] `Role::REFERENCING_RELATIONS` include `stepDefinitions` e `usageLabel()` nomina l'uso nei template
-      - [ ] `FieldDefinitionFactory` ha uno stato per ciascuno dei quattro tipi piu `optional()`
-      - [ ] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
+      - [x] `FieldDefinition` usa `OrderedByPosition` senza duplicare logica di ordinamento
+      - [x] `type` castato a `FieldType` e `is_required` a booleano, entrambi annotati in PHPDoc
+      - [x] Vincolo unico `(step_definition_id, position)` a livello di schema
+      - [x] `Role::REFERENCING_RELATIONS` include `stepDefinitions` e `usageLabel()` nomina l'uso nei template
+      - [x] `FieldDefinitionFactory` ha uno stato per ciascuno dei quattro tipi piu `optional()`
+      - [x] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
 
       ## Test Data
-      - [ ] `database/factories/FieldDefinitionFactory.php` creata con i quattro stati di tipo
-      - [ ] Nessuna factory esistente resta stantia: `RoleFactory` non cambia, ma la relazione aggiunta e coperta
+      - [x] `database/factories/FieldDefinitionFactory.php` creata con i quattro stati di tipo
+      - [x] Nessuna factory esistente resta stantia: `RoleFactory` non cambia, ma la relazione aggiunta e coperta
             dai test di TASK-04
 
       ## Git Deliverables
@@ -433,9 +433,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: c5b9c43147ab9d6fc8d1e378fe6ca9e48740284d
+      short_sha: c5b9c43
+      subject: 'feat(US-003): TASK-03 campi richiesti degli step e ruolo referenziato dai template'
+      committed_at: '2026-08-12T18:10:00+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: modelli, vincoli di schema, enum del tipo di campo e ruolo referenziato'
@@ -1160,4 +1166,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:08:07+00:00'
+updated_at: '2026-08-12T16:10:00+00:00'

@@ -5,6 +5,7 @@ namespace Tests\Unit\Models;
 use App\Models\DefaultRoleAssignment;
 use App\Models\ProjectRoleAssignment;
 use App\Models\Role;
+use App\Models\StepDefinition;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -66,6 +67,26 @@ class RoleTest extends TestCase
 
         $this->assertTrue($role->isReferenced());
         $this->assertSame(2, $role->referenceCounts()['projectAssignments']);
+    }
+
+    public function test_a_role_responsible_for_a_template_step_is_referenced(): void
+    {
+        $role = Role::factory()->create();
+        StepDefinition::factory()->count(2)->for($role)->create();
+
+        $this->assertTrue($role->isReferenced());
+        $this->assertSame(2, $role->referenceCounts()['stepDefinitions']);
+    }
+
+    public function test_the_usage_label_names_the_use_inside_templates(): void
+    {
+        $role = Role::factory()->create();
+        StepDefinition::factory()->for($role)->create();
+
+        $this->assertStringContainsString(
+            trans_choice('roles.used_templates', 1, ['count' => 1]),
+            $role->usageLabel()
+        );
     }
 
     public function test_a_free_role_can_be_deleted(): void
