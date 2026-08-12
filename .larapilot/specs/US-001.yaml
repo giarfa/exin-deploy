@@ -5,7 +5,7 @@ epic:
   title: 'Fondamenta e accesso'
 priority: CRITICAL
 points: 8
-status: 'IN PROGRESS'
+status: DONE
 body: |
   #### US-001: Accesso allo strumento e gestione dei membri del team
 
@@ -23,23 +23,33 @@ body: |
   disattiva i membri; un membro disattivato non entra più ma resta visibile nello storico dei rilasci.
 
   **Criteri di accettazione**
-  - [ ] Nessuna rotta applicativa è raggiungibile senza autenticazione: un utente anonimo viene rediretto al login
-  - [ ] Login con email e password e reset password funzionanti via Fortify
-  - [ ] 2FA TOTP attivabile dall'utente, con QR di enrolment e codici di recupero
-  - [ ] `Password::defaults()` registrato in `AppServiceProvider::boot()` (min 8, maiuscole/minuscole, numeri, simboli, `uncompromised`) e applicato a ogni validazione di password
-  - [ ] Modello `User` con chiave primaria UUID e hashing Argon2id
-  - [ ] Nessuna registrazione pubblica: gli account sono creati esclusivamente da un amministratore
-  - [ ] Un amministratore crea un membro con nome, email e livello applicativo (`admin` / `member`)
-  - [ ] Un amministratore disattiva un membro: il login viene rifiutato con messaggio esplicito, mentre nome e riferimenti storici restano visibili
-  - [ ] Un `member` non accede alla gestione dei membri: il controllo è a livello di Policy lato server, non solo comandi nascosti nell'interfaccia
-  - [ ] Shell applicativa secondo lo Starter Kit variante `livewire`: layout con sidebar, drawer sotto 1024 px, tema chiaro e scuro
-  - [ ] `public/robots.txt` con `Disallow: /` e meta `robots: noindex, nofollow` nel layout
-  - [ ] README con prerequisiti, avvio locale via Laravel Herd, variabili d'ambiente, comandi di test e di seed
-  - [ ] Nota architetturale iniziale che spiega la separazione fra tabelle di definizione e di istanza
-  - [ ] I tentativi di login falliti sono registrati nel log applicativo
+  - [x] Nessuna rotta applicativa è raggiungibile senza autenticazione: un utente anonimo viene rediretto al login
+  - [x] Login con email e password e reset password funzionanti via Fortify
+  - [x] 2FA TOTP attivabile dall'utente, con QR di enrolment e codici di recupero
+  - [x] `Password::defaults()` registrato in `AppServiceProvider::boot()` (min 8, maiuscole/minuscole, numeri, simboli, `uncompromised`) e applicato a ogni validazione di password
+  - [x] Modello `User` con chiave primaria UUID e hashing Argon2id
+  - [x] Nessuna registrazione pubblica: gli account sono creati esclusivamente da un amministratore
+  - [x] Un amministratore crea un membro con nome, email e livello applicativo (`admin` / `member`)
+  - [x] Un amministratore disattiva un membro: il login viene rifiutato con messaggio esplicito, mentre nome e riferimenti storici restano visibili
+  - [x] Un `member` non accede alla gestione dei membri: il controllo è a livello di Policy lato server, non solo comandi nascosti nell'interfaccia
+  - [x] Shell applicativa secondo lo Starter Kit variante `livewire`: layout con sidebar, drawer sotto 1024 px, tema chiaro e scuro
+  - [x] `public/robots.txt` con `Disallow: /` e meta `robots: noindex, nofollow` nel layout
+  - [x] README con prerequisiti, avvio locale via Laravel Herd, variabili d'ambiente, comandi di test e di seed
+  - [x] Nota architetturale iniziale che spiega la separazione fra tabelle di definizione e di istanza
+  - [x] I tentativi di login falliti sono registrati nel log applicativo
 status_history:
   - status: PLANNED
     at: '2026-08-12T10:11:39+00:00'
   - status: 'IN PROGRESS'
     at: '2026-08-12T10:16:51+00:00'
+  - status: REVIEW
+    at: '2026-08-12T10:54:20+00:00'
+  - status: DONE
+    at: '2026-08-12T14:14:54+00:00'
 rework: false
+merge_commit:
+  sha: f4a0147cfd29d1324dae688e30e5e963011f8387
+  short_sha: f4a0147
+  subject: 'docs(US-001): note di revisione Robert e Lars'
+  committed_at: '2026-08-12T12:54:19+02:00'
+  url: null

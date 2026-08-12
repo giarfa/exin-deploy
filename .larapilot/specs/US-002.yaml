@@ -5,7 +5,7 @@ epic:
   title: 'Configurazione del processo'
 priority: HIGH
 points: 8
-status: TODO
+status: 'IN PROGRESS'
 body: |
   #### US-002: Ruoli funzionali, progetti e responsabili
 
@@ -34,3 +34,9 @@ body: |
   - [ ] Assegnare a un ruolo una persona disattivata è rifiutato con messaggio esplicito
   - [ ] Un `member` non accede alla configurazione di ruoli, progetti e mappature (Policy lato server)
   - [ ] Factory e seeder aggiornati per ruoli, progetti e mappature nello stesso commit delle migrazioni
+status_history:
+  - status: PLANNED
+    at: '2026-08-12T14:25:59+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-12T14:35:16+00:00'
+rework: false

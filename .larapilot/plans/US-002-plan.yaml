@@ -1,0 +1,854 @@
+code: US-002
+plan_body: |
+  ## Technical Solution
+
+  Prima spec di configurazione: introduce le quattro entita che trasformano un template astratto in un
+  processo con responsabili reali. La separazione portante del PRD fra **definizione** e **istanza** vale
+  gia qui — nulla di quanto scritto in questa spec viene letto in fase di esecuzione di una release, che
+  leggera soltanto il proprio snapshot.
+
+  **Entita introdotte**
+
+  | Entita | Tabella | Contenuto |
+  | --- | --- | --- |
+  | `Role` | `roles` | ruolo funzionale di processo: nome, descrizione, attivo |
+  | `Project` | `projects` | progetto: nome, slug, descrizione, attivo |
+  | `DefaultRoleAssignment` | `default_role_assignments` | ruolo -> persona predefinita a livello di team |
+  | `ProjectRoleAssignment` | `project_role_assignments` | ruolo -> persona su un singolo progetto |
+
+  Tutte con chiave primaria UUID (`HasUuids`, UUIDv7) secondo la baseline del PRD.
+
+  **Fuori perimetro, per spec successive.** `projects.workflow_template_id` (associazione al template) e la
+  segnalazione dei ruoli previsti dal template ma non assegnati appartengono a **US-003**: qui il template
+  non esiste ancora e una colonna verso una tabella inesistente non e pianificabile. Il criterio di
+  accettazione FR-004 relativo alla segnalazione dei ruoli scoperti e citato in US-003, non in questa spec.
+  Analogamente, lo scenario dimostrativo completo (release a meta catena e release conclusa) e di **US-011**:
+  qui il seeder produce solo la fetta di configurazione.
+
+  **Vincoli a livello di schema, non solo di validazione.** Tre criteri di accettazione lo chiedono
+  esplicitamente e sono verificati da test che scrivono direttamente sul database, aggirando la validazione:
+
+  - `projects.slug` unique
+  - `project_role_assignments` unique su `(project_id, role_id)` — una sola persona per coppia progetto/ruolo
+  - `default_role_assignments.role_id` unique — una sola persona predefinita per ruolo
+
+  Chiavi esterne: `restrictOnDelete` verso `roles` e `users` (i ruoli referenziati non sono cancellabili, i
+  membri non si cancellano mai), `cascadeOnDelete` verso `projects`. Prerequisito da verificare in TASK-03:
+  `config/database.php` deve avere `foreign_key_constraints` attivo sulla connessione SQLite, altrimenti il
+  test sulla restrizione passerebbe per il motivo sbagliato. Nessuna funzione SQLite-specifica: solo Eloquent
+  e migrazioni portabili, come prescritto fra i vincoli permanenti del progetto.
+
+  **Cancellazione del ruolo.** Un ruolo referenziato non e cancellabile ma resta disattivabile. La regola vive
+  in tre punti, deliberatamente:
+
+  1. `Role::isReferenced()` conta i riferimenti esistenti — oggi le due tabelle di mappatura, domani
+     `step_definitions` (US-003) e `release_steps` (US-004). Il metodo dichiara le relazioni consultate in una
+     costante, cosi che le spec successive estendano un solo punto
+  2. `RolePolicy::delete()` nega quando `isReferenced()` e vera. **Deve stare fuori dal filtro `before()`**
+     (elenco `NOT_FILTERED`, stessa convenzione di `UserPolicy`): un'ability filtrata concederebbe
+     all'amministratore anche cio che il vincolo di dominio nega — e la lezione registrata in US-001
+  3. La chiave esterna `restrictOnDelete` come ultima difesa a livello di database
+
+  Il messaggio esplicito richiesto dal criterio di accettazione arriva dal componente, che intercetta il
+  diniego della Policy e mostra il numero e il tipo di riferimenti trovati.
+
+  **Precompilazione della mappatura predefinita.** E una Action esplicita, `App\Actions\Projects\CreateProject`,
+  invocata dal componente di creazione progetto, **non** un observer sull'evento `created` del modello. Motivo:
+  con un observer ogni `Project::factory()->create()` di test o di seeder erediterebbe mappature a sorpresa, e
+  la logica di dominio finirebbe fuori vista. L'Action apre una sola transazione, crea il progetto e copia le
+  assegnazioni predefinite.
+
+  Due filtri consapevoli in copiatura, entrambi da documentare nel codice e da mostrare all'utente come nota:
+  vengono copiate solo le predefinite il cui **ruolo e attivo** e la cui **persona e attiva**. Copiare una
+  persona disattivata contraddirebbe il criterio di accettazione che ne rifiuta l'assegnazione; l'Action
+  restituisce il numero di ruoli non precompilati, che la schermata riporta come avviso.
+
+  **Indipendenza delle due mappature.** Sono due tabelle distinte senza chiave esterna reciproca: la copia
+  avviene una sola volta, alla creazione del progetto. Modificare l'una non tocca l'altra per costruzione, non
+  per disciplina — ed e comunque coperto da test in entrambe le direzioni.
+
+  **Persona disattivata.** Il rifiuto e in validazione tramite una regola riusabile `App\Rules\AssignableUser`
+  (la persona deve esistere e avere `is_active = true`), usata sia dalla mappatura di progetto sia da quella
+  predefinita, con messaggio esplicito. Caso non coperto dai criteri di accettazione ma reale: una persona gia
+  assegnata che viene disattivata in seguito. Non si rimuove l'assegnazione — cancellare la traccia sarebbe
+  peggio — ma le due schermate di mappatura la segnalano con icona e parola, mai col solo colore.
+
+  **Autorizzazione.** Tre Policy, tutte con il filtro `before()` per l'amministratore e con le ability vincolate
+  escluse dal filtro:
+
+  - `RolePolicy` — `viewAny`, `view`, `create`, `update`, `toggleActivation`, `delete` (fuori dal filtro)
+  - `ProjectPolicy` — `viewAny`, `view`, `create`, `update`, `toggleActivation`, `manageAssignments`,
+    `delete` (fuori dal filtro, sempre `false`: un progetto contiene lo storico dei rilasci e si disattiva)
+  - `DefaultRoleAssignmentPolicy` — `viewAny`, `create`, `update`, `delete`
+
+  Le assegnazioni di progetto **non** hanno una Policy propria: non esistono fuori dal contesto di un progetto,
+  quindi sono autorizzate da `ProjectPolicy::manageAssignments`. Come in US-001 l'autorizzazione e applicata due
+  volte e non e ridondanza: il middleware `can` blocca la rotta, `Gate::authorize` dentro il componente blocca
+  le singole azioni Livewire, che non ripassano dalla rotta.
+
+  **Interfaccia.** Quattro schermate Livewire, componenti single-file `⚡` sotto `resources/views/components/`,
+  sullo stesso modello di `members.index` (tabella Flux, form inline, conferma su azioni distruttive). Superficie
+  di configurazione: densa e a uso rado, ma comunque leggibile da 375 px, perche il contratto responsive del
+  progetto non ammette schermate solo-desktop. Solo componenti **Flux free**. Testo dell'interfaccia nei file
+  `lang/it/`, mai incastonato nelle viste.
+
+  | Rotta | Componente | Contenuto |
+  | --- | --- | --- |
+  | `/ruoli` | `roles.index` | catalogo dei ruoli funzionali |
+  | `/progetti` | `projects.index` | elenco e creazione progetti |
+  | `/progetti/{project}/responsabili` | `projects.assignments` | mappatura ruolo -> persona del progetto |
+  | `/responsabili-predefiniti` | `default-assignments.index` | mappatura predefinita di team |
+
+  Binding di rotta su UUID e non su slug: lo slug e modificabile e i collegamenti si romperebbero.
+
+  **N+1.** La pagina responsabili di progetto e l'unico percorso con relazioni annidate: carica i ruoli attivi
+  e le assegnazioni del progetto con `with(['assignments.role', 'assignments.user'])`, e le combina in memoria.
+  L'elenco progetti carica `withCount('assignments')`, mai un conteggio per riga nel ciclo Blade. Indici sulle
+  colonne di filtro e sulle chiavi esterne, dichiarati nella stessa migrazione dello schema.
+
+  **Ruoli aggiunti dopo la creazione di un progetto.** La pagina responsabili itera sui **ruoli attivi**, non
+  sulle righe di assegnazione: un ruolo creato in seguito compare automaticamente come "non assegnato". Sono
+  mostrati anche i ruoli disattivati che hanno gia un'assegnazione su quel progetto, perche nasconderli
+  renderebbe invisibile una responsabilita esistente.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` — un commit atomico per task in Conventional Commits, descrizione di PR preparata **in
+    locale**, nessun push automatico
+  - **Prerequisito non standard, da chiudere in TASK-00:** `develop` e fermo al commit iniziale `b5462ab`. I 13
+    commit di US-001, gia approvata in revisione umana, non sono mai stati integrati, e l'albero di lavoro ha
+    artefatti Larapilot non committati (`backlog.yaml`, `specs/US-001.yaml`, `usage/ledger.jsonl`). Creare il
+    branch di US-002 dallo stato attuale di `develop` significherebbe costruire su un repository senza
+    applicazione
+  - Branch: `feature/US-002-ruoli-progetti-responsabili` da `develop`, **dopo** l'integrazione di US-001
+  - Per task: un solo commit nel formato `type(US-002): TASK-NN riassunto`
+  - Push e apertura PR remota: **omessi** (`git_mode: GITFLOW`). Solo su richiesta esplicita dell'utente
+  - Merge su `develop` solo dopo approvazione umana in `/larapilot-review`
+
+  ## Test Data Strategy
+
+  - Factory e seeder aggiornati nello **stesso task** delle migrazioni, come prescritto dalla disciplina di
+    progetto e richiesto esplicitamente da un criterio di accettazione
+  - `RoleFactory`: nomi di ruolo realistici del dominio (Dev Lead, QA, DevOps, PM, Security); stato `inactive()`
+  - `ProjectFactory`: nome di progetto plausibile e slug derivato con `Str::slug` sul nome, unico; stato
+    `inactive()`
+  - `DefaultRoleAssignmentFactory` e `ProjectRoleAssignmentFactory`: relazioni coerenti con `for()`, nessuna
+    chiave esterna orfana
+  - `DatabaseSeeder`: cinque ruoli funzionali, mappatura predefinita completa sui membri gia seminati in US-001,
+    due progetti (uno con mappatura ereditata intatta, uno con una sostituzione, perche la differenza fra le due
+    mappature deve essere visibile a colpo d'occhio in sviluppo)
+  - Lo scenario dimostrativo completo (template, release in corso, release conclusa) resta di **US-011**
+  - Verificare `php artisan migrate:fresh --seed` prima di ogni `task-done` che tocchi lo schema
+
+  ## Test Strategy
+
+  - Bar: `NORMAL`. Il repository usa **PHPUnit 12.5**, non Pest: test creati con `php artisan make:test --phpunit`
+  - **Nessun** Playwright, Laravel Dusk, Pest browser, matrice di viewport o E2E di journey
+  - Test interlacciati con l'implementazione (TASK-04, TASK-06, TASK-11), non accumulati alla fine
+  - Copertura richiesta:
+    - **Modelli e schema** (TASK-04): UUID generato, cast di `is_active`, stati delle factory, `isReferenced()`
+      su ruolo libero e referenziato; **vincoli applicati dal database** scrivendo direttamente con `DB::table()`
+      e attendendo `QueryException` — slug duplicato, coppia progetto/ruolo duplicata, ruolo predefinito
+      duplicato, cancellazione di un ruolo referenziato
+    - **Precompilazione** (TASK-06): un progetto creato tramite l'Action eredita la mappatura predefinita;
+      modificare la mappatura del progetto non altera la predefinita; modificare la predefinita non altera i
+      progetti esistenti; le predefinite con ruolo o persona disattivata non vengono copiate e il conteggio
+      restituito lo riflette; la creazione e atomica (nessun progetto orfano se la copia fallisce)
+    - **Autorizzazione e interfaccia** (TASK-11): un `member` riceve 403 su tutte e quattro le rotte **e** sulle
+      azioni Livewire invocate direttamente; un `admin` passa; creazione, modifica e disattivazione di ruoli e
+      progetti; slug duplicato rifiutato in validazione con messaggio; assegnazione di persona disattivata
+      rifiutata con messaggio esplicito; cancellazione di ruolo referenziato rifiutata con messaggio e ruolo
+      ancora disattivabile; cancellazione di ruolo libero consentita; nessuna azione di cancellazione progetto
+      esposta
+  - **Verifica manuale (handoff per l'umano)**, poiche il bar non prevede test browser: le quattro schermate a
+    375 / 768 / 1280 px senza scroll orizzontale, form leggibili da telefono, stato attivo/disattivo distinguibile
+    senza affidarsi al colore, tema chiaro e scuro
+
+  ## Documentation
+
+  Baseline secondo **Technical Documentation** in `runtime-delivery.md`: sezione del `README.md` sulla
+  configurazione del processo (ruoli, progetti, mappature, precompilazione e sua natura non retroattiva), nota
+  architetturale che estende quella di US-001 con le entita di definizione introdotte qui, `CHANGELOG.md`
+  Unreleased. Nessun OpenAPI: la spec non introduce API. Nessuna documentazione estesa richiesta in approvazione
+  della spec.
+
+  ## Quality gate
+
+  Prima di ogni `task-done`: `vendor/bin/pint --dirty --format agent` e Larastan livello 5 via
+  `php artisan larapilot:quality`. Le annotazioni PHPDoc sui modelli seguono la convenzione gia adottata su
+  `User`: l'analisi statica deduce il tipo dalla colonna, quindi gli attributi con cast vanno dichiarati.
+tasks:
+  -
+    id: TASK-00
+    title: 'Integrare US-001 in develop e creare il branch di lavoro'
+    type: Impl
+    status: TODO
+    dependencies: {}
+    body: |
+      ## Description
+      Preparare Gitflow per questa spec. Il branch non puo essere creato dallo stato attuale di `develop`: US-001 e
+      stata approvata in revisione umana ma i suoi 13 commit non sono mai stati integrati, quindi `develop` e fermo
+      al commit iniziale `b5462ab` e non contiene l'applicazione. Inoltre l'albero di lavoro ha artefatti Larapilot
+      non committati, prodotti dalla chiusura di US-001.
+
+      ## Files Involved
+      - (git e artefatti `.larapilot/` — nessun file applicativo)
+
+      ## Steps
+      1. Committare gli artefatti pendenti sul branch di US-001: `.larapilot/backlog.yaml`,
+         `.larapilot/specs/US-001.yaml`, `.larapilot/usage/ledger.jsonl` —
+         `docs(US-001): registra approvazione e consuntivo`
+      2. `git checkout develop`
+      3. `git merge --no-ff feature/US-001-accesso-membri-team` — merge esplicito, la storia deve mostrare che US-001
+         e entrata come unita approvata
+      4. Verificare che `develop` contenga l'applicazione: `php artisan test --compact` verde
+      5. `git checkout -b feature/US-002-ruoli-progetti-responsabili`
+      6. Redigere titolo e corpo della PR interna verso `develop` e **tenerli in locale**: titolo
+         `US-002: Ruoli funzionali, progetti e responsabili`; corpo con link al piano e l'elenco dei task
+      7. Commit di ancoraggio del branch (commit vuoto ammesso)
+
+      ## Completion Criteria
+      - [ ] Nessuna modifica pendente nell'albero di lavoro prima del merge
+      - [ ] `develop` contiene i commit di US-001 e la suite di test e verde su `develop`
+      - [ ] Il branch `feature/US-002-ruoli-progetti-responsabili` esiste in locale e deriva da `develop`
+      - [ ] Titolo e corpo della PR interna redatti e tenuti in locale
+      - [ ] Nessun push eseguito
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli
+
+      ## Git Deliverables
+      - Commit: `chore(US-002): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
+  -
+    id: TASK-01
+    title: 'Modello Role con migrazione, factory e seeder'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+    body: |
+      ## Description
+      Introdurre il catalogo dei ruoli funzionali di processo (FR-002), condiviso a livello di team e indipendente
+      dai progetti. Include il punto di estensione per la regola di non cancellabilita, che le spec successive
+      dovranno estendere in un solo posto.
+
+      ## Files Involved
+      - app/Models/Role.php
+      - database/migrations/xxxx_create_roles_table.php
+      - database/factories/RoleFactory.php
+      - database/seeders/DatabaseSeeder.php
+
+      ## Steps
+      1. `php artisan make:model Role -mf --no-interaction`
+      2. Migrazione: `$table->uuid('id')->primary()`, `$table->string('name')->unique()`,
+         `$table->text('description')->nullable()`, `$table->boolean('is_active')->default(true)->index()`,
+         `$table->timestamps()`
+      3. Modello: trait `HasUuids`, attributo `#[Fillable(['name', 'description', 'is_active'])]` secondo la
+         convenzione Laravel 13 gia adottata su `User` (non reintrodurre la proprieta `$fillable`), cast
+         `'is_active' => 'boolean'` e annotazione PHPDoc `@property bool $is_active` per l'analisi statica
+      4. Aggiungere `isReferenced(): bool` — conta i riferimenti al ruolo. Le relazioni consultate sono dichiarate
+         in una costante privata cosi che US-003 (`step_definitions`) e US-004 (`release_steps`) estendano un solo
+         punto. Oggi la costante e vuota: le due tabelle di mappatura arrivano in TASK-03, che la valorizza
+      5. Scope di comodo `active()` per le query di interfaccia
+      6. `RoleFactory`: nomi realistici del dominio via `Sequence` o elenco fisso (Dev Lead, QA, DevOps, PM,
+         Security), descrizione breve in italiano, stato `inactive()`
+      7. `DatabaseSeeder`: seminare i cinque ruoli funzionali con nomi fissi, perche il resto del dataset
+         dimostrativo vi si appoggia
+      8. `php artisan migrate:fresh --seed`
+      9. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] `roles` esiste con chiave primaria UUID, `name` unico e `is_active` indicizzato
+      - [ ] Un ruolo creato riceve automaticamente un id in formato UUID
+      - [ ] `Role::isReferenced()` esiste, e documentato come punto di estensione e restituisce `false` finche non
+            esistono tabelle referenzianti
+      - [ ] `migrate:fresh --seed` completa senza errori
+      - [ ] Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - [ ] `database/factories/RoleFactory.php` creata, con stato `inactive()` e nomi di dominio
+      - [ ] `DatabaseSeeder` crea i cinque ruoli funzionali con nomi fissi
+      - [ ] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
+
+      ## Git Deliverables
+      - Commit: `feat(US-002): TASK-01 catalogo dei ruoli funzionali`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-02
+    title: 'Modello Project con slug univoco, migrazione, factory e seeder'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+    body: |
+      ## Description
+      Introdurre i progetti su cui il team rilascia (FR-003), contenitori delle release e del loro storico.
+      L'associazione al template di workflow **non** appartiene a questa spec: la colonna
+      `workflow_template_id` arriva con US-003, quando il template esiste.
+
+      ## Files Involved
+      - app/Models/Project.php
+      - database/migrations/xxxx_create_projects_table.php
+      - database/factories/ProjectFactory.php
+      - database/seeders/DatabaseSeeder.php
+
+      ## Steps
+      1. `php artisan make:model Project -mf --no-interaction`
+      2. Migrazione: `$table->uuid('id')->primary()`, `$table->string('name')`,
+         `$table->string('slug')->unique()`, `$table->text('description')->nullable()`,
+         `$table->boolean('is_active')->default(true)->index()`, `$table->timestamps()`.
+         L'unicita dello slug e un criterio di accettazione esplicito a livello di schema, non solo di validazione
+      3. Modello: `HasUuids`, `#[Fillable(['name', 'slug', 'description', 'is_active'])]`, cast
+         `'is_active' => 'boolean'` con annotazione PHPDoc, scope `active()`
+      4. **Non** sovrascrivere `getRouteKeyName()`: il binding di rotta resta su UUID perche lo slug e modificabile
+         e i collegamenti gia diffusi si romperebbero. Motivo da annotare nel modello
+      5. `ProjectFactory`: nome di progetto plausibile in italiano, `slug` derivato dal nome con `Str::slug` e reso
+         unico, descrizione breve, stato `inactive()`
+      6. `DatabaseSeeder`: due progetti fissi con nome e slug leggibili
+      7. `php artisan migrate:fresh --seed`
+      8. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] `projects` esiste con chiave primaria UUID, `slug` con indice unico e `is_active` indicizzato
+      - [ ] Un progetto creato riceve automaticamente un id in formato UUID
+      - [ ] Nessuna colonna verso il template di workflow (appartiene a US-003)
+      - [ ] `migrate:fresh --seed` completa senza errori
+      - [ ] Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - [ ] `database/factories/ProjectFactory.php` creata, con slug unico derivato dal nome e stato `inactive()`
+      - [ ] `DatabaseSeeder` crea due progetti fissi
+      - [ ] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
+
+      ## Git Deliverables
+      - Commit: `feat(US-002): TASK-02 progetti con slug univoco`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-03
+    title: 'Mappature ruolo-persona: predefinita di team e di progetto'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-01
+      - TASK-02
+    body: |
+      ## Description
+      Introdurre le due mappature che trasformano un ruolo astratto in una responsabilita reale: quella predefinita
+      a livello di team (FR-005) e quella specifica di progetto (FR-004). Sono due tabelle distinte senza chiave
+      esterna reciproca: l'indipendenza fra le due e garantita dalla struttura, non dalla disciplina del codice.
+
+      ## Files Involved
+      - app/Models/DefaultRoleAssignment.php
+      - app/Models/ProjectRoleAssignment.php
+      - app/Models/Role.php (relazioni e `isReferenced()`)
+      - app/Models/Project.php (relazione `assignments`)
+      - app/Models/User.php (relazioni inverse)
+      - database/migrations/xxxx_create_default_role_assignments_table.php
+      - database/migrations/xxxx_create_project_role_assignments_table.php
+      - database/factories/DefaultRoleAssignmentFactory.php
+      - database/factories/ProjectRoleAssignmentFactory.php
+      - database/seeders/DatabaseSeeder.php
+      - config/database.php (verifica)
+
+      ## Steps
+      1. Verificare che la connessione `sqlite` in `config/database.php` abbia `foreign_key_constraints` attivo:
+         senza vincoli applicati, il test sulla cancellazione di un ruolo referenziato passerebbe per il motivo
+         sbagliato
+      2. `php artisan make:model DefaultRoleAssignment -mf --no-interaction` — migrazione: `uuid('id')->primary()`,
+         `foreignUuid('role_id')->unique()->constrained()->restrictOnDelete()`,
+         `foreignUuid('user_id')->constrained()->restrictOnDelete()`, `timestamps()`.
+         L'unicita di `role_id` esprime a livello di schema "una sola persona predefinita per ruolo"
+      3. `php artisan make:model ProjectRoleAssignment -mf --no-interaction` — migrazione: `uuid('id')->primary()`,
+         `foreignUuid('project_id')->constrained()->cascadeOnDelete()`,
+         `foreignUuid('role_id')->constrained()->restrictOnDelete()`,
+         `foreignUuid('user_id')->constrained()->restrictOnDelete()`, `timestamps()`,
+         `$table->unique(['project_id', 'role_id'])`, `$table->index('user_id')`.
+         `restrictOnDelete` verso `users` e coerente con la regola di progetto: i membri non si cancellano, si
+         disattivano
+      4. Modelli: `HasUuids`, attributi `#[Fillable]`, relazioni `belongsTo` verso `role`, `user` e (per la
+         mappatura di progetto) `project`
+      5. `Role`: relazioni `hasMany(ProjectRoleAssignment::class)` e `hasOne(DefaultRoleAssignment::class)`;
+         valorizzare la costante consultata da `isReferenced()` con queste due relazioni. Documentare che US-003 e
+         US-004 aggiungeranno qui `stepDefinitions` e `releaseSteps`
+      6. `Project`: relazione `hasMany(ProjectRoleAssignment::class, 'project_id')` chiamata `assignments`
+      7. `User`: relazioni inverse per poter rispondere a "quali ruoli ricopre questa persona", usate dalle
+         schermate di mappatura
+      8. Factory con relazioni coerenti (`for()`), nessuna chiave esterna orfana
+      9. `DatabaseSeeder`: mappatura predefinita completa sui cinque ruoli, usando i membri gia seminati in US-001;
+         sui due progetti, mappatura ereditata su uno e con **una sostituzione** sull'altro, perche la differenza
+         fra mappatura predefinita e di progetto deve essere visibile a colpo d'occhio in sviluppo
+      10. `php artisan migrate:fresh --seed`
+      11. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] `default_role_assignments` esiste con `role_id` unico e chiavi esterne in `restrict`
+      - [ ] `project_role_assignments` esiste con unicita su `(project_id, role_id)` e indice su `user_id`
+      - [ ] `foreign_key_constraints` verificato attivo sulla connessione SQLite
+      - [ ] `Role::isReferenced()` restituisce `true` quando il ruolo e usato da una delle due mappature
+      - [ ] Le relazioni Eloquent sono dichiarate su `Role`, `Project` e `User`
+      - [ ] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
+      - [ ] Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - [ ] `DefaultRoleAssignmentFactory` e `ProjectRoleAssignmentFactory` create con relazioni coerenti
+      - [ ] `DatabaseSeeder` semina mappatura predefinita completa e due progetti, di cui uno con una sostituzione
+      - [ ] Factory e seeder aggiornati in **questo stesso task** delle migrazioni e dei modelli
+
+      ## Git Deliverables
+      - Commit: `feat(US-002): TASK-03 mappature ruolo-persona di team e di progetto`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-04
+    title: 'Test: modelli, vincoli di schema e non cancellabilita del ruolo referenziato'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-03
+    body: |
+      ## Description
+      Coprire le entita introdotte e, soprattutto, verificare che i vincoli richiesti dai criteri di accettazione
+      siano applicati **dal database** e non solo dalla validazione. I test scrivono direttamente con `DB::table()`
+      per aggirare il livello applicativo: e l'unico modo di dimostrare il vincolo di schema.
+
+      ## Files Involved
+      - tests/Unit/Models/RoleTest.php
+      - tests/Unit/Models/ProjectTest.php
+      - tests/Feature/Configuration/SchemaConstraintsTest.php
+
+      ## Steps
+      1. Creare i test con `php artisan make:test --phpunit` (il repository usa PHPUnit 12.5, non Pest)
+      2. Riusare le factory create in TASK-01/02/03: non ridefinire dati di test nei file di test
+      3. Modelli: id in formato UUID, cast di `is_active`, stati `inactive()`, scope `active()`, relazioni che
+         restituiscono i record attesi
+      4. `Role::isReferenced()`: `false` su ruolo libero, `true` quando referenziato dalla mappatura predefinita,
+         `true` quando referenziato da una mappatura di progetto
+      5. Vincoli di schema, ciascuno con `$this->expectException(QueryException::class)` e scrittura diretta:
+         - slug di progetto duplicato
+         - coppia `(project_id, role_id)` duplicata
+         - secondo record predefinito per lo stesso ruolo
+         - cancellazione di un ruolo referenziato da una mappatura (chiave esterna in `restrict`)
+      6. Verificare che la cancellazione di un ruolo **non** referenziato vada a buon fine
+      7. `php artisan test --compact --filter=RoleTest`, `--filter=ProjectTest`, `--filter=SchemaConstraintsTest`
+      8. Non introdurre Playwright, Dusk, Pest browser o suite di viewport
+
+      ## Completion Criteria
+      - [ ] I test passano in locale
+      - [ ] Ogni vincolo di unicita richiesto dai criteri di accettazione e verificato a livello di database
+      - [ ] La non cancellabilita del ruolo referenziato e verificata come vincolo di schema, non solo applicativo
+      - [ ] La copertura corrisponde al bar `NORMAL`
+
+      ## Git Deliverables
+      - Commit: `test(US-002): TASK-04 copre modelli e vincoli di schema`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-05
+    title: 'Action di creazione progetto con precompilazione della mappatura predefinita'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-03
+    body: |
+      ## Description
+      Realizzare la precompilazione richiesta da FR-005: alla creazione di un progetto la mappatura predefinita di
+      team viene copiata sul progetto, dove resta modificabile senza alterare il valore predefinito. E il
+      comportamento che elimina la riconfigurazione manuale a ogni nuovo progetto, quindi il cuore di questa spec.
+
+      Scelta di progettazione da documentare nel codice: **Action esplicita, non observer sull'evento `created`**.
+      Con un observer ogni `Project::factory()->create()` di test o di seeder erediterebbe mappature a sorpresa, e
+      la logica di dominio sarebbe invisibile a chi legge il componente.
+
+      ## Files Involved
+      - app/Actions/Projects/CreateProject.php
+      - app/Rules/AssignableUser.php
+      - lang/it/validation.php
+
+      ## Steps
+      1. `php artisan make:class Actions/Projects/CreateProject --no-interaction`
+      2. Metodo unico `handle(array $attributes): array` (o oggetto di ritorno dedicato) che apre **una sola**
+         `DB::transaction`, crea il progetto e copia le assegnazioni predefinite, restituendo il progetto e il
+         numero di ruoli non precompilati
+      3. Filtri in copiatura, entrambi da commentare nel codice: si copiano solo le predefinite il cui **ruolo e
+         attivo** e la cui **persona e attiva**. Copiare una persona disattivata contraddirebbe il criterio di
+         accettazione che ne rifiuta l'assegnazione
+      4. Copia con una sola scrittura (`insert` di massa costruito dalle predefinite caricate con `with('role')`,
+         `with('user')`), non un `create()` per riga dentro un ciclo
+      5. `php artisan make:rule AssignableUser --no-interaction`: la persona deve esistere ed essere attiva.
+         Messaggio esplicito in italiano tramite `lang/it/validation.php`. La regola e condivisa dalle due
+         schermate di mappatura, per non duplicare il vincolo
+      6. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] `CreateProject` crea progetto e assegnazioni in **una sola transazione**
+      - [ ] Le predefinite con ruolo o persona disattivata non vengono copiate, e il conteggio restituito lo riflette
+      - [ ] Nessuna query per riga nella copiatura
+      - [ ] `AssignableUser` rifiuta una persona disattivata con messaggio esplicito in italiano
+      - [ ] Nessun observer o evento di modello introdotto per la precompilazione
+      - [ ] Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-002): TASK-05 precompilazione della mappatura predefinita sui nuovi progetti`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-06
+    title: 'Test: precompilazione e indipendenza delle due mappature'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-05
+    body: |
+      ## Description
+      Coprire il comportamento che la spec chiede di dimostrare: la mappatura predefinita si ritrova precompilata su
+      un progetto nuovo, e le due mappature restano indipendenti in entrambe le direzioni.
+
+      ## Files Involved
+      - tests/Feature/Configuration/DefaultAssignmentPrecompilationTest.php
+
+      ## Steps
+      1. Creare il test con `php artisan make:test --phpunit`
+      2. Riusare le factory esistenti
+      3. Coprire:
+         - un progetto creato tramite `CreateProject` eredita tutte le assegnazioni predefinite valide
+         - modificare la mappatura del progetto **non** altera la mappatura predefinita
+         - modificare la mappatura predefinita **non** altera i progetti gia esistenti
+         - una predefinita con persona disattivata non viene copiata e figura nel conteggio dei ruoli scoperti
+         - una predefinita con ruolo disattivato non viene copiata
+         - nessuna assegnazione resta scritta se la creazione fallisce a meta (atomicita della transazione)
+      4. `php artisan test --compact --filter=DefaultAssignmentPrecompilationTest`
+      5. Non introdurre strumenti browser o E2E
+
+      ## Completion Criteria
+      - [ ] I test passano in locale
+      - [ ] L'indipendenza fra le due mappature e verificata in **entrambe** le direzioni
+      - [ ] L'atomicita della creazione e verificata
+      - [ ] La copertura corrisponde al bar `NORMAL`
+
+      ## Git Deliverables
+      - Commit: `test(US-002): TASK-06 copre precompilazione e indipendenza delle mappature`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-07
+    title: 'Policy di configurazione, rotte e navigazione'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-03
+    body: |
+      ## Description
+      Applicare l'autorizzazione lato server su tutta la superficie di configurazione introdotta da questa spec, e
+      renderla raggiungibile dalla navigazione. Un `member` non deve accedere a ruoli, progetti e mappature: il
+      controllo vive nelle Policy, non nel nascondere comandi nell'interfaccia.
+
+      ## Files Involved
+      - app/Policies/RolePolicy.php
+      - app/Policies/ProjectPolicy.php
+      - app/Policies/DefaultRoleAssignmentPolicy.php
+      - routes/web.php
+      - resources/views/components/layouts/app.blade.php
+      - lang/it/app.php
+
+      ## Steps
+      1. `php artisan make:policy RolePolicy --model=Role --no-interaction` e analoghe per `Project` e
+         `DefaultRoleAssignment`
+      2. Seguire la convenzione di `UserPolicy`: filtro `before()` che concede all'amministratore, **con elenco
+         `NOT_FILTERED`** per le ability il cui vincolo vale anche per gli amministratori. Ogni ability usata deve
+         esistere come metodo, perche `before()` non viene invocato per ability senza metodo corrispondente
+      3. `RolePolicy`: `viewAny`, `view`, `create`, `update`, `toggleActivation`; **`delete` fuori dal filtro** —
+         consentita solo se `! $role->isReferenced()`
+      4. `ProjectPolicy`: `viewAny`, `view`, `create`, `update`, `toggleActivation`, `manageAssignments`;
+         **`delete` fuori dal filtro e sempre `false`** — un progetto contiene lo storico dei rilasci, si disattiva.
+         Le assegnazioni di progetto non hanno Policy propria perche non esistono fuori dal contesto di un progetto
+      5. `DefaultRoleAssignmentPolicy`: `viewAny`, `create`, `update`, `delete`
+      6. Rotte dentro il gruppo `auth` esistente, con middleware `can` come gia fatto per i membri:
+         - `Route::livewire('/ruoli', 'roles.index')->can('viewAny', Role::class)->name('roles.index')`
+         - `Route::livewire('/progetti', 'projects.index')->can('viewAny', Project::class)->name('projects.index')`
+         - `Route::livewire('/progetti/{project}/responsabili', 'projects.assignments')->can('manageAssignments', 'project')->name('projects.assignments')`
+         - `Route::livewire('/responsabili-predefiniti', 'default-assignments.index')->can('viewAny', DefaultRoleAssignment::class)->name('default-assignments.index')`
+      7. Navigazione in `app.blade.php`: nel gruppo **Configurazione** sostituire la voce segnaposto "Ruoli" con il
+         collegamento reale e aggiungere "Progetti" e "Responsabili predefiniti". Rimuovere la voce segnaposto
+         "Progetti" dal gruppo **Operativo**: i progetti sono configurazione, e due voci con lo stesso nome in due
+         gruppi diversi sono un errore di architettura dell'informazione. "Template di workflow" resta segnaposto
+         fino a US-003
+      8. Nuove chiavi in `lang/it/app.php` per le voci di navigazione
+      9. `php artisan route:list --except-vendor` per verificare le rotte registrate
+      10. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Tre Policy registrate e applicate, con `delete` fuori dal filtro `before()` dove il vincolo vale anche
+            per gli amministratori
+      - [ ] Le quattro rotte esistono, sono sotto `auth` e protette dal middleware `can`
+      - [ ] Un `member` riceve 403 su tutte e quattro le rotte
+      - [ ] La navigazione mostra le voci di configurazione solo a chi e autorizzato, senza duplicati fra gruppi
+      - [ ] Nessun testo dell'interfaccia incastonato nelle viste: tutto in `lang/it/`
+      - [ ] Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-002): TASK-07 autorizzazione, rotte e navigazione della configurazione`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-08
+    title: 'Schermata di gestione dei ruoli funzionali'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-07
+    body: |
+      ## Description
+      Interfaccia di creazione, modifica, disattivazione e cancellazione dei ruoli funzionali. La cancellazione di
+      un ruolo referenziato deve essere rifiutata con un messaggio che dica **perche**, e il ruolo deve restare
+      disattivabile: e il criterio di accettazione piu facile da implementare male, con un errore generico.
+
+      ## Files Involved
+      - resources/views/components/roles/⚡index.blade.php
+      - lang/it/roles.php
+
+      ## Steps
+      1. Componente single-file Livewire sul modello di `resources/views/components/members/⚡index.blade.php`:
+         tabella Flux, form inline per creazione e modifica, conferma sulle azioni distruttive
+      2. Ogni azione che muta lo stato passa da `Gate::authorize`: l'interfaccia nasconde i comandi non disponibili,
+         ma non e quello il controllo. Le azioni Livewire non ripassano dal middleware di rotta
+      3. Regole di validazione in `rules()` (non con attributi `#[Validate]`: due sorgenti per le stesse regole sono
+         un rilievo gia emerso in revisione su US-001): nome obbligatorio, unico con `Rule::unique('roles', 'name')->ignore($this->editingId)`, max 255;
+         descrizione facoltativa
+      4. Cancellazione: `Gate::authorize('delete', $role)`; intercettare il diniego e mostrare un messaggio che
+         riporta quanti e quali riferimenti bloccano l'operazione, ricordando che il ruolo puo essere disattivato
+      5. Stato attivo/disattivo reso con **icona e parola**, mai col solo colore, come gia fatto sui membri
+      6. Implementare **mobile first**: la tabella deve restare leggibile a 375 px senza scroll orizzontale;
+         verifica visiva a 375, 768 e 1280 px durante l'implementazione
+      7. Tutto il testo in `lang/it/roles.php`
+      8. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Un amministratore crea, modifica e disattiva un ruolo
+      - [ ] Un nome di ruolo duplicato e rifiutato in validazione con messaggio
+      - [ ] La cancellazione di un ruolo referenziato e rifiutata con **messaggio esplicito**, e il ruolo resta
+            disattivabile
+      - [ ] La cancellazione di un ruolo non referenziato funziona
+      - [ ] Ogni azione Livewire e protetta da `Gate::authorize`
+      - [ ] Schermata usabile a 375, 768 e 1280 px (verifica manuale ammessa al bar `NORMAL`)
+      - [ ] Nessun componente Flux Pro utilizzato
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-002): TASK-08 gestione dei ruoli funzionali`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-09
+    title: 'Schermate dei progetti e dei responsabili di progetto'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-07
+      - TASK-05
+    body: |
+      ## Description
+      Due schermate: l'elenco dei progetti con creazione e modifica, e la pagina dei responsabili di un progetto,
+      dove la mappatura precompilata si modifica senza toccare quella predefinita. La seconda e il punto in cui la
+      spec si dimostra.
+
+      ## Files Involved
+      - resources/views/components/projects/⚡index.blade.php
+      - resources/views/components/projects/⚡assignments.blade.php
+      - lang/it/projects.php
+
+      ## Steps
+      1. `projects.index`: tabella Flux e form inline. Lo slug e proposto automaticamente dal nome con `Str::slug`
+         ma resta modificabile; validazione con `Rule::unique('projects', 'slug')->ignore($this->editingId)` e
+         formato `['regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/']`. Nessuna azione di cancellazione esposta: i progetti si
+         disattivano, perche contengono lo storico dei rilasci
+      2. La creazione passa dall'Action `CreateProject` (TASK-05), non da `Project::create()` diretto; dopo la
+         creazione mostrare l'avviso sui ruoli non precompilati quando il conteggio restituito e maggiore di zero
+      3. Conteggio delle assegnazioni per riga con `withCount('assignments')` — mai una query dentro il ciclo Blade
+      4. `projects.assignments`: binding di rotta sul modello `Project`. La pagina itera sui **ruoli attivi** e non
+         sulle righe di assegnazione, cosi che un ruolo creato dopo il progetto compaia automaticamente come "non
+         assegnato"; mostra anche i ruoli disattivati che hanno gia un'assegnazione su quel progetto, perche
+         nasconderli renderebbe invisibile una responsabilita esistente
+      5. Caricamento con `with(['assignments.role', 'assignments.user'])` e combinazione in memoria: e l'unico
+         percorso di questa spec con relazioni annidate ed e il candidato naturale a un N+1
+      6. Salvataggio di un responsabile: `Gate::authorize('manageAssignments', $project)`, validazione con la regola
+         `AssignableUser` — assegnare una persona disattivata e rifiutato con messaggio esplicito. Svuotare la
+         selezione rimuove l'assegnazione
+      7. Una persona assegnata e successivamente disattivata resta assegnata (rimuoverla cancellerebbe una traccia),
+         ma e segnalata nella riga con icona e parola
+      8. Implementare **mobile first**: a 375 px la mappatura si legge come elenco di schede, non come tabella
+         compressa; verifica visiva a 375, 768 e 1280 px
+      9. Tutto il testo in `lang/it/projects.php`
+      10. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Un amministratore crea, modifica e disattiva un progetto
+      - [ ] Uno slug duplicato e rifiutato in validazione con messaggio, prima del vincolo di database
+      - [ ] Un progetto appena creato mostra la mappatura predefinita gia precompilata
+      - [ ] Modificare la mappatura del progetto non altera quella predefinita
+      - [ ] Assegnare una persona disattivata e rifiutato con messaggio esplicito
+      - [ ] Nessuna azione di cancellazione progetto esposta
+      - [ ] Nessuna query dentro cicli Blade: `withCount` sull'elenco, `with` annidato sulla pagina responsabili
+      - [ ] Schermate usabili a 375, 768 e 1280 px
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-002): TASK-09 progetti e responsabili di progetto`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-10
+    title: 'Schermata della mappatura predefinita di team'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-07
+    body: |
+      ## Description
+      La mappatura predefinita ruolo -> persona valida per il team: e la sorgente della precompilazione, quindi la
+      schermata deve dichiarare esplicitamente che le modifiche valgono **solo per i progetti futuri**. Un utente
+      che si aspetta la propagazione retroattiva scoprirebbe il contrario nel momento peggiore.
+
+      ## Files Involved
+      - resources/views/components/default-assignments/⚡index.blade.php
+      - lang/it/assignments.php
+
+      ## Steps
+      1. Componente Livewire con una riga per ogni **ruolo attivo** e una selezione della persona; svuotare la
+         selezione rimuove la predefinita per quel ruolo
+      2. `Gate::authorize` su ogni azione che muta lo stato
+      3. Validazione con la regola condivisa `AssignableUser`: una persona disattivata e rifiutata con messaggio
+         esplicito
+      4. Scrittura con `updateOrCreate` sulla chiave `role_id`, coerente con l'unicita a livello di schema
+      5. Testo in evidenza sulla natura **non retroattiva** della mappatura: si applica ai progetti creati dopo
+      6. Caricamento con `with('user')` sulle predefinite: nessuna query per riga
+      7. Implementare **mobile first**; verifica visiva a 375, 768 e 1280 px
+      8. Tutto il testo in `lang/it/assignments.php`
+      9. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Un amministratore definisce, modifica e rimuove la persona predefinita di ogni ruolo
+      - [ ] Un solo record predefinito per ruolo, coerente con il vincolo di schema
+      - [ ] Assegnare una persona disattivata e rifiutato con messaggio esplicito
+      - [ ] La schermata dichiara che la mappatura si applica ai progetti futuri, non a quelli esistenti
+      - [ ] Modificare la predefinita non altera i progetti gia creati
+      - [ ] Schermata usabile a 375, 768 e 1280 px
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-002): TASK-10 mappatura predefinita di team`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-11
+    title: 'Test: autorizzazione e flussi di configurazione'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-08
+      - TASK-09
+      - TASK-10
+    body: |
+      ## Description
+      Coprire l'autorizzazione e i flussi delle quattro schermate. L'autorizzazione va verificata a **due livelli**,
+      come gia stabilito in US-001: il middleware protegge la rotta, `Gate::authorize` protegge le singole azioni
+      Livewire, che non ripassano dalla rotta. Verificare solo il primo lascerebbe scoperta la superficie reale.
+
+      ## Files Involved
+      - tests/Feature/Configuration/ConfigurationPolicyTest.php
+      - tests/Feature/Configuration/RoleManagementTest.php
+      - tests/Feature/Configuration/ProjectManagementTest.php
+      - tests/Feature/Configuration/ProjectAssignmentsTest.php
+      - tests/Feature/Configuration/DefaultAssignmentsTest.php
+
+      ## Steps
+      1. Creare i test con `php artisan make:test --phpunit`; riusare le factory esistenti
+      2. `ConfigurationPolicyTest`: le tre Policy in isolamento — un `admin` puo, un `member` no; `delete` sul ruolo
+         referenziato negato **anche all'amministratore**; `delete` sul progetto negato a chiunque
+      3. Autorizzazione a livello di rotta: un `member` riceve 403 sulle quattro rotte, un ospite e reindirizzato al
+         login, un `admin` riceve 200
+      4. Autorizzazione a livello di componente: un `member` che invoca direttamente le azioni Livewire riceve un
+         errore di autorizzazione
+      5. Flussi: creazione, modifica e disattivazione di ruoli e progetti; nome di ruolo duplicato rifiutato; slug
+         duplicato rifiutato in validazione; cancellazione di ruolo referenziato rifiutata e ruolo ancora
+         disattivabile; cancellazione di ruolo libero consentita; nessuna azione di cancellazione progetto esposta
+      6. Mappature: assegnazione di persona disattivata rifiutata su **entrambe** le schermate; assegnazione e
+         rimozione del responsabile su un progetto; un ruolo creato dopo il progetto compare come non assegnato
+      7. Nota operativa dalle regole di progetto: quando un'asserzione sulla risposta fallisce, il messaggio puo
+         essere mascherato da "Call to a member function all() on array" perche `session('errors')` e un array in
+         questo progetto — leggere `Location` e gli errori a mano invece di inseguire quel messaggio
+      8. `php artisan test --compact` sulla cartella `tests/Feature/Configuration`
+      9. Non introdurre Playwright, Dusk, Pest browser o suite di viewport
+
+      ## Completion Criteria
+      - [ ] I test passano in locale
+      - [ ] L'autorizzazione e verificata sia a livello di rotta sia a livello di azione Livewire
+      - [ ] Ogni criterio di accettazione della spec ha almeno un test corrispondente, esclusi quelli di sola
+            verifica manuale
+      - [ ] L'intera suite del progetto resta verde
+      - [ ] La copertura corrisponde al bar `NORMAL`
+
+      ## Git Deliverables
+      - Commit: `test(US-002): TASK-11 copre autorizzazione e flussi di configurazione`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+  -
+    id: TASK-12
+    title: 'Documentazione baseline e CHANGELOG'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-11
+    body: |
+      ## Description
+      Aggiornare il set di documentazione baseline con la configurazione del processo introdotta da questa spec. Il
+      punto che un nuovo arrivato fraintende, e che quindi va scritto per esteso, e la natura **non retroattiva**
+      della mappatura predefinita.
+
+      ## Files Involved
+      - README.md
+      - CHANGELOG.md
+      - (nota architetturale gia presente dal task di documentazione di US-001)
+
+      ## Steps
+      1. `README.md`: sezione sulla configurazione del processo — catalogo dei ruoli, progetti con slug univoco, le
+         due mappature e la loro indipendenza, precompilazione alla creazione del progetto e sua natura non
+         retroattiva, regola di non cancellabilita del ruolo referenziato
+      2. Estendere la nota architetturale con le entita di definizione introdotte qui, ribadendo che nulla di
+         questa configurazione viene letto in fase di esecuzione di una release (che leggera solo il proprio snapshot)
+      3. Aggiornare le credenziali e i contenuti dell'ambiente dimostrativo se il seeder li ha modificati
+      4. `CHANGELOG.md`, sezione Unreleased in formato Keep a Changelog: voce `Added` per ruoli funzionali, progetti
+         e mappature ruolo-persona
+      5. Nessun OpenAPI: la spec non introduce API
+      6. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+      7. `php artisan test --compact` — suite completa verde prima della consegna in revisione
+
+      ## Completion Criteria
+      - [ ] README aggiornato con la configurazione del processo e la natura non retroattiva della precompilazione
+      - [ ] Nota architetturale estesa alle nuove entita di definizione
+      - [ ] CHANGELOG aggiornato nella sezione Unreleased
+      - [ ] Suite completa verde, Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+updated_at: '2026-08-12T14:25:59+00:00'
