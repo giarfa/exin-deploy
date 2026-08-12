@@ -27,6 +27,15 @@ class SetDefaultWorkflowTemplate
      */
     public function handle(WorkflowTemplate $template): void
     {
+        /*
+         * L'istanza ricevuta puo portare uno stato obsoleto: l'azzeramento di
+         * massa qui sotto scrive in tabella senza toccare i modelli gia in
+         * memoria, e un `is_default` rimasto `true` nell'istanza renderebbe la
+         * `update()` finale non sporca — quindi silenziosamente senza effetto.
+         * L'invariante si decide su cio che c'e davvero in tabella.
+         */
+        $template->refresh();
+
         if (! $template->is_active) {
             throw InactiveTemplateCannotBeDefault::for($template);
         }

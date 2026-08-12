@@ -655,27 +655,33 @@ tasks:
          `CreateProject` restino verdi, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Colonna nullable con `restrict` verso `workflow_templates`, migrazione reversibile
-      - [ ] `CreateProject` propone il template predefinito attivo e accetta una scelta diversa
-      - [ ] Senza alcun predefinito il progetto viene creato senza template, senza errori
-      - [ ] `uncoveredRoles()` non esegue query quando le relazioni sono precaricate
-      - [ ] `ProjectFactory` ha lo stato `withTemplate()` e il comportamento predefinito e invariato
-      - [ ] I test di US-002 sulla precompilazione della mappatura restano verdi
-      - [ ] `migrate:fresh --seed` verde, Pint e Larastan verdi
+      - [x] Colonna nullable con `restrict` verso `workflow_templates`, migrazione reversibile
+      - [x] `CreateProject` propone il template predefinito attivo e accetta una scelta diversa
+      - [x] Senza alcun predefinito il progetto viene creato senza template, senza errori
+      - [x] `uncoveredRoles()` non esegue query quando le relazioni sono precaricate
+      - [x] `ProjectFactory` ha lo stato `withTemplate()` e il comportamento predefinito e invariato
+      - [x] I test di US-002 sulla precompilazione della mappatura restano verdi
+      - [x] `migrate:fresh --seed` verde, Pint e Larastan verdi
 
       ## Test Data
-      - [ ] `database/factories/ProjectFactory.php` aggiornata nello stesso task della migrazione, con
+      - [x] `database/factories/ProjectFactory.php` aggiornata nello stesso task della migrazione, con
             `withTemplate()`
-      - [ ] Seeder: l'associazione dei progetti dimostrativi al template arriva in TASK-14, insieme al template stesso
+      - [x] Seeder: l'associazione dei progetti dimostrativi al template arriva in TASK-14, insieme al template stesso
 
       ## Git Deliverables
       - Commit: `feat(US-003): TASK-07 associazione progetto-template e ruoli scoperti`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-06
+    commit:
+      sha: f4df3eced86b4fa0971164443500447a56c8ee06
+      short_sha: f4df3ec
+      subject: 'feat(US-003): TASK-07 associazione progetto-template e ruoli scoperti'
+      committed_at: '2026-08-12T18:17:44+02:00'
+      url: null
   -
     id: TASK-08
     title: 'Test: predefinito unico, proposta alla creazione, utilizzabilita e ruoli scoperti'
@@ -1184,4 +1190,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:15:21+00:00'
+updated_at: '2026-08-12T16:17:44+00:00'
