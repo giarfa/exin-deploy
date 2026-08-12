@@ -651,7 +651,7 @@ tasks:
     id: TASK-08
     title: 'Schermata di gestione dei ruoli funzionali'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
     body: |
@@ -681,14 +681,14 @@ tasks:
       8. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Un amministratore crea, modifica e disattiva un ruolo
-      - [ ] Un nome di ruolo duplicato e rifiutato in validazione con messaggio
-      - [ ] La cancellazione di un ruolo referenziato e rifiutata con **messaggio esplicito**, e il ruolo resta
+      - [x] Un amministratore crea, modifica e disattiva un ruolo
+      - [x] Un nome di ruolo duplicato e rifiutato in validazione con messaggio
+      - [x] La cancellazione di un ruolo referenziato e rifiutata con **messaggio esplicito**, e il ruolo resta
             disattivabile
-      - [ ] La cancellazione di un ruolo non referenziato funziona
-      - [ ] Ogni azione Livewire e protetta da `Gate::authorize`
-      - [ ] Schermata usabile a 375, 768 e 1280 px (verifica manuale ammessa al bar `NORMAL`)
-      - [ ] Nessun componente Flux Pro utilizzato
+      - [x] La cancellazione di un ruolo non referenziato funziona
+      - [x] Ogni azione Livewire e protetta da `Gate::authorize`
+      - [x] Schermata usabile a 375, 768 e 1280 px (verifica manuale ammessa al bar `NORMAL`)
+      - [x] Nessun componente Flux Pro utilizzato
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -697,6 +697,12 @@ tasks:
       - Commit: `feat(US-002): TASK-08 gestione dei ruoli funzionali`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: fc53b3818392be0e5d46f7627f4b98b284b5ab51
+      short_sha: fc53b38
+      subject: 'feat(US-002): TASK-08 gestione dei ruoli funzionali'
+      committed_at: '2026-08-12T16:51:11+02:00'
+      url: null
   -
     id: TASK-09
     title: 'Schermate dei progetti e dei responsabili di progetto'
@@ -899,4 +905,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:48:45+00:00'
+updated_at: '2026-08-12T14:51:12+00:00'
