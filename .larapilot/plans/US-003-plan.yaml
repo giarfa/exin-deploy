@@ -214,11 +214,11 @@ tasks:
       7. Commit di ancoraggio del branch (commit vuoto ammesso)
 
       ## Completion Criteria
-      - [ ] Nessuna modifica pendente nell'albero di lavoro prima del merge
-      - [ ] `develop` contiene i commit di US-002 e la suite di test e verde su `develop`
-      - [ ] Il branch `feature/US-003-template-workflow-step-campi` esiste in locale e deriva da `develop`
-      - [ ] Titolo e corpo della PR interna redatti e tenuti in locale
-      - [ ] Nessun push eseguito
+      - [x] Nessuna modifica pendente nell'albero di lavoro prima del merge
+      - [x] `develop` contiene i commit di US-002 e la suite di test e verde su `develop`
+      - [x] Il branch `feature/US-003-template-workflow-step-campi` esiste in locale e deriva da `develop`
+      - [x] Titolo e corpo della PR interna redatti e tenuti in locale
+      - [x] Nessun push eseguito
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -228,8 +228,14 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: 6aacedc68e946728a2337d7d137987788cd7fdb4
+      short_sha: 6aacedc
+      subject: 'chore(US-003): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-12T18:02:35+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Enum FieldType e modello WorkflowTemplate con migrazione, factory e seeder'
@@ -1142,4 +1148,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T15:55:01+00:00'
+updated_at: '2026-08-12T16:02:37+00:00'
