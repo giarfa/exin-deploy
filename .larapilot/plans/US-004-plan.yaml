@@ -499,19 +499,25 @@ tasks:
       7. `php artisan test --compact --filter=Release`
 
       ## Completion Criteria
-      - [ ] I vincoli di unicita e di integrita sono verificati aggirando i modelli
-      - [ ] Enum e cast coperti su lettura e su etichetta
-      - [ ] Il registro rifiuta modifica e cancellazione
-      - [ ] Suite verde
+      - [x] I vincoli di unicita e di integrita sono verificati aggirando i modelli
+      - [x] Enum e cast coperti su lettura e su etichetta
+      - [x] Il registro rifiuta modifica e cancellazione
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-004): TASK-04 copre modelli, vincoli di schema e registro`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: fa27be8276db7c5c235772e1727bbd34d9b3dc14
+      short_sha: fa27be8
+      subject: 'test(US-004): TASK-04 copre modelli, vincoli di schema e registro'
+      committed_at: '2026-08-13T00:22:47+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Action StartRelease: snapshot, responsabili risolti ed eccezioni di dominio'
@@ -842,4 +848,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:20:45+00:00'
+updated_at: '2026-08-12T22:22:48+00:00'
