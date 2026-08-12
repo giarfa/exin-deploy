@@ -1221,11 +1221,11 @@ tasks:
       7. Pint (nessun PHP toccato, ma il gate resta), `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] README descrive template, step e campi e il confine con lo snapshot di US-004
-      - [ ] I due trade-off (predefinito unico, tipo come string) sono annotati fra i vincoli permanenti
-      - [ ] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
-      - [ ] I comandi documentati sono stati eseguiti come scritti
-      - [ ] Suite verde
+      - [x] README descrive template, step e campi e il confine con lo snapshot di US-004
+      - [x] I due trade-off (predefinito unico, tipo come string) sono annotati fra i vincoli permanenti
+      - [x] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
+      - [x] I comandi documentati sono stati eseguiti come scritti
+      - [x] Suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -1235,7 +1235,13 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione finale della PR interna verso `develop`, tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:38:26+00:00'
+    commit:
+      sha: e7071a668144ec0a17a6d6e32188701f83d06e6d
+      short_sha: e7071a6
+      subject: 'docs(US-003): TASK-16 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-12T18:40:13+02:00'
+      url: null
+updated_at: '2026-08-12T16:40:13+00:00'

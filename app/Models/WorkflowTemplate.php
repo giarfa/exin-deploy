@@ -109,18 +109,24 @@ class WorkflowTemplate extends Model
      * Disattiva o riattiva il template.
      *
      * Disattivare il predefinito ne rimuove il flag: proporre ai nuovi progetti
-     * un template inutilizzabile sarebbe un errore silenzioso. E l'unica
-     * scrittura di `is_default` fuori da `SetDefaultWorkflowTemplate`, e azzera
-     * soltanto — non puo quindi creare un secondo predefinito. Una sola `update`:
-     * l'operazione e atomica senza bisogno di una transazione esplicita.
+     * un template inutilizzabile sarebbe un errore silenzioso.
+     *
+     * Il flag viene azzerato in **entrambe** le direzioni, e non e una
+     * ridondanza: riattivare non deve poter restituire il ruolo di predefinito a
+     * una riga che lo porti ancora per altra via — una correzione manuale, una
+     * migrazione di dati — facendola convivere con il predefinito impostato nel
+     * frattempo. Cosi questa e l'unica scrittura di `is_default` fuori da
+     * `SetDefaultWorkflowTemplate` e puo soltanto azzerare: nessun secondo
+     * percorso e in grado di creare un predefinito. Per tornare predefinito, un
+     * template riattivato ripassa dalla Action.
+     *
+     * Una sola `update`: l'operazione e atomica senza transazione esplicita.
      */
     public function toggleActivation(): void
     {
-        $deactivating = $this->is_active;
-
         $this->update([
             'is_active' => ! $this->is_active,
-            'is_default' => $deactivating ? false : $this->is_default,
+            'is_default' => false,
         ]);
     }
 

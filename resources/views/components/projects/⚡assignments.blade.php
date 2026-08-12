@@ -44,10 +44,13 @@ new class extends Component
     #[Computed]
     public function uncoveredRoles()
     {
-        $this->project->loadMissing([
-            'workflowTemplate.stepDefinitions.role:id,name',
-            'assignments:id,project_id,role_id',
-        ]);
+        /*
+         * Le assegnazioni sono gia state lette dal computed `assignments`: gliele
+         * si passa invece di rileggerle, altrimenti la stessa pagina
+         * interrogherebbe due volte la stessa tabella per disegnare due riquadri.
+         */
+        $this->project->setRelation('assignments', $this->assignments->values());
+        $this->project->loadMissing('workflowTemplate.stepDefinitions.role:id,name');
 
         return $this->project->uncoveredRoles();
     }
@@ -180,7 +183,7 @@ new class extends Component
         });
 
         unset($this->assignments, $this->assignableUsers, $this->uncoveredRoles, $this->rolesPerUser);
-        $this->project->unsetRelation('assignments');
+        $this->project->unsetRelation('assignments')->unsetRelation('workflowTemplate');
 
         $this->feedback = __('projects.assignment_saved');
     }

@@ -163,6 +163,12 @@ class FieldDefinitionManagementTest extends TestCase
         $this->fields()->call('moveUp', $field->id)->assertForbidden();
         $this->fields()->call('moveDown', $field->id)->assertForbidden();
         $this->fields()->call('delete', $field->id)->assertForbidden();
+
+        $this->fields()
+            ->set('label', 'Tentativo')
+            ->set('type', FieldType::ShortText->value)
+            ->call('save')
+            ->assertForbidden();
     }
 
     public function test_the_listing_does_not_query_per_row(): void

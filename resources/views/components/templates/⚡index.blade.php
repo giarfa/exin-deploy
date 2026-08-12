@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Workflows\SetDefaultWorkflowTemplate;
+use App\Exceptions\InactiveTemplateCannotBeDefault;
 use App\Models\WorkflowTemplate;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -122,6 +123,7 @@ new class extends Component
             WorkflowTemplate::create($attributes + ['is_active' => true, 'is_default' => false]);
         }
 
+        $this->operationError = null;
         unset($this->templates);
         $this->closeForm();
     }
@@ -160,7 +162,20 @@ new class extends Component
 
         Gate::authorize('setDefault', $template);
 
-        app(SetDefaultWorkflowTemplate::class)->handle($template);
+        try {
+            app(SetDefaultWorkflowTemplate::class)->handle($template);
+        } catch (InactiveTemplateCannotBeDefault) {
+            /*
+             * Il controllo qui sopra legge lo stato di un istante prima: fra
+             * quella lettura e la scrittura il template puo essere stato
+             * disattivato da qualcun altro. L'Action decide sul dato fresco e
+             * rifiuta; senza questa cattura il rifiuto diventerebbe un 500,
+             * cioe un errore tecnico al posto di un messaggio comprensibile.
+             */
+            $this->operationError = __('templates.default_requires_active');
+
+            return;
+        }
 
         $this->operationError = null;
         unset($this->templates);

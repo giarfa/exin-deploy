@@ -32,7 +32,10 @@ return [
     'default_requires_active' => 'Un template disattivato non puo diventare predefinito: riattivalo prima.',
 
     'steps_count' => ':count step|:count step',
-    'projects_count' => 'nessun progetto|:count progetto|:count progetti',
+    // Condizioni esplicite: il selettore italiano usa due forme, e senza `{0}`
+    // la prima renderebbe per `n == 1` — cioe "nessun progetto" su un template
+    // usato da un progetto, che dice il contrario del vero.
+    'projects_count' => '{0} nessun progetto|{1} :count progetto|[2,*] :count progetti',
     'manage_steps' => 'Step',
 
     'unusable_inactive' => 'Template disattivato: non e utilizzabile per avviare una release.',
@@ -68,7 +71,7 @@ return [
     'move_down' => 'Sposta :name piu in basso',
     'moved' => ':name e ora alla posizione :position.',
 
-    'fields_count' => 'nessun campo richiesto|:count campo richiesto|:count campi richiesti',
+    'fields_count' => '{0} nessun campo richiesto|{1} :count campo richiesto|[2,*] :count campi richiesti',
     'manage_fields' => 'Campi richiesti',
 
     'confirm_delete_step' => 'Eliminare lo step :name? Anche i campi richiesti che vi hai definito andranno persi. Le release gia avviate non cambiano: leggono la propria copia.',

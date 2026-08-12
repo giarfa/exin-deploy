@@ -177,12 +177,17 @@ new class extends Component
         Gate::authorize('manageSteps', $this->template);
 
         $field = $this->findField($id);
+        $before = $field->position;
 
         $up ? $field->moveUp() : $field->moveDown();
 
-        $this->feedback = __('templates.moved', [
+        $after = $field->fresh()->position;
+
+        // Nessun annuncio quando lo spostamento non ha avuto effetto: vedi il
+        // commento gemello nella schermata degli step.
+        $this->feedback = $after === $before ? null : __('templates.moved', [
             'name' => $field->label,
-            'position' => $field->fresh()->position,
+            'position' => $after,
         ]);
 
         unset($this->fields);

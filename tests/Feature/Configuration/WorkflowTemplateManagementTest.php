@@ -108,6 +108,70 @@ class WorkflowTemplateManagementTest extends TestCase
         $this->assertFalse($template->fresh()->is_default);
     }
 
+    public function test_the_counters_are_worded_correctly_for_one_and_many(): void
+    {
+        // Le forme plurali con tre varianti senza condizioni esplicite rendevano
+        // "nessun progetto" proprio per `n == 1`: il contrario del vero, e
+        // sull'informazione che deve rendere consapevole una disattivazione.
+        $this->assertSame('nessun progetto', trans_choice('templates.projects_count', 0, ['count' => 0]));
+        $this->assertSame('1 progetto', trans_choice('templates.projects_count', 1, ['count' => 1]));
+        $this->assertSame('3 progetti', trans_choice('templates.projects_count', 3, ['count' => 3]));
+
+        $this->assertSame('nessun campo richiesto', trans_choice('templates.fields_count', 0, ['count' => 0]));
+        $this->assertSame('1 campo richiesto', trans_choice('templates.fields_count', 1, ['count' => 1]));
+        $this->assertSame('4 campi richiesti', trans_choice('templates.fields_count', 4, ['count' => 4]));
+    }
+
+    public function test_reactivating_a_template_never_recreates_a_second_default(): void
+    {
+        // Riga incoerente come puo produrla una correzione manuale: disattivata,
+        // ma con il flag ancora addosso. Riattivarla non deve restituirle il ruolo.
+        $stale = WorkflowTemplate::factory()->inactive()->create();
+        DB::table('workflow_templates')->where('id', $stale->id)->update(['is_default' => true]);
+
+        $current = WorkflowTemplate::factory()->isDefault()->create();
+
+        Livewire::test('templates.index')->call('toggleActivation', $stale->id);
+
+        $this->assertTrue($stale->fresh()->is_active);
+        $this->assertFalse($stale->fresh()->is_default);
+        $this->assertTrue($current->fresh()->is_default);
+        $this->assertSame(1, WorkflowTemplate::where('is_default', true)->count());
+    }
+
+    public function test_a_template_deactivated_meanwhile_is_refused_without_a_server_error(): void
+    {
+        // Fra il controllo del componente e la scrittura dell'Action il template
+        // puo essere stato disattivato da qualcun altro: il rifiuto deve restare
+        // un messaggio comprensibile, non un errore tecnico.
+        $template = WorkflowTemplate::factory()->create();
+
+        $component = Livewire::test('templates.index');
+
+        DB::table('workflow_templates')->where('id', $template->id)->update(['is_active' => false]);
+
+        $component->call('setAsDefault', $template->id);
+
+        $this->assertFalse($template->fresh()->is_default);
+        $this->assertSame(__('templates.default_requires_active'), $component->get('operationError'));
+    }
+
+    public function test_a_successful_save_clears_a_previous_refusal(): void
+    {
+        $inactive = WorkflowTemplate::factory()->inactive()->create();
+
+        $component = Livewire::test('templates.index')
+            ->call('setAsDefault', $inactive->id);
+
+        $this->assertNotNull($component->get('operationError'));
+
+        $component->call('openCreateForm')
+            ->set('name', 'Rilascio nuovo')
+            ->call('save');
+
+        $this->assertNull($component->get('operationError'));
+    }
+
     public function test_a_template_without_steps_is_flagged_as_unusable(): void
     {
         WorkflowTemplate::factory()->create(['name' => 'Processo incompleto']);
@@ -127,6 +191,12 @@ class WorkflowTemplateManagementTest extends TestCase
         Livewire::test('templates.index')->call('openEditForm', $template->id)->assertForbidden();
         Livewire::test('templates.index')->call('toggleActivation', $template->id)->assertForbidden();
         Livewire::test('templates.index')->call('setAsDefault', $template->id)->assertForbidden();
+
+        // `save` e l'azione che scrive: non basta che il comando sia nascosto.
+        Livewire::test('templates.index')
+            ->set('name', 'Tentativo')
+            ->call('save')
+            ->assertForbidden();
     }
 
     public function test_a_member_refused_on_a_deactivated_template_gets_a_403_not_a_domain_message(): void

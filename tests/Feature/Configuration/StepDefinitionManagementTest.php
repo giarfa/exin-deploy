@@ -134,6 +134,24 @@ class StepDefinitionManagementTest extends TestCase
         $this->assertSame([1, 2, 3, 4], $this->template->stepDefinitions()->pluck('position')->all());
     }
 
+    public function test_a_move_with_no_effect_is_not_announced(): void
+    {
+        // Agli estremi lo spostamento e un nulla di fatto: annunciarlo direbbe a
+        // chi non vede lo schermo che qualcosa e cambiato quando non e cambiato.
+        StepDefinition::factory()->count(3)->for($this->template)->create();
+
+        $first = $this->template->stepDefinitions()->where('position', 1)->firstOrFail();
+        $last = $this->template->stepDefinitions()->where('position', 3)->firstOrFail();
+
+        $this->steps()->call('moveUp', $first->id)->assertSet('feedback', null);
+        $this->steps()->call('moveDown', $last->id)->assertSet('feedback', null);
+
+        $this->steps()->call('moveDown', $first->id)->assertSet(
+            'feedback',
+            __('templates.moved', ['name' => $first->name, 'position' => 2])
+        );
+    }
+
     public function test_deleting_a_step_removes_its_fields_and_closes_the_sequence(): void
     {
         StepDefinition::factory()->count(3)->for($this->template)->create();
@@ -173,6 +191,12 @@ class StepDefinitionManagementTest extends TestCase
         $this->steps()->call('moveUp', $step->id)->assertForbidden();
         $this->steps()->call('moveDown', $step->id)->assertForbidden();
         $this->steps()->call('delete', $step->id)->assertForbidden();
+
+        $this->steps()
+            ->set('name', 'Tentativo')
+            ->set('roleId', $step->role_id)
+            ->call('save')
+            ->assertForbidden();
     }
 
     public function test_the_listing_does_not_query_per_row(): void

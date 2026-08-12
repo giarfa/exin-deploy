@@ -187,12 +187,20 @@ new class extends Component
         Gate::authorize('manageSteps', $this->template);
 
         $step = $this->findStep($id);
+        $before = $step->position;
 
         $up ? $step->moveUp() : $step->moveDown();
 
-        $this->feedback = __('templates.moved', [
+        $after = $step->fresh()->position;
+
+        /*
+         * Agli estremi lo spostamento e un nulla di fatto (la regola vive nel
+         * concern): annunciarlo comunque direbbe a chi non vede lo schermo che
+         * qualcosa e cambiato quando non e cambiato niente.
+         */
+        $this->feedback = $after === $before ? null : __('templates.moved', [
             'name' => $step->name,
-            'position' => $step->fresh()->position,
+            'position' => $after,
         ]);
 
         unset($this->steps);
