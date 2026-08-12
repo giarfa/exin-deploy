@@ -242,9 +242,9 @@ tasks:
       7. Redigere titolo e corpo della PR interna verso `develop` e **tenerli in locale**: nessun push
 
       ## Completion Criteria
-      - [ ] `develop` contiene i commit di US-003 e la suite e verde su `develop`
-      - [ ] Il branch `feature/US-004-avvio-release-snapshot` esiste in locale e parte da `develop`
-      - [ ] Descrizione della PR interna redatta e tenuta in locale
+      - [x] `develop` contiene i commit di US-003 e la suite e verde su `develop`
+      - [x] Il branch `feature/US-004-avvio-release-snapshot` esiste in locale e parte da `develop`
+      - [x] Descrizione della PR interna redatta e tenuta in locale
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -254,8 +254,14 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale verso `develop`, apertura remota solo su richiesta esplicita
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: 749415753599bdfeac1f56a97a06f54d8b756160
+      short_sha: '7494157'
+      subject: 'chore(US-004): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-13T00:13:21+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Enum di stato e modello Release con migrazione e factory'
@@ -818,4 +824,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:09:39+00:00'
+updated_at: '2026-08-12T22:13:36+00:00'

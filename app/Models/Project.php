@@ -70,6 +70,21 @@ class Project extends Model
     }
 
     /**
+     * Rilasci avviati sul progetto, dal piu recente.
+     *
+     * E lo storico che rende un progetto non cancellabile: portarselo via
+     * significherebbe portarsi via il valore che lo strumento accumula nel tempo
+     * (vedi `ProjectPolicy::delete`). Il vincolo e applicato anche dallo schema,
+     * con `restrict` sulla chiave esterna di `releases`.
+     *
+     * @return HasMany<Release, $this>
+     */
+    public function releases(): HasMany
+    {
+        return $this->hasMany(Release::class)->latest('started_at');
+    }
+
+    /**
      * Ruoli previsti dagli step del template associato che su questo progetto non
      * hanno un responsabile.
      *
