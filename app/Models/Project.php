@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Progetto su cui il team rilascia: contenitore delle proprie release e del
@@ -38,6 +39,16 @@ class Project extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Mappatura ruolo -> persona valida su questo progetto.
+     *
+     * @return HasMany<ProjectRoleAssignment, $this>
+     */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(ProjectRoleAssignment::class);
     }
 
     /**

@@ -292,7 +292,7 @@ tasks:
     id: TASK-02
     title: 'Modello Project con slug univoco, migrazione, factory e seeder'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |
@@ -324,21 +324,27 @@ tasks:
       8. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `projects` esiste con chiave primaria UUID, `slug` con indice unico e `is_active` indicizzato
-      - [ ] Un progetto creato riceve automaticamente un id in formato UUID
-      - [ ] Nessuna colonna verso il template di workflow (appartiene a US-003)
-      - [ ] `migrate:fresh --seed` completa senza errori
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `projects` esiste con chiave primaria UUID, `slug` con indice unico e `is_active` indicizzato
+      - [x] Un progetto creato riceve automaticamente un id in formato UUID
+      - [x] Nessuna colonna verso il template di workflow (appartiene a US-003)
+      - [x] `migrate:fresh --seed` completa senza errori
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] `database/factories/ProjectFactory.php` creata, con slug unico derivato dal nome e stato `inactive()`
-      - [ ] `DatabaseSeeder` crea due progetti fissi
-      - [ ] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
+      - [x] `database/factories/ProjectFactory.php` creata, con slug unico derivato dal nome e stato `inactive()`
+      - [x] `DatabaseSeeder` crea due progetti fissi
+      - [x] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
 
       ## Git Deliverables
       - Commit: `feat(US-002): TASK-02 progetti con slug univoco`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 9cf3e4083b8d9b402cacadb82eeddbadef699443
+      short_sha: 9cf3e40
+      subject: 'feat(US-002): TASK-02 progetti con slug univoco'
+      committed_at: '2026-08-12T16:40:04+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Mappature ruolo-persona: predefinita di team e di progetto'
@@ -863,4 +869,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:38:41+00:00'
+updated_at: '2026-08-12T14:40:04+00:00'

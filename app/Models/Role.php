@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -31,15 +33,14 @@ class Role extends Model
     /**
      * Relazioni che rendono un ruolo non cancellabile.
      *
-     * Punto di estensione unico della regola: le mappature ruolo -> persona
-     * arrivano nel task successivo, US-003 aggiungera `stepDefinitions` (step di
-     * template) e US-004 `releaseSteps` (step di release gia avviate). Chi
-     * introduce una nuova tabella che referenzia i ruoli aggiunge il nome della
-     * relazione qui, e la regola vale ovunque senza altre modifiche.
+     * Punto di estensione unico della regola: US-003 aggiungera `stepDefinitions`
+     * (step di template) e US-004 `releaseSteps` (step di release gia avviate).
+     * Chi introduce una nuova tabella che referenzia i ruoli aggiunge il nome
+     * della relazione qui, e la regola vale ovunque senza altre modifiche.
      *
      * @var list<string>
      */
-    private const REFERENCING_RELATIONS = [];
+    private const REFERENCING_RELATIONS = ['projectAssignments', 'defaultAssignment'];
 
     /**
      * Get the attributes that should be cast.
@@ -51,6 +52,26 @@ class Role extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Assegnazioni del ruolo sui singoli progetti.
+     *
+     * @return HasMany<ProjectRoleAssignment, $this>
+     */
+    public function projectAssignments(): HasMany
+    {
+        return $this->hasMany(ProjectRoleAssignment::class);
+    }
+
+    /**
+     * Persona che ricopre il ruolo per impostazione predefinita nel team.
+     *
+     * @return HasOne<DefaultRoleAssignment, $this>
+     */
+    public function defaultAssignment(): HasOne
+    {
+        return $this->hasOne(DefaultRoleAssignment::class);
     }
 
     /**

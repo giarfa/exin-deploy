@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Enums\UserLevel;
+use App\Models\DefaultRoleAssignment;
 use App\Models\Project;
+use App\Models\ProjectRoleAssignment;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -102,6 +104,35 @@ class DatabaseSeeder extends Seeder
     ];
 
     /**
+     * Mappatura predefinita ruolo -> persona valida per il team.
+     *
+     * @var array<string, string>
+     */
+    private const DEFAULT_ASSIGNMENTS = [
+        'Dev Lead' => 'l.serra@gruppoexcellence.com',
+        'QA' => 'm.bellini@gruppoexcellence.com',
+        'DevOps' => 'd.rossi@gruppoexcellence.com',
+        'PM' => 'c.fumagalli@gruppoexcellence.com',
+        'Security' => 'f.giarola@gruppoexcellence.com',
+    ];
+
+    /**
+     * Scostamenti dalla mappatura predefinita, per progetto.
+     *
+     * Un progetto eredita la mappatura predefinita intatta, l'altro ha una
+     * sostituzione: in sviluppo la differenza fra le due mappature deve essere
+     * visibile a colpo d'occhio, altrimenti il comportamento che questa spec
+     * introduce resta invisibile.
+     *
+     * @var array<string, array<string, string>>
+     */
+    private const PROJECT_OVERRIDES = [
+        'gestionale-magazzino' => [
+            'QA' => 'd.rossi@gruppoexcellence.com',
+        ],
+    ];
+
+    /**
      * Seed the application's database.
      */
     public function run(): void
@@ -109,6 +140,7 @@ class DatabaseSeeder extends Seeder
         $this->seedTeam();
         $this->seedRoles();
         $this->seedProjects();
+        $this->seedAssignments();
     }
 
     /**
@@ -141,6 +173,38 @@ class DatabaseSeeder extends Seeder
     {
         foreach (self::PROJECTS as $project) {
             Project::factory()->create($project);
+        }
+    }
+
+    /**
+     * Mappatura predefinita di team e mappature dei singoli progetti.
+     *
+     * I progetti sono seminati con la loro mappatura esplicita e non tramite
+     * l'Action di precompilazione: il seeder descrive lo stato finale voluto,
+     * inclusi gli scostamenti, invece di simulare il percorso dell'interfaccia.
+     */
+    private function seedAssignments(): void
+    {
+        $roles = Role::pluck('id', 'name');
+        $users = User::pluck('id', 'email');
+
+        foreach (self::DEFAULT_ASSIGNMENTS as $roleName => $email) {
+            DefaultRoleAssignment::factory()->create([
+                'role_id' => $roles[$roleName],
+                'user_id' => $users[$email],
+            ]);
+        }
+
+        foreach (Project::all() as $project) {
+            $overrides = self::PROJECT_OVERRIDES[$project->slug] ?? [];
+
+            foreach (self::DEFAULT_ASSIGNMENTS as $roleName => $email) {
+                ProjectRoleAssignment::factory()->create([
+                    'project_id' => $project->id,
+                    'role_id' => $roles[$roleName],
+                    'user_id' => $users[$overrides[$roleName] ?? $email],
+                ]);
+            }
         }
     }
 }
