@@ -4,6 +4,7 @@ use App\Models\DefaultRoleAssignment;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\WorkflowTemplate;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -56,6 +57,37 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/progetti/{project}/responsabili', 'projects.assignments')
         ->can('manageAssignments', 'project')
         ->name('projects.assignments');
+
+    /*
+     * Template di workflow: la definizione del processo di rilascio. Tre livelli
+     * annidati — template, step, campi richiesti — perche in un unico componente
+     * i tre livelli di form diventerebbero illeggibili a 375 px.
+     *
+     * Step e campi non hanno una Policy propria: sono decisi da `manageSteps` sul
+     * template che li contiene.
+     */
+    Route::livewire('/template', 'templates.index')
+        ->can('viewAny', WorkflowTemplate::class)
+        ->name('templates.index');
+
+    Route::livewire('/template/{template}/step', 'templates.steps')
+        ->can('manageSteps', 'template')
+        ->name('templates.steps');
+
+    /*
+     * `scopeBindings()` non e cosmetico: senza, uno step appartenente a un altro
+     * template sarebbe raggiungibile cambiando identificativo nell'indirizzo,
+     * anche con l'autorizzazione sul template corretta.
+     *
+     * Il parametro si chiama `{stepDefinition}` e non `{step}` perche il binding
+     * annidato ne ricava il nome della relazione da interrogare
+     * (`stepDefinition` -> `stepDefinitions()`). Il segmento visibile
+     * dell'indirizzo resta `step`.
+     */
+    Route::livewire('/template/{template}/step/{stepDefinition}/campi', 'templates.fields')
+        ->can('manageSteps', 'template')
+        ->scopeBindings()
+        ->name('templates.fields');
 
     Route::livewire('/responsabili-predefiniti', 'default-assignments.index')
         ->can('viewAny', DefaultRoleAssignment::class)

@@ -45,8 +45,20 @@ il rifiuto dell'accesso.
 Semina inoltre la configurazione di processo: cinque ruoli funzionali, la mappatura
 predefinita del team e due progetti. Uno dei due (`gestionale-magazzino`) ha una
 sostituzione rispetto alla predefinita, cosi che la differenza fra le due mappature sia
-visibile senza doverla ricreare a mano. Lo scenario di esecuzione — template, release in
-corso, release conclusa — arriva con US-011.
+visibile senza doverla ricreare a mano.
+
+E semina il processo di rilascio: il template **"Rilascio standard"**, attivo e
+predefinito, con cinque step ordinati (Preparazione del codice, Verifica funzionale,
+Valutazione di sicurezza, Preparazione dell'ambiente, Consegna in produzione) e quattordici
+campi richiesti che coprono tutti e quattro i tipi previsti. Entrambi i progetti lo usano.
+Un secondo template, **"Rilascio urgente"**, e disattivato: serve a vedere come si comporta
+l'elenco e come si sostituisce il processo su un progetto.
+
+La mappatura dimostrativa copre tutti i ruoli previsti dal template, quindi lo stato
+iniziale e quello sano. Per vedere la segnalazione dei **ruoli scoperti**, rimuovi un
+responsabile dalla pagina dei responsabili di un progetto.
+
+Lo scenario di **esecuzione** — release in corso, release conclusa — arriva con US-011.
 
 Non ci sono istruzioni Sail o Docker: l'ambiente locale scelto nel PRD e Herd.
 
@@ -102,6 +114,11 @@ non si potrebbe piu sapere cosa fosse stato effettivamente richiesto in un rilas
 passato. Le release concluse sono la prova documentata che il processo e stato rispettato,
 e una prova che cambia retroattivamente non e una prova.
 
+Da US-003 le tabelle di definizione del workflow esistono davvero: `workflow_templates`,
+`step_definitions` e `field_definitions` sono esattamente le righe che US-004 congelera
+nello snapshot di ogni release. Nessun percorso di esecuzione — chiusura di uno step,
+avanzamento, viste operative — deve leggerle.
+
 Regole correlate, applicate dal codice: la chiusura di uno step, l'attivazione del
 successivo e la scrittura dell'evento avvengono in **una sola transazione**, e una release
 ha al massimo **uno** step attivo per volta.
@@ -119,6 +136,33 @@ Le entita di definizione presenti oggi:
 | `Project` | progetto su cui si rilascia | slug univoco a livello di schema; mai cancellabile, solo disattivabile |
 | `DefaultRoleAssignment` | ruolo → persona predefinita del team | una sola persona per ruolo |
 | `ProjectRoleAssignment` | ruolo → persona su un progetto | una sola persona per coppia progetto/ruolo |
+| `WorkflowTemplate` | processo di rilascio riutilizzabile | nome univoco; **un solo predefinito**; mai cancellabile, solo disattivabile |
+| `StepDefinition` | passaggio ordinato del processo, con ruolo responsabile e istruzioni | posizioni **contigue e senza duplicati**, unicita `(template, posizione)` a schema |
+| `FieldDefinition` | informazione richiesta per chiudere uno step | **quattro tipi** (testo breve, testo lungo, link, conferma); unicita `(step, posizione)` a schema |
+
+**Il template nomina ruoli, non persone.** E cio che rende lo stesso processo utilizzabile
+su progetti con team diversi: la persona si ottiene all'avvio della release, risolvendo il
+ruolo di ogni step sulla mappatura del progetto. Un ruolo previsto dal template e senza
+responsabile sul progetto e segnalato in elenco progetti e nella pagina dei responsabili,
+perche una release avviata cosi si bloccherebbe su quello step.
+
+**Un template senza step non e utilizzabile.** `WorkflowTemplate::isUsable()` e
+`unusableReason()` distinguono "disattivato" da "senza step": sono due situazioni che si
+risolvono in modo diverso, e un messaggio unico costringerebbe a indovinare. US-004
+invochera lo stesso metodo come precondizione dell'avvio di una release.
+
+**Il template predefinito e una proposta, non un legame.** Alla creazione di un progetto
+viene proposto come valore iniziale e resta sostituibile, in creazione e in modifica —
+stessa semantica della mappatura predefinita di team. Cambiare il predefinito non tocca i
+progetti gia creati.
+
+**Il riordino e affidato a un concern condiviso.** `App\Models\Concerns\OrderedByPosition`,
+usato da step e campi, garantisce che dopo ogni spostamento o cancellazione le posizioni
+restino `1..N`. La rinumerazione avviene in due passaggi dentro una sola transazione,
+passando da posizioni **temporanee negative**: senza quel passaggio intermedio l'indice
+unico rifiuterebbe la scrittura a meta strada. Per questo `position` e un `integer` con
+segno. Ogni cancellazione passa da `deleteAndResequence()`: la contiguita non e
+responsabilita di chi chiama.
 
 **La mappatura predefinita non e retroattiva.** Alla creazione di un progetto,
 `App\Actions\Projects\CreateProject` copia la mappatura predefinita sul progetto, dentro una
@@ -164,6 +208,18 @@ riga, con icona e parola.
    offerto a chiunque.
 4. **Soglia responsive unica a 1024 px.** Sopra, sidebar permanente; sotto, drawer. E la
    soglia `max-lg:` gestita da Flux: non introdurne una seconda.
+5. **Un solo template predefinito, garantito dal codice e non dallo schema.**
+   L'invariante vive in `App\Actions\Workflows\SetDefaultWorkflowTemplate`, unico percorso
+   di scrittura del flag. Un indice unico parziale non e portabile fra SQLite, MySQL e
+   PostgreSQL con le migrazioni di Laravel (vincolo 1), e la variante con colonna nullable
+   renderebbe `is_default` ambigua — `null` invece di `false` — proprio dove il codice la
+   legge come booleana. Contropartite: transazione, percorso unico e un test che verifica
+   l'assenza di due predefiniti dopo una sequenza di operazioni. Se il flag venisse scritto
+   da un secondo percorso, l'indice parziale va rivalutato.
+6. **`field_definitions.type` e una `string` con cast a enum, non un `enum` di schema.**
+   Un vincolo di check costringerebbe SQLite a ricostruire la tabella al primo tipo
+   aggiunto. Il rifiuto di un valore fuori dai quattro casi resta pieno: `Rule::enum` in
+   scrittura, `ValueError` del cast Eloquent in lettura, entrambi coperti da test.
 
 ## Stack
 

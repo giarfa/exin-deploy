@@ -108,7 +108,7 @@ specs:
       title: 'Configurazione del processo'
     priority: HIGH
     points: 13
-    status: PLANNED
+    status: DONE
     body: |
       #### US-003: Template di workflow con step ordinati e campi richiesti
 
@@ -127,22 +127,31 @@ specs:
       risulta associabile ai progetti come predefinito.
 
       **Criteri di accettazione**
-      - [ ] Un amministratore crea, modifica e disattiva template (nome, descrizione, flag di predefinito)
-      - [ ] Un solo template può essere predefinito: impostarne uno nuovo rimuove il flag dal precedente
-      - [ ] Il template predefinito è proposto in automatico alla creazione di un progetto, e resta sostituibile
-      - [ ] Un amministratore aggiunge step al template con nome, istruzioni per chi lo esegue e ruolo responsabile
-      - [ ] Gli step hanno una posizione ordinata e sono riordinabili
-      - [ ] Dopo un riordino o una cancellazione le posizioni restano contigue e senza duplicati (verificato da test)
-      - [ ] Per ogni step si definiscono i campi richiesti: etichetta, tipo, obbligatorietà, posizione e testo di aiuto opzionale
-      - [ ] I tipi supportati sono esattamente quattro: testo breve, testo lungo, link, conferma
-      - [ ] Il tipo di campo è modellato come enum PHP nativo: un valore fuori dall'enum è rifiutato
-      - [ ] Un template senza step non è utilizzabile per avviare una release, con messaggio esplicito
-      - [ ] Il sistema segnala i ruoli previsti dal template e non ancora assegnati sul progetto associato
-      - [ ] Un `member` non accede alla configurazione dei template (Policy lato server)
-      - [ ] Factory e seeder producono il template "Rilascio standard" con cinque step realistici e i relativi campi
+      - [x] Un amministratore crea, modifica e disattiva template (nome, descrizione, flag di predefinito)
+      - [x] Un solo template può essere predefinito: impostarne uno nuovo rimuove il flag dal precedente
+      - [x] Il template predefinito è proposto in automatico alla creazione di un progetto, e resta sostituibile
+      - [x] Un amministratore aggiunge step al template con nome, istruzioni per chi lo esegue e ruolo responsabile
+      - [x] Gli step hanno una posizione ordinata e sono riordinabili
+      - [x] Dopo un riordino o una cancellazione le posizioni restano contigue e senza duplicati (verificato da test)
+      - [x] Per ogni step si definiscono i campi richiesti: etichetta, tipo, obbligatorietà, posizione e testo di aiuto opzionale
+      - [x] I tipi supportati sono esattamente quattro: testo breve, testo lungo, link, conferma
+      - [x] Il tipo di campo è modellato come enum PHP nativo: un valore fuori dall'enum è rifiutato
+      - [x] Un template senza step non è utilizzabile per avviare una release, con messaggio esplicito
+      - [x] Il sistema segnala i ruoli previsti dal template e non ancora assegnati sul progetto associato
+      - [x] Un `member` non accede alla configurazione dei template (Policy lato server)
+      - [x] Factory e seeder producono il template "Rilascio standard" con cinque step realistici e i relativi campi
     status_history:
       - { status: PLANNED, at: '2026-08-12T15:55:01+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-12T16:02:29+00:00' }
+      - { status: REVIEW, at: '2026-08-12T16:52:57+00:00' }
+      - { status: DONE, at: '2026-08-12T21:58:49+00:00' }
     rework: false
+    merge_commit:
+      sha: cab7e777df8fd83a0f640342e4b68b513cfc398a
+      short_sha: cab7e77
+      subject: 'docs(US-003): registra consuntivo'
+      committed_at: '2026-08-12T18:53:11+02:00'
+      url: null
   -
     code: US-004
     title: 'Avvio di una release con snapshot congelato del workflow'
@@ -151,7 +160,7 @@ specs:
       title: 'Esecuzione del rilascio'
     priority: HIGH
     points: 5
-    status: TODO
+    status: 'IN PROGRESS'
     body: |
       #### US-004: Avvio di una release con snapshot congelato del workflow
 
@@ -181,6 +190,10 @@ specs:
       - [ ] L'etichetta è obbligatoria e univoca per progetto: il duplicato è rifiutato
       - [ ] L'avvio è registrato nel registro delle transizioni con attore e istante
       - [ ] Un `member` non avvia release (Policy lato server)
+    status_history:
+      - { status: PLANNED, at: '2026-08-12T22:09:39+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-12T22:12:48+00:00' }
+    rework: false
   -
     code: US-005
     title: 'Chiusura di uno step con validazione e avanzamento sequenziale'

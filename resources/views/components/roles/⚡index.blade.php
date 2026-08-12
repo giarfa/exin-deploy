@@ -62,7 +62,7 @@ new class extends Component
     public function roles()
     {
         return Role::query()
-            ->withCount(['projectAssignments', 'defaultAssignment'])
+            ->withCount(['projectAssignments', 'defaultAssignment', 'stepDefinitions'])
             ->orderBy('name')
             ->get();
     }

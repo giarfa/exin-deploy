@@ -33,14 +33,18 @@ class Role extends Model
     /**
      * Relazioni che rendono un ruolo non cancellabile.
      *
-     * Punto di estensione unico della regola: US-003 aggiungera `stepDefinitions`
-     * (step di template) e US-004 `releaseSteps` (step di release gia avviate).
-     * Chi introduce una nuova tabella che referenzia i ruoli aggiunge il nome
-     * della relazione qui, e la regola vale ovunque senza altre modifiche.
+     * Punto di estensione unico della regola: US-004 aggiungera `releaseSteps`
+     * (step di release gia avviate). Chi introduce una nuova tabella che
+     * referenzia i ruoli aggiunge il nome della relazione qui, e la regola vale
+     * ovunque senza altre modifiche.
+     *
+     * Chi la estende deve anche aggiungere la relazione ai `withCount()` degli
+     * elenchi che chiamano `usageLabel()` per riga: il conteggio mancante viene
+     * caricato al volo, e sarebbe un N+1.
      *
      * @var list<string>
      */
-    private const REFERENCING_RELATIONS = ['projectAssignments', 'defaultAssignment'];
+    private const REFERENCING_RELATIONS = ['projectAssignments', 'defaultAssignment', 'stepDefinitions'];
 
     /**
      * Get the attributes that should be cast.
@@ -72,6 +76,16 @@ class Role extends Model
     public function defaultAssignment(): HasOne
     {
         return $this->hasOne(DefaultRoleAssignment::class);
+    }
+
+    /**
+     * Step di template che assegnano a questo ruolo la responsabilita.
+     *
+     * @return HasMany<StepDefinition, $this>
+     */
+    public function stepDefinitions(): HasMany
+    {
+        return $this->hasMany(StepDefinition::class);
     }
 
     /**
@@ -128,6 +142,12 @@ class Role extends Model
         if ($counts['projectAssignments'] > 0) {
             $parts[] = trans_choice('roles.used_projects', $counts['projectAssignments'], [
                 'count' => $counts['projectAssignments'],
+            ]);
+        }
+
+        if ($counts['stepDefinitions'] > 0) {
+            $parts[] = trans_choice('roles.used_templates', $counts['stepDefinitions'], [
+                'count' => $counts['stepDefinitions'],
             ]);
         }
 

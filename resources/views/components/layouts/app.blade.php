@@ -51,7 +51,10 @@
                         {{ __('app.nav_projects') }}
                     </flux:navlist.item>
 
-                    <x-nav.planned icon="queue-list">{{ __('app.nav_templates') }}</x-nav.planned>
+                    <flux:navlist.item icon="queue-list" :href="route('templates.index')"
+                                       :current="request()->routeIs('templates.*')">
+                        {{ __('app.nav_templates') }}
+                    </flux:navlist.item>
 
                     <flux:navlist.item icon="identification" :href="route('roles.index')"
                                        :current="request()->routeIs('roles.*')">

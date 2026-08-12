@@ -5,7 +5,7 @@ epic:
   title: 'Esecuzione del rilascio'
 priority: HIGH
 points: 5
-status: TODO
+status: 'IN PROGRESS'
 body: |
   #### US-004: Avvio di una release con snapshot congelato del workflow
 
@@ -35,3 +35,9 @@ body: |
   - [ ] L'etichetta è obbligatoria e univoca per progetto: il duplicato è rifiutato
   - [ ] L'avvio è registrato nel registro delle transizioni con attore e istante
   - [ ] Un `member` non avvia release (Policy lato server)
+status_history:
+  - status: PLANNED
+    at: '2026-08-12T22:09:39+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-12T22:12:48+00:00'
+rework: false

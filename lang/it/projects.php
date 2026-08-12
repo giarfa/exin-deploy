@@ -38,6 +38,25 @@ return [
     'empty' => 'Nessun progetto. Creane uno per iniziare a tracciare i rilasci.',
 
     /*
+     * Template di workflow associato al progetto.
+     */
+    'workflow_template' => 'Template di workflow',
+    'workflow_template_help' => 'Il processo con cui si rilascia su questo progetto. Il template predefinito e proposto alla creazione e resta sostituibile.',
+    'no_template_option' => '— Nessun template —',
+    'no_template' => 'Nessun template',
+    'inactive_template_note' => 'Template disattivato: resta elencato perche e quello attualmente associato.',
+    'created_with_template' => 'Il progetto usa il template ":template".',
+    'created_without_template' => 'Nessun template predefinito disponibile: il progetto e stato creato senza processo di rilascio. Assegnane uno prima di avviare release.',
+
+    /*
+     * Ruoli previsti dal template e non ancora assegnati.
+     */
+    'uncovered_roles' => 'Ruolo previsto dal template senza responsabile su questo progetto: :roles. Una release avviata ora si bloccherebbe su quello step.|Ruoli previsti dal template senza responsabile su questo progetto: :roles. Una release avviata ora si bloccherebbe su quegli step.',
+    'uncovered_roles_badge' => ':count ruolo scoperto|:count ruoli scoperti',
+    'all_roles_covered' => 'Tutti i ruoli previsti dal template hanno un responsabile.',
+    'multiple_roles' => ':name ricopre :count ruoli su questo progetto: e una scelta, non un errore.',
+
+    /*
      * Pagina dei responsabili di un progetto.
      */
     'assignments_heading' => 'Responsabili di :project',

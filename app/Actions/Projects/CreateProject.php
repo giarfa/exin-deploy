@@ -5,11 +5,13 @@ namespace App\Actions\Projects;
 use App\Models\DefaultRoleAssignment;
 use App\Models\Project;
 use App\Models\ProjectRoleAssignment;
+use App\Models\WorkflowTemplate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Crea un progetto e vi precompila la mappatura predefinita di team.
+ * Crea un progetto, vi applica il template predefinito e vi precompila la
+ * mappatura predefinita di team.
  *
  * E il comportamento che elimina la riconfigurazione manuale a ogni nuovo
  * progetto. Deliberatamente una Action esplicita e non un observer sull'evento
@@ -25,13 +27,27 @@ class CreateProject
 {
     /**
      * @param  array<string, mixed>  $attributes
-     * @return array{project: Project, skipped: int} `skipped` e il numero di ruoli
-     *                                               non precompilati perche il ruolo o la persona predefinita
-     *                                               risultano disattivati
+     * @return array{project: Project, skipped: int, template: WorkflowTemplate|null}
+     *                                                                                `skipped` e il numero di ruoli non precompilati perche il ruolo o la
+     *                                                                                persona predefinita risultano disattivati; `template` e il processo
+     *                                                                                effettivamente applicato, `null` quando nessuno era proponibile
      */
     public function handle(array $attributes): array
     {
         return DB::transaction(function () use ($attributes): array {
+            /*
+             * Il template predefinito e una **proposta** al momento della
+             * creazione, non un legame permanente: se il chiamante ne ha gia
+             * indicato uno (anche `null`, per un progetto senza processo) la sua
+             * scelta vince. Stessa semantica della mappatura predefinita.
+             */
+            if (! array_key_exists('workflow_template_id', $attributes)) {
+                $attributes['workflow_template_id'] = WorkflowTemplate::query()
+                    ->active()
+                    ->where('is_default', true)
+                    ->value('id');
+            }
+
             $project = Project::create($attributes);
 
             /*
@@ -65,6 +81,7 @@ class CreateProject
             return [
                 'project' => $project,
                 'skipped' => DefaultRoleAssignment::count() - $assignable->count(),
+                'template' => $project->workflowTemplate,
             ];
         });
     }

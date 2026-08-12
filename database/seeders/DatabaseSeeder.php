@@ -2,12 +2,16 @@
 
 namespace Database\Seeders;
 
+use App\Enums\FieldType;
 use App\Enums\UserLevel;
 use App\Models\DefaultRoleAssignment;
+use App\Models\FieldDefinition;
 use App\Models\Project;
 use App\Models\ProjectRoleAssignment;
 use App\Models\Role;
+use App\Models\StepDefinition;
 use App\Models\User;
+use App\Models\WorkflowTemplate;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -15,9 +19,13 @@ use Illuminate\Support\Facades\Hash;
 /**
  * Dataset dimostrativo del team e della configurazione di processo.
  *
- * Qui vivono membri, ruoli funzionali, progetti e mappature ruolo -> persona:
- * lo scenario di esecuzione (template di workflow, release a meta catena e
+ * Qui vivono membri, ruoli funzionali, template di workflow, progetti e mappature
+ * ruolo -> persona: lo scenario di **esecuzione** (release a meta catena e
  * release conclusa) appartiene a US-011.
+ *
+ * La mappatura dimostrativa copre tutti i ruoli previsti dal template
+ * predefinito: lo stato iniziale e quello sano. Per vedere la segnalazione dei
+ * ruoli scoperti basta rimuovere un responsabile dalla pagina dei responsabili.
  */
 class DatabaseSeeder extends Seeder
 {
@@ -104,6 +112,93 @@ class DatabaseSeeder extends Seeder
     ];
 
     /**
+     * Processo di rilascio dimostrativo: cinque step ordinati, con i campi che
+     * ciascun responsabile deve fornire per chiuderlo.
+     *
+     * Tutti e quattro i tipi di campo sono rappresentati, con un misto di
+     * obbligatori e facoltativi. Il ruolo `PM` resta non usato: e realistico, e
+     * dimostra che non ogni ruolo del catalogo compare in ogni processo.
+     *
+     * @var list<array{name: string, role: string, instructions: string, fields: list<array{label: string, type: FieldType, required: bool, help: string|null}>}>
+     */
+    private const STANDARD_STEPS = [
+        [
+            'name' => 'Preparazione del codice',
+            'role' => 'Dev Lead',
+            'instructions' => 'Verifica che il ramo di rilascio sia allineato e che la pipeline sia verde. Indica la versione che stai rilasciando.',
+            'fields' => [
+                ['label' => 'Versione rilasciata', 'type' => FieldType::ShortText, 'required' => true, 'help' => 'Il numero di versione o il tag consegnato.'],
+                ['label' => 'Link alla pipeline', 'type' => FieldType::Link, 'required' => true, 'help' => 'Indirizzo dell\'esecuzione che ha prodotto il pacchetto.'],
+                ['label' => 'Note di preparazione', 'type' => FieldType::LongText, 'required' => false, 'help' => 'Cosa deve sapere chi esegue lo step successivo.'],
+            ],
+        ],
+        [
+            'name' => 'Verifica funzionale',
+            'role' => 'QA',
+            'instructions' => 'Esegui i controlli funzionali sulle aree toccate dal rilascio e riporta l\'esito.',
+            'fields' => [
+                ['label' => 'Esito della verifica', 'type' => FieldType::LongText, 'required' => true, 'help' => 'Cosa e stato provato e con quale risultato.'],
+                ['label' => 'Link al report di test', 'type' => FieldType::Link, 'required' => false, 'help' => null],
+                ['label' => 'Regressioni verificate', 'type' => FieldType::Confirmation, 'required' => true, 'help' => null],
+            ],
+        ],
+        [
+            'name' => 'Valutazione di sicurezza',
+            'role' => 'Security',
+            'instructions' => 'Valuta i rischi introdotti dal rilascio e controlla le dipendenze aggiornate.',
+            'fields' => [
+                ['label' => 'Rischi rilevati', 'type' => FieldType::LongText, 'required' => true, 'help' => 'Anche "nessuno" e una risposta, purche esplicita.'],
+                ['label' => 'Verifica delle dipendenze eseguita', 'type' => FieldType::Confirmation, 'required' => true, 'help' => null],
+            ],
+        ],
+        [
+            'name' => 'Preparazione dell\'ambiente',
+            'role' => 'DevOps',
+            'instructions' => 'Prepara l\'ambiente di destinazione, esegui il backup e tieni pronto il piano di rientro.',
+            'fields' => [
+                ['label' => 'Ambiente di destinazione', 'type' => FieldType::ShortText, 'required' => true, 'help' => null],
+                ['label' => 'Backup eseguito', 'type' => FieldType::Confirmation, 'required' => true, 'help' => null],
+                ['label' => 'Link al piano di rientro', 'type' => FieldType::Link, 'required' => false, 'help' => 'Come si torna indietro se qualcosa va storto.'],
+            ],
+        ],
+        [
+            'name' => 'Consegna in produzione',
+            'role' => 'DevOps',
+            'instructions' => 'Esegui la consegna, verifica che il servizio risponda e pubblica il changelog.',
+            'fields' => [
+                ['label' => 'Consegna completata', 'type' => FieldType::Confirmation, 'required' => true, 'help' => null],
+                ['label' => 'Link al changelog pubblicato', 'type' => FieldType::Link, 'required' => false, 'help' => null],
+                ['label' => 'Note di consegna', 'type' => FieldType::LongText, 'required' => false, 'help' => 'Cosa deve sapere chi presidia le ore successive.'],
+            ],
+        ],
+    ];
+
+    /**
+     * Processo ridotto e **disattivato**: dimostra il filtro sull'elenco, la
+     * sostituibilita del template su un progetto e il fatto che un template
+     * disattivato non e proponibile.
+     *
+     * @var list<array{name: string, role: string, instructions: string}>
+     */
+    private const URGENT_STEPS = [
+        [
+            'name' => 'Correzione e verifica rapida',
+            'role' => 'Dev Lead',
+            'instructions' => 'Prepara la correzione minima e verificala sull\'area interessata.',
+        ],
+        [
+            'name' => 'Approvazione del rilascio urgente',
+            'role' => 'Security',
+            'instructions' => 'Valuta se il rischio della correzione e inferiore a quello di attendere il rilascio programmato.',
+        ],
+        [
+            'name' => 'Consegna immediata',
+            'role' => 'DevOps',
+            'instructions' => 'Consegna in produzione e comunica l\'intervento al team.',
+        ],
+    ];
+
+    /**
      * Mappatura predefinita ruolo -> persona valida per il team.
      *
      * @var array<string, string>
@@ -139,6 +234,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->seedTeam();
         $this->seedRoles();
+        // Prima dei progetti: cosi nascono gia associati al processo predefinito.
+        $this->seedWorkflowTemplates();
         $this->seedProjects();
         $this->seedAssignments();
     }
@@ -167,12 +264,74 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
+     * Template di workflow: la definizione del processo di rilascio.
+     *
+     * Il seeder descrive lo stato finale voluto con dati espliciti e non simula
+     * il percorso dell'interfaccia — stessa convenzione delle mappature. Il flag
+     * di predefinito e scritto direttamente perche qui esiste un solo template
+     * candidato: nell'applicazione passa dalla Action che ne garantisce l'unicita.
+     */
+    private function seedWorkflowTemplates(): void
+    {
+        $roles = Role::pluck('id', 'name');
+
+        $standard = WorkflowTemplate::factory()->create([
+            'name' => 'Rilascio standard',
+            'description' => 'Il percorso completo, dalla preparazione del codice alla consegna in produzione.',
+            'is_active' => true,
+            'is_default' => true,
+        ]);
+
+        foreach (self::STANDARD_STEPS as $position => $step) {
+            $stepDefinition = StepDefinition::factory()->create([
+                'workflow_template_id' => $standard->id,
+                'position' => $position + 1,
+                'name' => $step['name'],
+                'instructions' => $step['instructions'],
+                'role_id' => $roles[$step['role']],
+            ]);
+
+            foreach ($step['fields'] as $index => $field) {
+                FieldDefinition::factory()->create([
+                    'step_definition_id' => $stepDefinition->id,
+                    'position' => $index + 1,
+                    'label' => $field['label'],
+                    'type' => $field['type'],
+                    'is_required' => $field['required'],
+                    'help_text' => $field['help'],
+                ]);
+            }
+        }
+
+        $urgent = WorkflowTemplate::factory()->inactive()->create([
+            'name' => 'Rilascio urgente',
+            'description' => 'Percorso ridotto per le correzioni che non possono attendere il rilascio programmato.',
+        ]);
+
+        foreach (self::URGENT_STEPS as $position => $step) {
+            StepDefinition::factory()->create([
+                'workflow_template_id' => $urgent->id,
+                'position' => $position + 1,
+                'name' => $step['name'],
+                'instructions' => $step['instructions'],
+                'role_id' => $roles[$step['role']],
+            ]);
+        }
+    }
+
+    /**
      * Progetti dimostrativi, contenitori delle release.
+     *
+     * Nascono associati al template predefinito scrivendo la colonna in modo
+     * esplicito, e non tramite `CreateProject`: il seeder dichiara lo stato
+     * finale invece di ripercorrere il comportamento dell'interfaccia.
      */
     private function seedProjects(): void
     {
+        $defaultTemplate = WorkflowTemplate::where('is_default', true)->value('id');
+
         foreach (self::PROJECTS as $project) {
-            Project::factory()->create($project);
+            Project::factory()->create([...$project, 'workflow_template_id' => $defaultTemplate]);
         }
     }
 

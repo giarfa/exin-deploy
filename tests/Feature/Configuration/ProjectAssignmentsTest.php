@@ -5,7 +5,9 @@ namespace Tests\Feature\Configuration;
 use App\Models\Project;
 use App\Models\ProjectRoleAssignment;
 use App\Models\Role;
+use App\Models\StepDefinition;
 use App\Models\User;
+use App\Models\WorkflowTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
@@ -188,5 +190,73 @@ class ProjectAssignmentsTest extends TestCase
         Livewire::test('projects.assignments', ['project' => $project])->assertOk();
 
         $this->assertLessThan(8, $queries, "Eseguite {$queries} query: sospetto N+1 sulla pagina dei responsabili.");
+    }
+
+    public function test_the_page_names_the_roles_left_without_a_person(): void
+    {
+        $template = WorkflowTemplate::factory()->create();
+        $roles = Role::factory()->count(3)->create();
+
+        foreach ($roles as $role) {
+            StepDefinition::factory()->for($template)->for($role)->create();
+        }
+
+        $project = Project::factory()->withTemplate($template)->create();
+        ProjectRoleAssignment::factory()->for($project)->for($roles[0])->create();
+
+        Livewire::test('projects.assignments', ['project' => $project])
+            ->assertSee($roles[1]->name)
+            ->assertSee($roles[2]->name)
+            ->assertSee('si bloccherebbe');
+    }
+
+    public function test_a_fully_mapped_project_shows_no_warning(): void
+    {
+        $template = WorkflowTemplate::factory()->create();
+        $role = Role::factory()->create();
+        StepDefinition::factory()->for($template)->for($role)->create();
+
+        $project = Project::factory()->withTemplate($template)->create();
+        ProjectRoleAssignment::factory()->for($project)->for($role)->create();
+
+        Livewire::test('projects.assignments', ['project' => $project])
+            ->assertDontSee('si bloccherebbe');
+    }
+
+    public function test_an_unusable_template_is_flagged_with_its_reason(): void
+    {
+        $template = WorkflowTemplate::factory()->create();
+        $project = Project::factory()->withTemplate($template)->create();
+        Role::factory()->create();
+
+        Livewire::test('projects.assignments', ['project' => $project])
+            ->assertSee(__('templates.unusable_without_steps'));
+    }
+
+    public function test_a_person_holding_several_roles_is_flagged_as_intentional(): void
+    {
+        // Il vincolo unico e su (progetto, ruolo): la stessa persona su piu righe
+        // e voluta, e detta come tale non sembra piu un difetto da correggere.
+        $project = Project::factory()->create();
+        $person = User::factory()->member()->create(['name' => 'Davide Rossi']);
+        $roles = Role::factory()->count(2)->create();
+
+        foreach ($roles as $role) {
+            ProjectRoleAssignment::factory()->for($project)->for($role)->for($person)->create();
+        }
+
+        Livewire::test('projects.assignments', ['project' => $project])
+            ->assertSee(__('projects.multiple_roles', ['name' => 'Davide Rossi', 'count' => 2]));
+    }
+
+    public function test_a_person_holding_one_role_is_not_flagged(): void
+    {
+        $assignment = ProjectRoleAssignment::factory()->create();
+
+        Livewire::test('projects.assignments', ['project' => $assignment->project])
+            ->assertDontSee(__('projects.multiple_roles', [
+                'name' => $assignment->user->name,
+                'count' => 1,
+            ]));
     }
 }

@@ -214,11 +214,11 @@ tasks:
       7. Commit di ancoraggio del branch (commit vuoto ammesso)
 
       ## Completion Criteria
-      - [ ] Nessuna modifica pendente nell'albero di lavoro prima del merge
-      - [ ] `develop` contiene i commit di US-002 e la suite di test e verde su `develop`
-      - [ ] Il branch `feature/US-003-template-workflow-step-campi` esiste in locale e deriva da `develop`
-      - [ ] Titolo e corpo della PR interna redatti e tenuti in locale
-      - [ ] Nessun push eseguito
+      - [x] Nessuna modifica pendente nell'albero di lavoro prima del merge
+      - [x] `develop` contiene i commit di US-002 e la suite di test e verde su `develop`
+      - [x] Il branch `feature/US-003-template-workflow-step-campi` esiste in locale e deriva da `develop`
+      - [x] Titolo e corpo della PR interna redatti e tenuti in locale
+      - [x] Nessun push eseguito
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -228,8 +228,14 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: 6aacedc68e946728a2337d7d137987788cd7fdb4
+      short_sha: 6aacedc
+      subject: 'chore(US-003): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-12T18:02:35+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Enum FieldType e modello WorkflowTemplate con migrazione, factory e seeder'
@@ -269,15 +275,15 @@ tasks:
       7. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `FieldType` ha esattamente quattro casi, chiavi TitleCase ed `label()` in italiano
-      - [ ] Migrazione con nome univoco e flag indicizzati, reversibile
-      - [ ] `WorkflowTemplateFactory` produce nomi non collidenti e ha gli stati `inactive()` e `isDefault()`
-      - [ ] `migrate:fresh --seed` chiude senza errori e la suite resta verde
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `FieldType` ha esattamente quattro casi, chiavi TitleCase ed `label()` in italiano
+      - [x] Migrazione con nome univoco e flag indicizzati, reversibile
+      - [x] `WorkflowTemplateFactory` produce nomi non collidenti e ha gli stati `inactive()` e `isDefault()`
+      - [x] `migrate:fresh --seed` chiude senza errori e la suite resta verde
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] `database/factories/WorkflowTemplateFactory.php` creata, con stati `inactive()` e `isDefault()`
-      - [ ] Seeder non ancora toccato: il dataset dimostrativo del template arriva in TASK-14, quando esistono step
+      - [x] `database/factories/WorkflowTemplateFactory.php` creata, con stati `inactive()` e `isDefault()`
+      - [x] Seeder non ancora toccato: il dataset dimostrativo del template arriva in TASK-14, quando esistono step
             e campi da comporre in uno scenario coerente
 
       ## Git Deliverables
@@ -285,9 +291,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: 23aa4ea390f6e7f86ce1f52035fe07f0fd207cb3
+      short_sha: 23aa4ea
+      subject: 'feat(US-003): TASK-01 enum del tipo di campo e modello del template'
+      committed_at: '2026-08-12T18:03:59+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Concern OrderedByPosition e modello StepDefinition con migrazione e factory'
@@ -338,26 +350,32 @@ tasks:
       7. `php artisan migrate:fresh --seed`, `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Il concern rinumera senza violare l'indice unico e dentro una sola transazione
-      - [ ] `position` e `integer` con segno, e il PHPDoc spiega perche
-      - [ ] Vincolo unico `(workflow_template_id, position)` a livello di schema
-      - [ ] `role_id` in `restrictOnDelete`
-      - [ ] `WorkflowTemplate::stepDefinitions()` restituisce gli step gia ordinati per posizione
-      - [ ] `StepDefinitionFactory` genera step consecutivi sullo stesso template senza collisioni
-      - [ ] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
+      - [x] Il concern rinumera senza violare l'indice unico e dentro una sola transazione
+      - [x] `position` e `integer` con segno, e il PHPDoc spiega perche
+      - [x] Vincolo unico `(workflow_template_id, position)` a livello di schema
+      - [x] `role_id` in `restrictOnDelete`
+      - [x] `WorkflowTemplate::stepDefinitions()` restituisce gli step gia ordinati per posizione
+      - [x] `StepDefinitionFactory` genera step consecutivi sullo stesso template senza collisioni
+      - [x] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
 
       ## Test Data
-      - [ ] `database/factories/StepDefinitionFactory.php` creata, con posizionamento in coda e nomi di dominio
-      - [ ] Seeder aggiornato in TASK-14, dove template, step e campi formano uno scenario coerente
+      - [x] `database/factories/StepDefinitionFactory.php` creata, con posizionamento in coda e nomi di dominio
+      - [x] Seeder aggiornato in TASK-14, dove template, step e campi formano uno scenario coerente
 
       ## Git Deliverables
       - Commit: `feat(US-003): TASK-02 step del template con ordinamento condiviso`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: 449272a983e8f0f8c9df4e5daa09d506571656f7
+      short_sha: 449272a
+      subject: 'feat(US-003): TASK-02 step del template con ordinamento condiviso'
+      committed_at: '2026-08-12T18:08:06+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Modello FieldDefinition con migrazione, factory e punto di estensione del ruolo'
@@ -398,16 +416,16 @@ tasks:
       7. `php artisan migrate:fresh --seed`, `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `FieldDefinition` usa `OrderedByPosition` senza duplicare logica di ordinamento
-      - [ ] `type` castato a `FieldType` e `is_required` a booleano, entrambi annotati in PHPDoc
-      - [ ] Vincolo unico `(step_definition_id, position)` a livello di schema
-      - [ ] `Role::REFERENCING_RELATIONS` include `stepDefinitions` e `usageLabel()` nomina l'uso nei template
-      - [ ] `FieldDefinitionFactory` ha uno stato per ciascuno dei quattro tipi piu `optional()`
-      - [ ] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
+      - [x] `FieldDefinition` usa `OrderedByPosition` senza duplicare logica di ordinamento
+      - [x] `type` castato a `FieldType` e `is_required` a booleano, entrambi annotati in PHPDoc
+      - [x] Vincolo unico `(step_definition_id, position)` a livello di schema
+      - [x] `Role::REFERENCING_RELATIONS` include `stepDefinitions` e `usageLabel()` nomina l'uso nei template
+      - [x] `FieldDefinitionFactory` ha uno stato per ciascuno dei quattro tipi piu `optional()`
+      - [x] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
 
       ## Test Data
-      - [ ] `database/factories/FieldDefinitionFactory.php` creata con i quattro stati di tipo
-      - [ ] Nessuna factory esistente resta stantia: `RoleFactory` non cambia, ma la relazione aggiunta e coperta
+      - [x] `database/factories/FieldDefinitionFactory.php` creata con i quattro stati di tipo
+      - [x] Nessuna factory esistente resta stantia: `RoleFactory` non cambia, ma la relazione aggiunta e coperta
             dai test di TASK-04
 
       ## Git Deliverables
@@ -415,9 +433,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: c5b9c43147ab9d6fc8d1e378fe6ca9e48740284d
+      short_sha: c5b9c43
+      subject: 'feat(US-003): TASK-03 campi richiesti degli step e ruolo referenziato dai template'
+      committed_at: '2026-08-12T18:10:00+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: modelli, vincoli di schema, enum del tipo di campo e ruolo referenziato'
@@ -452,21 +476,27 @@ tasks:
       8. Nessun test browser, Dusk o Playwright: il bar e `NORMAL`
 
       ## Completion Criteria
-      - [ ] I vincoli unici sulle posizioni sono verificati aggirando la validazione
-      - [ ] `restrict` su `step_definitions.role_id` verificato, con il prerequisito sulle chiavi esterne accertato
-      - [ ] Un valore fuori dai quattro tipi e rifiutato sia da `from()` sia in lettura Eloquent
-      - [ ] Le relazioni di step e campi sono ordinate per posizione
-      - [ ] Il ruolo usato da uno step non e cancellabile e l'etichetta di utilizzo lo dice
-      - [ ] Suite verde
+      - [x] I vincoli unici sulle posizioni sono verificati aggirando la validazione
+      - [x] `restrict` su `step_definitions.role_id` verificato, con il prerequisito sulle chiavi esterne accertato
+      - [x] Un valore fuori dai quattro tipi e rifiutato sia da `from()` sia in lettura Eloquent
+      - [x] Le relazioni di step e campi sono ordinate per posizione
+      - [x] Il ruolo usato da uno step non e cancellabile e l'etichetta di utilizzo lo dice
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-003): TASK-04 copre modelli, vincoli di schema e tipo di campo`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: e43f9fa721a18b86f88008e2a8f3df4ed01bb746
+      short_sha: e43f9fa
+      subject: 'test(US-003): TASK-04 copre modelli, vincoli di schema e tipo di campo'
+      committed_at: '2026-08-12T18:11:47+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Test: contiguita e unicita delle posizioni dopo riordini e cancellazioni'
@@ -494,20 +524,26 @@ tasks:
       6. `php artisan test --compact --filter=OrderedByPosition`
 
       ## Completion Criteria
-      - [ ] L'invariante `1..N` e verificata dopo ogni operazione, non solo alla fine
-      - [ ] Coperti gli estremi: primo elemento verso l'alto e ultimo verso il basso non cambiano nulla
-      - [ ] Verificato l'isolamento fra sequenze di padri diversi
-      - [ ] Lo stesso test copre step e campi
-      - [ ] Suite verde
+      - [x] L'invariante `1..N` e verificata dopo ogni operazione, non solo alla fine
+      - [x] Coperti gli estremi: primo elemento verso l'alto e ultimo verso il basso non cambiano nulla
+      - [x] Verificato l'isolamento fra sequenze di padri diversi
+      - [x] Lo stesso test copre step e campi
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-003): TASK-05 copre contiguita e unicita delle posizioni`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-04
+    commit:
+      sha: e3cbe4ca5031850131a4fc6142c25c3e1b671ff7
+      short_sha: e3cbe4c
+      subject: 'test(US-003): TASK-05 copre contiguita e unicita delle posizioni'
+      committed_at: '2026-08-12T18:12:50+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Action del template predefinito unico e utilizzabilita del template'
@@ -550,12 +586,12 @@ tasks:
       6. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Impostare un predefinito azzera il precedente dentro una sola transazione
-      - [ ] Un template disattivato non puo diventare predefinito, con rifiuto esplicito
-      - [ ] Disattivare il template predefinito ne rimuove il flag
-      - [ ] `isUsable()` / `unusableReason()` non producono una query per riga quando il conteggio e precaricato
-      - [ ] `lang/it/templates.php` creato: nessun testo incastonato nelle viste
-      - [ ] Pint e Larastan verdi
+      - [x] Impostare un predefinito azzera il precedente dentro una sola transazione
+      - [x] Un template disattivato non puo diventare predefinito, con rifiuto esplicito
+      - [x] Disattivare il template predefinito ne rimuove il flag
+      - [x] `isUsable()` / `unusableReason()` non producono una query per riga quando il conteggio e precaricato
+      - [x] `lang/it/templates.php` creato: nessun testo incastonato nelle viste
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o relazioni; la copertura arriva in TASK-08
@@ -565,9 +601,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: b92cd98fe2e1525092294cd84dd25fca946201b3
+      short_sha: b92cd98
+      subject: 'feat(US-003): TASK-06 template predefinito unico e utilizzabilita'
+      committed_at: '2026-08-12T18:15:21+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Associazione progetto-template, proposta del predefinito e ruoli scoperti'
@@ -613,27 +655,33 @@ tasks:
          `CreateProject` restino verdi, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Colonna nullable con `restrict` verso `workflow_templates`, migrazione reversibile
-      - [ ] `CreateProject` propone il template predefinito attivo e accetta una scelta diversa
-      - [ ] Senza alcun predefinito il progetto viene creato senza template, senza errori
-      - [ ] `uncoveredRoles()` non esegue query quando le relazioni sono precaricate
-      - [ ] `ProjectFactory` ha lo stato `withTemplate()` e il comportamento predefinito e invariato
-      - [ ] I test di US-002 sulla precompilazione della mappatura restano verdi
-      - [ ] `migrate:fresh --seed` verde, Pint e Larastan verdi
+      - [x] Colonna nullable con `restrict` verso `workflow_templates`, migrazione reversibile
+      - [x] `CreateProject` propone il template predefinito attivo e accetta una scelta diversa
+      - [x] Senza alcun predefinito il progetto viene creato senza template, senza errori
+      - [x] `uncoveredRoles()` non esegue query quando le relazioni sono precaricate
+      - [x] `ProjectFactory` ha lo stato `withTemplate()` e il comportamento predefinito e invariato
+      - [x] I test di US-002 sulla precompilazione della mappatura restano verdi
+      - [x] `migrate:fresh --seed` verde, Pint e Larastan verdi
 
       ## Test Data
-      - [ ] `database/factories/ProjectFactory.php` aggiornata nello stesso task della migrazione, con
+      - [x] `database/factories/ProjectFactory.php` aggiornata nello stesso task della migrazione, con
             `withTemplate()`
-      - [ ] Seeder: l'associazione dei progetti dimostrativi al template arriva in TASK-14, insieme al template stesso
+      - [x] Seeder: l'associazione dei progetti dimostrativi al template arriva in TASK-14, insieme al template stesso
 
       ## Git Deliverables
       - Commit: `feat(US-003): TASK-07 associazione progetto-template e ruoli scoperti`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-06
+    commit:
+      sha: f4df3eced86b4fa0971164443500447a56c8ee06
+      short_sha: f4df3ec
+      subject: 'feat(US-003): TASK-07 associazione progetto-template e ruoli scoperti'
+      committed_at: '2026-08-12T18:17:44+02:00'
+      url: null
   -
     id: TASK-08
     title: 'Test: predefinito unico, proposta alla creazione, utilizzabilita e ruoli scoperti'
@@ -667,21 +715,27 @@ tasks:
       7. `php artisan test --compact --filter='DefaultWorkflowTemplate|TemplateUsability|ProjectTemplateAssociation'`
 
       ## Completion Criteria
-      - [ ] Non esistono due predefiniti in nessuna sequenza di operazioni provata
-      - [ ] Il rifiuto sul template disattivato e coperto
-      - [ ] Le tre situazioni di utilizzabilita sono distinte da messaggi diversi
-      - [ ] Proposta, sostituzione e assenza di predefinito coperte alla creazione del progetto
-      - [ ] `uncoveredRoles()` corretta e a query costanti
-      - [ ] Suite verde
+      - [x] Non esistono due predefiniti in nessuna sequenza di operazioni provata
+      - [x] Il rifiuto sul template disattivato e coperto
+      - [x] Le tre situazioni di utilizzabilita sono distinte da messaggi diversi
+      - [x] Proposta, sostituzione e assenza di predefinito coperte alla creazione del progetto
+      - [x] `uncoveredRoles()` corretta e a query costanti
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-003): TASK-08 copre predefinito, utilizzabilita e associazione al progetto`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
+    commit:
+      sha: b4a032bde1b21234e0b02997195f70a64639aa94
+      short_sha: b4a032b
+      subject: 'test(US-003): TASK-08 copre predefinito, utilizzabilita e associazione al progetto'
+      committed_at: '2026-08-12T18:19:54+02:00'
+      url: null
   -
     id: TASK-09
     title: 'Policy dei template, rotte annidate e navigazione'
@@ -722,12 +776,12 @@ tasks:
       6. `php artisan route:list --except-vendor`, `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Tre rotte registrate, tutte con middleware `can` e binding sull'identificativo
-      - [ ] `scopeBindings()` sulla rotta annidata dei campi
-      - [ ] Ogni ability usata esiste come metodo nella Policy
-      - [ ] `delete()` nega a tutti ed e fuori dal filtro `before()`
-      - [ ] La voce di navigazione "Template di workflow" non e piu marcata "in arrivo"
-      - [ ] Pint e Larastan verdi
+      - [x] Tre rotte registrate, tutte con middleware `can` e binding sull'identificativo
+      - [x] `scopeBindings()` sulla rotta annidata dei campi
+      - [x] Ogni ability usata esiste come metodo nella Policy
+      - [x] `delete()` nega a tutti ed e fuori dal filtro `before()`
+      - [x] La voce di navigazione "Template di workflow" non e piu marcata "in arrivo"
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -737,9 +791,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
+    commit:
+      sha: b0fa14bf4dcc8e5f8515eec62bc06f4862fb17f3
+      short_sha: b0fa14b
+      subject: 'feat(US-003): TASK-09 autorizzazione, rotte e navigazione dei template'
+      committed_at: '2026-08-12T18:21:07+02:00'
+      url: null
   -
     id: TASK-10
     title: 'Schermata di elenco e configurazione dei template'
@@ -775,14 +835,14 @@ tasks:
       9. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Creazione, modifica e disattivazione funzionanti, con nome univoco validato
-      - [ ] Impostazione del predefinito passa dalla Action e il precedente perde il flag
-      - [ ] Un template senza step e segnalato con messaggio esplicito
-      - [ ] Elenco a query costanti rispetto al numero di template
-      - [ ] Stato leggibile senza affidarsi al colore
-      - [ ] Nessun testo incastonato nella vista: tutto da `lang/it/templates.php`
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px senza scorrimento orizzontale
-      - [ ] Pint e Larastan verdi
+      - [x] Creazione, modifica e disattivazione funzionanti, con nome univoco validato
+      - [x] Impostazione del predefinito passa dalla Action e il precedente perde il flag
+      - [x] Un template senza step e segnalato con messaggio esplicito
+      - [x] Elenco a query costanti rispetto al numero di template
+      - [x] Stato leggibile senza affidarsi al colore
+      - [x] Nessun testo incastonato nella vista: tutto da `lang/it/templates.php`
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px senza scorrimento orizzontale
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -792,9 +852,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-09
+    commit:
+      sha: 334fe698b1b5885194747c732c456f3c98f43348
+      short_sha: 334fe69
+      subject: 'feat(US-003): TASK-10 schermata dei template di workflow'
+      committed_at: '2026-08-12T18:22:37+02:00'
+      url: null
   -
     id: TASK-11
     title: 'Schermata degli step di un template con riordino'
@@ -836,14 +902,14 @@ tasks:
       10. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Aggiunta, modifica e cancellazione degli step funzionanti, con ruolo responsabile obbligatorio
-      - [ ] Le istruzioni sono modificabili e mostrate a chi configura
-      - [ ] Riordino con sposta su / sposta giu, accessibile da tastiera e annunciato
-      - [ ] Dopo cancellazione e riordino le posizioni restano contigue (regola nel concern, non nel componente)
-      - [ ] Un ruolo indicato per identificativo ma fuori dalle opzioni in elenco e rifiutato
-      - [ ] Elenco a query costanti rispetto al numero di step
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px
-      - [ ] Pint e Larastan verdi
+      - [x] Aggiunta, modifica e cancellazione degli step funzionanti, con ruolo responsabile obbligatorio
+      - [x] Le istruzioni sono modificabili e mostrate a chi configura
+      - [x] Riordino con sposta su / sposta giu, accessibile da tastiera e annunciato
+      - [x] Dopo cancellazione e riordino le posizioni restano contigue (regola nel concern, non nel componente)
+      - [x] Un ruolo indicato per identificativo ma fuori dalle opzioni in elenco e rifiutato
+      - [x] Elenco a query costanti rispetto al numero di step
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -853,9 +919,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-10
+    commit:
+      sha: 2819c5d0e5d4ccd96886f289061078b5e2414b21
+      short_sha: 2819c5d
+      subject: 'feat(US-003): TASK-11 schermata degli step con riordino'
+      committed_at: '2026-08-12T18:24:59+02:00'
+      url: null
   -
     id: TASK-12
     title: 'Schermata dei campi richiesti di uno step'
@@ -890,13 +962,13 @@ tasks:
       10. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Aggiunta, modifica, cancellazione e riordino dei campi funzionanti
-      - [ ] Le opzioni del tipo derivano da `FieldType::cases()`: nessun elenco duplicato nella vista
-      - [ ] Un tipo fuori dall'enum e rifiutato lato server
-      - [ ] Obbligatorieta e tipo leggibili senza affidarsi al colore
-      - [ ] Uno step di un altro template non e raggiungibile cambiando identificativo nell'indirizzo
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px
-      - [ ] Pint e Larastan verdi
+      - [x] Aggiunta, modifica, cancellazione e riordino dei campi funzionanti
+      - [x] Le opzioni del tipo derivano da `FieldType::cases()`: nessun elenco duplicato nella vista
+      - [x] Un tipo fuori dall'enum e rifiutato lato server
+      - [x] Obbligatorieta e tipo leggibili senza affidarsi al colore
+      - [x] Uno step di un altro template non e raggiungibile cambiando identificativo nell'indirizzo
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -906,9 +978,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-11
+    commit:
+      sha: 7d69de72ecb0d770ed1fe802abf5cdd0a4e49b86
+      short_sha: 7d69de7
+      subject: 'feat(US-003): TASK-12 schermata dei campi richiesti'
+      committed_at: '2026-08-12T18:28:36+02:00'
+      url: null
   -
     id: TASK-13
     title: 'Progetti: scelta del template e segnalazioni sulla mappatura dei responsabili'
@@ -949,14 +1027,14 @@ tasks:
       7. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Il template e scegliibile in creazione (predefinito proposto) e sostituibile in modifica
-      - [ ] Un identificativo di template fuori dalle opzioni in elenco e rifiutato
-      - [ ] I ruoli scoperti sono nominati in elenco progetti e nella pagina responsabili, con la conseguenza spiegata
-      - [ ] Il cumulo di ruoli sulla stessa persona e segnalato come intenzionale
-      - [ ] Un template associato non utilizzabile e segnalato con il motivo
-      - [ ] Elenco progetti a query costanti rispetto al numero di progetti
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px
-      - [ ] Pint e Larastan verdi
+      - [x] Il template e scegliibile in creazione (predefinito proposto) e sostituibile in modifica
+      - [x] Un identificativo di template fuori dalle opzioni in elenco e rifiutato
+      - [x] I ruoli scoperti sono nominati in elenco progetti e nella pagina responsabili, con la conseguenza spiegata
+      - [x] Il cumulo di ruoli sulla stessa persona e segnalato come intenzionale
+      - [x] Un template associato non utilizzabile e segnalato con il motivo
+      - [x] Elenco progetti a query costanti rispetto al numero di progetti
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task (la colonna e la factory sono di TASK-07)
@@ -966,9 +1044,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-12
+    commit:
+      sha: 4ee796b95d3e3b832c8d6f1510f2ea05e037b320
+      short_sha: 4ee796b
+      subject: 'feat(US-003): TASK-13 template e segnalazioni nelle schermate dei progetti'
+      committed_at: '2026-08-12T18:32:06+02:00'
+      url: null
   -
     id: TASK-14
     title: 'Seeder: template Rilascio standard con cinque step e campi'
@@ -1016,27 +1100,33 @@ tasks:
       7. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Il template "Rilascio standard" e attivo, predefinito e ha esattamente cinque step ordinati
-      - [ ] I quattro tipi di campo sono tutti rappresentati, con un misto di obbligatori e facoltativi
-      - [ ] Esiste un secondo template disattivato
-      - [ ] I due progetti dimostrativi risultano associati al template predefinito
-      - [ ] Nessun ruolo scoperto nello stato iniziale del dataset
-      - [ ] `migrate:fresh --seed` produce un ambiente navigabile senza tabelle vuote
-      - [ ] Pint e Larastan verdi
+      - [x] Il template "Rilascio standard" e attivo, predefinito e ha esattamente cinque step ordinati
+      - [x] I quattro tipi di campo sono tutti rappresentati, con un misto di obbligatori e facoltativi
+      - [x] Esiste un secondo template disattivato
+      - [x] I due progetti dimostrativi risultano associati al template predefinito
+      - [x] Nessun ruolo scoperto nello stato iniziale del dataset
+      - [x] `migrate:fresh --seed` produce un ambiente navigabile senza tabelle vuote
+      - [x] Pint e Larastan verdi
 
       ## Test Data
-      - [ ] `DatabaseSeeder` compone template, step e campi con le factory, senza duplicare definizioni
-      - [ ] Le factory di TASK-01/02/03 restano la sola sorgente dei valori generati
-      - [ ] Nessuno scenario di release nel seeder: resta di US-011
+      - [x] `DatabaseSeeder` compone template, step e campi con le factory, senza duplicare definizioni
+      - [x] Le factory di TASK-01/02/03 restano la sola sorgente dei valori generati
+      - [x] Nessuno scenario di release nel seeder: resta di US-011
 
       ## Git Deliverables
       - Commit: `feat(US-003): TASK-14 dataset dimostrativo del template di rilascio`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-13
+    commit:
+      sha: 0ee654f575fe1ef183c78d2829ff9db7d67c299e
+      short_sha: 0ee654f
+      subject: 'feat(US-003): TASK-14 dataset dimostrativo del template di rilascio'
+      committed_at: '2026-08-12T18:34:01+02:00'
+      url: null
   -
     id: TASK-15
     title: 'Test: autorizzazione, flussi di configurazione e assenza di N+1'
@@ -1077,21 +1167,27 @@ tasks:
       9. Nessun test browser, Dusk, Playwright o matrice di viewport: il bar e `NORMAL`
 
       ## Completion Criteria
-      - [ ] 403 verificato su rotte **e** azioni Livewire per un `member`
-      - [ ] Nessun aggiramento per identificativo fra template diversi
-      - [ ] I flussi di configurazione di template, step e campi sono coperti nei percorsi felici e nei rifiuti
-      - [ ] Segnalazione dei ruoli scoperti coperta in presenza e in assenza
-      - [ ] Due test contano le query e falliscono se ricompare un N+1
-      - [ ] Suite intera verde
+      - [x] 403 verificato su rotte **e** azioni Livewire per un `member`
+      - [x] Nessun aggiramento per identificativo fra template diversi
+      - [x] I flussi di configurazione di template, step e campi sono coperti nei percorsi felici e nei rifiuti
+      - [x] Segnalazione dei ruoli scoperti coperta in presenza e in assenza
+      - [x] Due test contano le query e falliscono se ricompare un N+1
+      - [x] Suite intera verde
 
       ## Git Deliverables
       - Commit: `test(US-003): TASK-15 copre autorizzazione, configurazione e query`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-14
+    commit:
+      sha: 02815f44b0d09f5e56c0660e26f11a645a3d8d39
+      short_sha: 02815f4
+      subject: 'test(US-003): TASK-15 copre autorizzazione, configurazione e query'
+      committed_at: '2026-08-12T18:38:26+02:00'
+      url: null
   -
     id: TASK-16
     title: 'Documentazione baseline e CHANGELOG'
@@ -1125,11 +1221,11 @@ tasks:
       7. Pint (nessun PHP toccato, ma il gate resta), `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] README descrive template, step e campi e il confine con lo snapshot di US-004
-      - [ ] I due trade-off (predefinito unico, tipo come string) sono annotati fra i vincoli permanenti
-      - [ ] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
-      - [ ] I comandi documentati sono stati eseguiti come scritti
-      - [ ] Suite verde
+      - [x] README descrive template, step e campi e il confine con lo snapshot di US-004
+      - [x] I due trade-off (predefinito unico, tipo come string) sono annotati fra i vincoli permanenti
+      - [x] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
+      - [x] I comandi documentati sono stati eseguiti come scritti
+      - [x] Suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -1139,7 +1235,13 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione finale della PR interna verso `develop`, tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T15:55:01+00:00'
+    commit:
+      sha: e7071a668144ec0a17a6d6e32188701f83d06e6d
+      short_sha: e7071a6
+      subject: 'docs(US-003): TASK-16 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-12T18:40:13+02:00'
+      url: null
+updated_at: '2026-08-12T16:40:13+00:00'
