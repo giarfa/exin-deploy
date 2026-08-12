@@ -30,9 +30,35 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   creazione, in una sola transazione. Non e retroattiva, e le due mappature restano
   indipendenti. Le predefinite con ruolo o persona disattivati non vengono copiate, e i
   ruoli rimasti scoperti sono riportati all'utente.
+- **Template di workflow** (US-003, FR-006): il processo di rilascio diventa configurabile.
+  Un amministratore crea, modifica e disattiva template riutilizzabili. Un solo template
+  puo essere predefinito, e impostarne uno nuovo toglie il flag al precedente. I template
+  non si cancellano: vi si appoggiano progetti e release.
+- **Step ordinati** (US-003, FR-007): ogni template e una sequenza di passaggi, ciascuno con
+  nome, istruzioni per chi lo esegue e ruolo responsabile. Gli step si riordinano con
+  comandi "sposta su" e "sposta giu", raggiungibili da tastiera. Dopo un riordino o una
+  cancellazione le posizioni restano contigue e senza buchi.
+- **Campi richiesti** (US-003, FR-008): per ogni step si definisce cosa il responsabile
+  dovra fornire per chiuderlo — etichetta, tipo fra quattro (testo breve, testo lungo,
+  link, conferma), obbligatorieta, posizione e un testo di aiuto facoltativo. Un campo
+  obbligatorio non compilato impedira di chiudere lo step; uno facoltativo no.
+- **Un template senza step non e utilizzabile**, e il motivo e detto in chiaro: "disattivato"
+  e "senza step" sono due situazioni diverse e si risolvono in modo diverso.
+- **Il progetto adotta un processo** (US-003, chiusura di FR-004): alla creazione viene
+  proposto il template predefinito, sostituibile subito e modificabile dopo. Cambiare il
+  predefinito non tocca i progetti gia creati.
+- **Ruoli previsti e non assegnati** (US-003, chiusura di FR-004): elenco progetti e pagina
+  dei responsabili nominano i ruoli che il template richiede e che sul progetto non hanno
+  un responsabile, spiegando la conseguenza — una release avviata cosi si bloccherebbe su
+  quello step.
+- La pagina dei responsabili segnala quando una persona ricopre piu ruoli sullo stesso
+  progetto: e una scelta legittima su un team piccolo, e detta come tale non sembra piu un
+  dato da correggere.
 - **Ambiente dimostrativo**: seeder con il team di esempio, incluso un membro disattivato
   per verificare il rifiuto dell'accesso, piu cinque ruoli funzionali, la mappatura
-  predefinita e due progetti di cui uno con una sostituzione.
+  predefinita e due progetti di cui uno con una sostituzione. Include ora il template
+  "Rilascio standard" con cinque step e quattordici campi, e un secondo template
+  disattivato.
 - Documentazione baseline: README con avvio via Herd, nota architetturale sulla separazione
   fra definizione e istanza, questo changelog.
 
@@ -50,8 +76,12 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
 - `robots.txt` con `Disallow: /` e meta `noindex, nofollow`: lo strumento non deve essere
   indicizzato in nessun caso.
 - Configurazione del processo riservata agli amministratori, con Policy dedicate su ruoli,
-  progetti e mappature. Le schermate di mappatura accettano soltanto i ruoli realmente in
-  elenco: indicare un ruolo per identificativo non permette di aggirare il filtro.
+  progetti, mappature e template. Le schermate accettano soltanto i ruoli e i template
+  realmente in elenco: indicarne uno per identificativo non permette di aggirare il filtro.
+- Uno step o un campo appartenenti a un altro template non sono raggiungibili cambiando
+  identificativo nell'indirizzo (binding annidato) ne passandolo a un'azione.
+- Un tipo di campo fuori dai quattro previsti e rifiutato lato server, non solo assente
+  dal menu.
 
 ### Changed
 

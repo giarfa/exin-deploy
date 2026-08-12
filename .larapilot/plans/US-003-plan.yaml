@@ -1167,21 +1167,27 @@ tasks:
       9. Nessun test browser, Dusk, Playwright o matrice di viewport: il bar e `NORMAL`
 
       ## Completion Criteria
-      - [ ] 403 verificato su rotte **e** azioni Livewire per un `member`
-      - [ ] Nessun aggiramento per identificativo fra template diversi
-      - [ ] I flussi di configurazione di template, step e campi sono coperti nei percorsi felici e nei rifiuti
-      - [ ] Segnalazione dei ruoli scoperti coperta in presenza e in assenza
-      - [ ] Due test contano le query e falliscono se ricompare un N+1
-      - [ ] Suite intera verde
+      - [x] 403 verificato su rotte **e** azioni Livewire per un `member`
+      - [x] Nessun aggiramento per identificativo fra template diversi
+      - [x] I flussi di configurazione di template, step e campi sono coperti nei percorsi felici e nei rifiuti
+      - [x] Segnalazione dei ruoli scoperti coperta in presenza e in assenza
+      - [x] Due test contano le query e falliscono se ricompare un N+1
+      - [x] Suite intera verde
 
       ## Git Deliverables
       - Commit: `test(US-003): TASK-15 copre autorizzazione, configurazione e query`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-14
+    commit:
+      sha: 02815f44b0d09f5e56c0660e26f11a645a3d8d39
+      short_sha: 02815f4
+      subject: 'test(US-003): TASK-15 copre autorizzazione, configurazione e query'
+      committed_at: '2026-08-12T18:38:26+02:00'
+      url: null
   -
     id: TASK-16
     title: 'Documentazione baseline e CHANGELOG'
@@ -1232,4 +1238,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:34:02+00:00'
+updated_at: '2026-08-12T16:38:26+00:00'
