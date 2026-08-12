@@ -231,7 +231,7 @@ tasks:
     id: TASK-01
     title: 'Modello Role con migrazione, factory e seeder'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |
@@ -266,22 +266,28 @@ tasks:
       9. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `roles` esiste con chiave primaria UUID, `name` unico e `is_active` indicizzato
-      - [ ] Un ruolo creato riceve automaticamente un id in formato UUID
-      - [ ] `Role::isReferenced()` esiste, e documentato come punto di estensione e restituisce `false` finche non
+      - [x] `roles` esiste con chiave primaria UUID, `name` unico e `is_active` indicizzato
+      - [x] Un ruolo creato riceve automaticamente un id in formato UUID
+      - [x] `Role::isReferenced()` esiste, e documentato come punto di estensione e restituisce `false` finche non
             esistono tabelle referenzianti
-      - [ ] `migrate:fresh --seed` completa senza errori
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] `migrate:fresh --seed` completa senza errori
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] `database/factories/RoleFactory.php` creata, con stato `inactive()` e nomi di dominio
-      - [ ] `DatabaseSeeder` crea i cinque ruoli funzionali con nomi fissi
-      - [ ] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
+      - [x] `database/factories/RoleFactory.php` creata, con stato `inactive()` e nomi di dominio
+      - [x] `DatabaseSeeder` crea i cinque ruoli funzionali con nomi fissi
+      - [x] Factory e seeder aggiornati in **questo stesso task** della migrazione e del modello
 
       ## Git Deliverables
       - Commit: `feat(US-002): TASK-01 catalogo dei ruoli funzionali`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 5cb6901f603038a210a18838466956d2e69bc5b2
+      short_sha: 5cb6901
+      subject: 'feat(US-002): TASK-01 catalogo dei ruoli funzionali'
+      committed_at: '2026-08-12T16:38:41+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Modello Project con slug univoco, migrazione, factory e seeder'
@@ -857,4 +863,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:36:02+00:00'
+updated_at: '2026-08-12T14:38:41+00:00'

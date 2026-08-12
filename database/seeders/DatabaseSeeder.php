@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\UserLevel;
+use App\Models\Project;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -83,12 +84,31 @@ class DatabaseSeeder extends Seeder
     ];
 
     /**
+     * Progetti su cui il team rilascia.
+     *
+     * @var list<array{name: string, slug: string, description: string}>
+     */
+    private const PROJECTS = [
+        [
+            'name' => 'Portale Clienti',
+            'slug' => 'portale-clienti',
+            'description' => 'Area riservata dei clienti: anagrafiche, documenti e richieste di assistenza.',
+        ],
+        [
+            'name' => 'Gestionale Magazzino',
+            'slug' => 'gestionale-magazzino',
+            'description' => 'Giacenze, movimentazioni e integrazione con i corrieri.',
+        ],
+    ];
+
+    /**
      * Seed the application's database.
      */
     public function run(): void
     {
         $this->seedTeam();
         $this->seedRoles();
+        $this->seedProjects();
     }
 
     /**
@@ -111,6 +131,16 @@ class DatabaseSeeder extends Seeder
     {
         foreach (self::ROLES as $role) {
             Role::factory()->create($role);
+        }
+    }
+
+    /**
+     * Progetti dimostrativi, contenitori delle release.
+     */
+    private function seedProjects(): void
+    {
+        foreach (self::PROJECTS as $project) {
+            Project::factory()->create($project);
         }
     }
 }
