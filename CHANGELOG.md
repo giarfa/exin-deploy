@@ -54,6 +54,28 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
 - La pagina dei responsabili segnala quando una persona ricopre piu ruoli sullo stesso
   progetto: e una scelta legittima su un team piccolo, e detta come tale non sembra piu un
   dato da correggere.
+- **Avvio di una release** (US-004, FR-009): un amministratore avvia un rilascio su un
+  progetto indicando un'etichetta — `v2.4.0`, `2026.08.1` — che deve essere unica su quel
+  progetto. La release nasce "in corso", con l'autore e l'istante dell'avvio, e l'avvio
+  finisce nel registro delle transizioni.
+- **Il processo viene congelato all'avvio** (US-004, prima attivazione di FR-010): step e
+  campi del template vengono copiati nella release. Da quel momento modificare, riordinare
+  o disattivare il template non cambia i rilasci gia avviati, e nemmeno lo storico: cosa
+  era stato richiesto in un rilascio passato resta leggibile com'era allora. Copia anche il
+  **nome** del ruolo responsabile, cosi che rinominare un ruolo non riscriva il passato.
+- **Ogni step sa gia chi ne risponde**: all'avvio il ruolo di ciascuno step viene risolto in
+  una persona leggendo la mappatura del progetto. Cambiare la mappatura dopo non riassegna
+  gli step delle release gia avviate.
+- **Il primo step e attivo, gli altri attendono**: la catena nasce con un solo step su cui
+  si puo lavorare, e tutti gli altri bloccati.
+- **L'avvio e impedito quando mancano le condizioni**, e il motivo e detto in chiaro:
+  progetto disattivato, processo non associato, template disattivato o senza step, ruoli
+  senza responsabile — nominati — o responsabili disattivati — nominati anch'essi. Il
+  motivo compare gia sull'elenco progetti, dove il comando di avvio resta visibile ma
+  disabilitato: si scopre cosa manca prima di provare, non dopo.
+- **Registro delle transizioni in sola aggiunta** (US-004, base di FR-016): una riga
+  scritta non si modifica e non si cancella. E la condizione perche il registro valga come
+  prova di cosa e successo durante un rilascio.
 - **Ambiente dimostrativo**: seeder con il team di esempio, incluso un membro disattivato
   per verificare il rifiuto dell'accesso, piu cinque ruoli funzionali, la mappatura
   predefinita e due progetti di cui uno con una sostituzione. Include ora il template

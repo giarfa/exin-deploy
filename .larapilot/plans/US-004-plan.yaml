@@ -815,19 +815,25 @@ tasks:
       7. `php artisan test --compact --filter=Release`
 
       ## Completion Criteria
-      - [ ] Autorizzazione verificata su rotta **e** su azione Livewire
-      - [ ] Flusso di avvio e messaggi di rifiuto coperti
-      - [ ] Validazione dell'etichetta coperta su obbligatorieta e unicita
-      - [ ] Suite verde
+      - [x] Autorizzazione verificata su rotta **e** su azione Livewire
+      - [x] Flusso di avvio e messaggi di rifiuto coperti
+      - [x] Validazione dell'etichetta coperta su obbligatorieta e unicita
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-004): TASK-10 copre autorizzazione e flusso di avvio`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-09
+    commit:
+      sha: acf758618706257d05b7153a918f3d8e0afd0b4e
+      short_sha: acf7586
+      subject: 'test(US-004): TASK-10 copre autorizzazione e flusso di avvio'
+      committed_at: '2026-08-13T00:36:00+02:00'
+      url: null
   -
     id: TASK-11
     title: 'Documentazione baseline e CHANGELOG'
@@ -878,4 +884,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:35:53+00:00'
+updated_at: '2026-08-12T22:36:00+00:00'

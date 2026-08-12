@@ -114,10 +114,32 @@ non si potrebbe piu sapere cosa fosse stato effettivamente richiesto in un rilas
 passato. Le release concluse sono la prova documentata che il processo e stato rispettato,
 e una prova che cambia retroattivamente non e una prova.
 
-Da US-003 le tabelle di definizione del workflow esistono davvero: `workflow_templates`,
-`step_definitions` e `field_definitions` sono esattamente le righe che US-004 congelera
-nello snapshot di ogni release. Nessun percorso di esecuzione — chiusura di uno step,
-avanzamento, viste operative — deve leggerle.
+Da US-004 le due meta esistono entrambe, e la separazione non e piu una promessa ma uno
+schema. Le entita di istanza:
+
+| Entita | Contenuto | Regole |
+| --- | --- | --- |
+| `Release` | rilascio avviato su un progetto | etichetta univoca **per progetto** a schema; stati `in_corso` e `conclusa`; mai cancellabile |
+| `ReleaseStep` | copia congelata di uno step del template | unicita `(release, posizione)` a schema; nome del ruolo congelato accanto alla chiave esterna; al massimo **uno** attivo per release |
+| `ReleaseStepField` | copia congelata di un campo richiesto, e il valore fornito | unicita `(step, posizione)` a schema; una sola colonna `value` per tutti e quattro i tipi |
+| `ReleaseEvent` | registro delle transizioni | **sola aggiunta**: una riga scritta non si modifica e non si cancella |
+
+Cosa e congelato e cosa no:
+
+| Congelato all'avvio | Riferimento vivo |
+| --- | --- |
+| forma della catena: numero, ordine, nomi e istruzioni degli step | identita delle **persone** (`assigned_user_id`) |
+| etichetta, tipo, obbligatorieta e testo di aiuto di ogni campo | identita del **progetto** |
+| **nome** del ruolo responsabile (`role_name`) | — |
+
+La distinzione ha una ragione: rinominare un ruolo o riordinare un template non deve
+riscrivere il passato, mentre una persona che cambia cognome deve comparire nello storico
+con il proprio nome attuale — e la stessa persona, non un nome fossile.
+
+La regola operativa e verificata da un test che ascolta le query eseguite mentre si legge
+una release: se ne compare una su `workflow_templates`, `step_definitions`,
+`field_definitions` o `project_role_assignments`, il test fallisce. Un altro test cancella
+gli step di definizione e verifica che la release resti leggibile per intero.
 
 Regole correlate, applicate dal codice: la chiusura di uno step, l'attivazione del
 successivo e la scrittura dell'evento avvengono in **una sola transazione**, e una release
@@ -125,6 +147,57 @@ ha al massimo **uno** step attivo per volta.
 
 I diagrammi (entita-relazioni e macchina a stati) arrivano con US-005, quando modello e
 transizioni sono completi.
+
+### Avvio di una release
+
+Un amministratore avvia una release da un progetto, indicando un'etichetta
+(`v2.4.0`, `2026.08.1`, ...). L'avvio passa da **un solo percorso**,
+`App\Actions\Releases\StartRelease`, e avviene in **una sola transazione**.
+
+Le precondizioni sono verificate in quest'ordine, tutte **prima** di qualsiasi scrittura:
+
+1. il progetto e attivo — un progetto disattivato non accoglie nuove release;
+2. il progetto ha un template, e il template e utilizzabile (`isUsable()`: attivo e con
+   almeno uno step). Il motivo del rifiuto distingue "disattivato" da "senza step";
+3. ogni ruolo previsto dagli step ha un responsabile sul progetto — i ruoli scoperti sono
+   **nominati** nel rifiuto;
+4. nessuno dei responsabili risolti e disattivato — anche qui, nominati.
+
+Poi, nella stessa transazione: la release nasce `in_corso` con autore e istante, step e
+campi vengono copiati in **due sole scritture di massa**, il primo step risulta `attivo` e
+gli altri `bloccato`, e il registro riceve l'evento `release_avviata`. Il costo in query
+non dipende dalla lunghezza della catena, ed e vincolato da un test.
+
+L'ordine dei rifiuti non e casuale: si vede il secondo problema solo dopo aver risolto il
+primo, quindi elencarli tutti insieme non aiuterebbe.
+
+`Project::startBlocker()` anticipa lo stesso giudizio dove serve mostrarlo — la schermata di
+avvio e l'elenco progetti, che disabilita il comando con il motivo accanto. Anticipa, non
+sostituisce: l'Action decide comunque sul dato fresco, e il suo rifiuto viene reso come
+messaggio e mai come errore tecnico.
+
+**Il doppio invio non produce due release.** Non serve un lock pessimistico: qui non c'e
+uno stato preesistente da leggere e riscrivere, e l'unicita `(project_id, label)` a livello
+di schema fa fallire la seconda transazione, che non lascia nulla dietro di se. Il lock
+richiesto da `.ai/rules/app.md` riguarda l'**avanzamento**, dove invece lo stato c'e.
+
+### Schermate
+
+| Rotta | Pagina | Accesso |
+| --- | --- | --- |
+| `/` | I miei step — segnaposto fino a US-007 | ogni membro |
+| `/impostazioni/sicurezza` | Verifica in due passaggi | ogni membro |
+| `/membri` | Membri del team | amministratore |
+| `/ruoli` | Ruoli funzionali | amministratore |
+| `/progetti` | Progetti, con il comando di avvio release per riga | amministratore |
+| `/progetti/{progetto}/responsabili` | Mappatura ruolo → persona del progetto | amministratore |
+| `/progetti/{progetto}/rilascio` | **Avvio di una release** | amministratore |
+| `/template` · `/template/{t}/step` · `/template/{t}/step/{s}/campi` | Processo di rilascio | amministratore |
+| `/responsabili-predefiniti` | Mappatura predefinita di team | amministratore |
+
+La voce **Release** nella navigazione resta marcata "in arrivo": la pagina che promette e
+l'**elenco** delle release (US-009), non la schermata di avvio, che si raggiunge dal
+progetto su cui si rilascia.
 
 ### Configurazione del processo
 
@@ -148,8 +221,9 @@ perche una release avviata cosi si bloccherebbe su quello step.
 
 **Un template senza step non e utilizzabile.** `WorkflowTemplate::isUsable()` e
 `unusableReason()` distinguono "disattivato" da "senza step": sono due situazioni che si
-risolvono in modo diverso, e un messaggio unico costringerebbe a indovinare. US-004
-invochera lo stesso metodo come precondizione dell'avvio di una release.
+risolvono in modo diverso, e un messaggio unico costringerebbe a indovinare. E lo stesso
+metodo che `StartRelease` invoca come precondizione dell'avvio: la regola e scritta una
+volta sola.
 
 **Il template predefinito e una proposta, non un legame.** Alla creazione di un progetto
 viene proposto come valore iniziale e resta sostituibile, in creazione e in modifica —
@@ -219,7 +293,33 @@ riga, con icona e parola.
 6. **`field_definitions.type` e una `string` con cast a enum, non un `enum` di schema.**
    Un vincolo di check costringerebbe SQLite a ricostruire la tabella al primo tipo
    aggiunto. Il rifiuto di un valore fuori dai quattro casi resta pieno: `Rule::enum` in
-   scrittura, `ValueError` del cast Eloquent in lettura, entrambi coperti da test.
+   scrittura, `ValueError` del cast Eloquent in lettura, entrambi coperti da test. Vale
+   identico per `releases.status`, `release_steps.status` e `release_events.action`.
+7. **`release_steps.role_name` e congelato accanto a `role_id`.** L'esecuzione legge
+   `role_name`; la chiave esterna serve solo a rendere il ruolo non cancellabile
+   (`restrict`, piu `Role::REFERENCING_RELATIONS`). Chi aggiunge una relazione a
+   quella costante deve aggiungerla anche ai `withCount()` degli elenchi che chiamano
+   `Role::usageLabel()` per riga, altrimenti il conteggio mancante diventa un N+1.
+8. **Le posizioni dello snapshot non si riordinano.** `ReleaseStep` e `ReleaseStepField`
+   **non** usano `OrderedByPosition`, e per questo la loro `position` e
+   `unsignedInteger` e non `integer` con segno: non servono posizioni temporanee
+   negative. Introdurre il trait aprirebbe un percorso di scrittura sull'ordine congelato,
+   cioe sull'unica cosa che quelle tabelle esistono per proteggere.
+9. **Una sola colonna `value` per tutti e quattro i tipi di campo.** Il valore fornito e
+   sempre testo; la semantica per tipo — un link deve essere un indirizzo valido, una
+   conferma obbligatoria deve risultare spuntata — appartiene alla chiusura dello step
+   (US-005). Quattro colonne tipizzate ne lascerebbero tre sempre nulle su ogni riga.
+10. **`release_events` non ha `updated_at`, ed e voluto.** Il registro e in sola aggiunta:
+    `update()` e `delete()` sollevano `ReleaseEventIsAppendOnly` dal modello, e lo schema
+    non offre nemmeno la colonna che dichiarerebbe possibile la modifica. Un registro
+    correggibile a posteriori non e una prova.
+11. **`releases.completed_by` e `completed_at` nascono vuote.** Sono create da US-004 e
+    riempite da US-006, quando la chiusura dell'ultimo step conclude la release:
+    aggiungerle dopo sarebbe una seconda migrazione sulla stessa tabella per una semantica
+    gia decisa dal PRD. Per lo stesso motivo `ReleaseEventAction` nasce con tutti e cinque
+    i casi di FR-016 anche se questa spec ne scrive uno solo — quei valori finiscono in
+    colonna e sopravvivono nello storico, quindi rinominarli dopo sarebbe una migrazione
+    di dati evitabile.
 
 ## Stack
 
