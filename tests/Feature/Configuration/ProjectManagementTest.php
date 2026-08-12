@@ -4,8 +4,13 @@ namespace Tests\Feature\Configuration;
 
 use App\Models\DefaultRoleAssignment;
 use App\Models\Project;
+use App\Models\ProjectRoleAssignment;
+use App\Models\Role;
+use App\Models\StepDefinition;
 use App\Models\User;
+use App\Models\WorkflowTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -151,5 +156,99 @@ class ProjectManagementTest extends TestCase
 
         Livewire::test('projects.index')->call('openCreateForm')->assertForbidden();
         Livewire::test('projects.index')->call('toggleActivation', $project->id)->assertForbidden();
+    }
+
+    public function test_the_default_template_is_proposed_and_stays_replaceable(): void
+    {
+        $default = WorkflowTemplate::factory()->isDefault()->withSteps(2)->create();
+        $other = WorkflowTemplate::factory()->withSteps(2)->create();
+
+        Livewire::test('projects.index')
+            ->call('openCreateForm')
+            ->assertSet('workflowTemplateId', $default->id)
+            ->set('name', 'Portale Clienti')
+            ->set('slug', 'portale-clienti')
+            ->set('workflowTemplateId', $other->id)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame($other->id, Project::where('slug', 'portale-clienti')->value('workflow_template_id'));
+    }
+
+    public function test_a_project_can_be_created_without_a_template(): void
+    {
+        WorkflowTemplate::factory()->isDefault()->withSteps(2)->create();
+
+        Livewire::test('projects.index')
+            ->call('openCreateForm')
+            ->set('name', 'Senza processo')
+            ->set('slug', 'senza-processo')
+            ->set('workflowTemplateId', '')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertNull(Project::where('slug', 'senza-processo')->value('workflow_template_id'));
+    }
+
+    public function test_a_template_outside_the_listed_options_is_rejected(): void
+    {
+        // Un template disattivato e non associato a questo progetto non e
+        // scegliibile nemmeno indicandone l'identificativo.
+        $hidden = WorkflowTemplate::factory()->inactive()->create();
+
+        Livewire::test('projects.index')
+            ->call('openCreateForm')
+            ->set('name', 'Progetto')
+            ->set('slug', 'progetto')
+            ->set('workflowTemplateId', $hidden->id)
+            ->call('save')
+            ->assertHasErrors('workflowTemplateId');
+    }
+
+    public function test_the_listing_names_the_template_and_flags_uncovered_roles(): void
+    {
+        $template = WorkflowTemplate::factory()->create();
+        $roles = Role::factory()->count(2)->create();
+
+        foreach ($roles as $role) {
+            StepDefinition::factory()->for($template)->for($role)->create();
+        }
+
+        $project = Project::factory()->withTemplate($template)->create();
+        ProjectRoleAssignment::factory()->for($project)->for($roles[0])->create();
+
+        Livewire::test('projects.index')
+            ->assertSee($template->name)
+            ->assertSee(trans_choice('projects.uncovered_roles_badge', 1, ['count' => 1]));
+    }
+
+    public function test_a_fully_mapped_project_shows_no_uncovered_roles_badge(): void
+    {
+        $template = WorkflowTemplate::factory()->create();
+        $role = Role::factory()->create();
+        StepDefinition::factory()->for($template)->for($role)->create();
+
+        $project = Project::factory()->withTemplate($template)->create();
+        ProjectRoleAssignment::factory()->for($project)->for($role)->create();
+
+        Livewire::test('projects.index')
+            ->assertDontSee(trans_choice('projects.uncovered_roles_badge', 1, ['count' => 1]));
+    }
+
+    public function test_the_listing_does_not_query_per_row(): void
+    {
+        $template = WorkflowTemplate::factory()->withSteps(3)->create();
+        Project::factory()->count(6)->withTemplate($template)->create();
+
+        $queries = 0;
+        DB::listen(function () use (&$queries): void {
+            $queries++;
+        });
+
+        Livewire::test('projects.index')->assertOk();
+
+        // Elenco, conteggi, template, step, ruoli e assegnazioni: un numero fisso
+        // di query, che non deve crescere con il numero di progetti.
+        $this->assertLessThan(11, $queries, "Eseguite {$queries} query: sospetto N+1 sull'elenco dei progetti.");
     }
 }

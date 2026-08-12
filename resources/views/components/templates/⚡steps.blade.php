@@ -239,9 +239,14 @@ new class extends Component
         </flux:callout>
     @endif
 
+    {{-- Il catalogo dei ruoli vuoto impedisce di aggiungere step, ma non deve
+         nascondere lo stato del template: senza step resta inutilizzabile, e
+         chi guarda deve continuare a vederlo detto. --}}
     @if ($this->assignableRoles->isEmpty())
-        <flux:callout icon="information-circle">{{ __('templates.no_roles') }}</flux:callout>
-    @else
+        <flux:callout icon="information-circle" class="mb-6">{{ __('templates.no_roles') }}</flux:callout>
+    @endif
+
+    @if ($this->assignableRoles->isNotEmpty())
         @if ($showingForm)
             <flux:card class="mb-6 space-y-5">
                 <flux:heading size="lg" level="2">
@@ -277,100 +282,100 @@ new class extends Component
                 </form>
             </flux:card>
         @endif
+    @endif
 
-        @if ($this->steps->isEmpty())
-            <flux:callout variant="warning" icon="exclamation-triangle">
-                {{ __('templates.steps_empty') }}
-            </flux:callout>
-        @else
-            {{-- Elenco di schede e non tabella: a 375 px una tabella con istruzioni
-                 e quattro comandi per riga imporrebbe lo scorrimento orizzontale. --}}
-            <ol class="space-y-4">
-                @foreach ($this->steps as $step)
-                    <li>
-                        <flux:card class="space-y-4">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <flux:text class="text-xs">
-                                        {{ __('templates.step_position', ['position' => $step->position]) }}
-                                    </flux:text>
-
-                                    <flux:heading size="lg" level="2">{{ $step->name }}</flux:heading>
-
-                                    <flux:text class="mt-1 inline-flex items-center gap-1.5 text-sm">
-                                        <flux:icon name="identification" variant="mini" class="size-4 shrink-0" />
-                                        {{ $step->role->name }}
-                                    </flux:text>
-
-                                    @unless ($step->role->is_active)
-                                        <flux:text class="mt-1 inline-flex items-center gap-1.5 text-xs">
-                                            <flux:icon name="no-symbol" variant="mini" class="size-4 shrink-0" />
-                                            {{ __('templates.inactive_role_note') }}
-                                        </flux:text>
-                                    @endunless
-                                </div>
-
-                                {{-- Comandi di riordino. L'etichetta nomina lo step spostato e
-                                     non e solo una freccia. Agli estremi il comando resta
-                                     raggiungibile ma annunciato come non disponibile
-                                     (`aria-disabled`), e l'operazione e comunque un nulla di
-                                     fatto: la regola vive nel concern, non qui. --}}
-                                <div class="flex shrink-0 gap-1">
-                                    <flux:button
-                                        wire:click="moveUp('{{ $step->id }}')"
-                                        icon="arrow-up"
-                                        size="sm"
-                                        variant="ghost"
-                                        :aria-disabled="$loop->first ? 'true' : 'false'"
-                                        :class="$loop->first ? 'opacity-40' : ''"
-                                        :aria-label="__('templates.move_up', ['name' => $step->name])"
-                                    />
-
-                                    <flux:button
-                                        wire:click="moveDown('{{ $step->id }}')"
-                                        icon="arrow-down"
-                                        size="sm"
-                                        variant="ghost"
-                                        :aria-disabled="$loop->last ? 'true' : 'false'"
-                                        :class="$loop->last ? 'opacity-40' : ''"
-                                        :aria-label="__('templates.move_down', ['name' => $step->name])"
-                                    />
-                                </div>
-                            </div>
-
-                            @if ($step->instructions)
-                                <flux:text class="text-sm whitespace-pre-line">{{ $step->instructions }}</flux:text>
-                            @endif
-
-                            <div class="flex flex-wrap items-center gap-2">
-                                <flux:button :href="route('templates.fields', [$template, $step])" size="sm"
-                                             variant="ghost" icon="list-bullet">
-                                    {{ __('templates.manage_fields') }}
-                                </flux:button>
-
-                                <flux:text class="text-sm">
-                                    {{ trans_choice('templates.fields_count', $step->field_definitions_count, ['count' => $step->field_definitions_count]) }}
+    @if ($this->steps->isEmpty())
+        <flux:callout variant="warning" icon="exclamation-triangle">
+            {{ __('templates.steps_empty') }}
+        </flux:callout>
+    @else
+        {{-- Elenco di schede e non tabella: a 375 px una tabella con istruzioni
+             e quattro comandi per riga imporrebbe lo scorrimento orizzontale. --}}
+        <ol class="space-y-4">
+            @foreach ($this->steps as $step)
+                <li>
+                    <flux:card class="space-y-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <flux:text class="text-xs">
+                                    {{ __('templates.step_position', ['position' => $step->position]) }}
                                 </flux:text>
 
-                                <div class="flex flex-wrap gap-2 sm:ms-auto">
-                                    <flux:button wire:click="openEditForm('{{ $step->id }}')" size="sm" variant="ghost">
-                                        {{ __('templates.edit') }}
-                                    </flux:button>
+                                <flux:heading size="lg" level="2">{{ $step->name }}</flux:heading>
 
-                                    <flux:button
-                                        wire:click="delete('{{ $step->id }}')"
-                                        wire:confirm="{{ __('templates.confirm_delete_step', ['name' => $step->name]) }}"
-                                        size="sm"
-                                        variant="ghost"
-                                    >
-                                        {{ __('templates.delete_step') }}
-                                    </flux:button>
-                                </div>
+                                <flux:text class="mt-1 inline-flex items-center gap-1.5 text-sm">
+                                    <flux:icon name="identification" variant="mini" class="size-4 shrink-0" />
+                                    {{ $step->role->name }}
+                                </flux:text>
+
+                                @unless ($step->role->is_active)
+                                    <flux:text class="mt-1 inline-flex items-center gap-1.5 text-xs">
+                                        <flux:icon name="no-symbol" variant="mini" class="size-4 shrink-0" />
+                                        {{ __('templates.inactive_role_note') }}
+                                    </flux:text>
+                                @endunless
                             </div>
-                        </flux:card>
-                    </li>
-                @endforeach
-            </ol>
-        @endif
+
+                            {{-- Comandi di riordino. L'etichetta nomina lo step spostato e
+                                 non e solo una freccia. Agli estremi il comando resta
+                                 raggiungibile ma annunciato come non disponibile
+                                 (`aria-disabled`), e l'operazione e comunque un nulla di
+                                 fatto: la regola vive nel concern, non qui. --}}
+                            <div class="flex shrink-0 gap-1">
+                                <flux:button
+                                    wire:click="moveUp('{{ $step->id }}')"
+                                    icon="arrow-up"
+                                    size="sm"
+                                    variant="ghost"
+                                    :aria-disabled="$loop->first ? 'true' : 'false'"
+                                    :class="$loop->first ? 'opacity-40' : ''"
+                                    :aria-label="__('templates.move_up', ['name' => $step->name])"
+                                />
+
+                                <flux:button
+                                    wire:click="moveDown('{{ $step->id }}')"
+                                    icon="arrow-down"
+                                    size="sm"
+                                    variant="ghost"
+                                    :aria-disabled="$loop->last ? 'true' : 'false'"
+                                    :class="$loop->last ? 'opacity-40' : ''"
+                                    :aria-label="__('templates.move_down', ['name' => $step->name])"
+                                />
+                            </div>
+                        </div>
+
+                        @if ($step->instructions)
+                            <flux:text class="text-sm whitespace-pre-line">{{ $step->instructions }}</flux:text>
+                        @endif
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <flux:button :href="route('templates.fields', [$template, $step])" size="sm"
+                                         variant="ghost" icon="list-bullet">
+                                {{ __('templates.manage_fields') }}
+                            </flux:button>
+
+                            <flux:text class="text-sm">
+                                {{ trans_choice('templates.fields_count', $step->field_definitions_count, ['count' => $step->field_definitions_count]) }}
+                            </flux:text>
+
+                            <div class="flex flex-wrap gap-2 sm:ms-auto">
+                                <flux:button wire:click="openEditForm('{{ $step->id }}')" size="sm" variant="ghost">
+                                    {{ __('templates.edit') }}
+                                </flux:button>
+
+                                <flux:button
+                                    wire:click="delete('{{ $step->id }}')"
+                                    wire:confirm="{{ __('templates.confirm_delete_step', ['name' => $step->name]) }}"
+                                    size="sm"
+                                    variant="ghost"
+                                >
+                                    {{ __('templates.delete_step') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    </flux:card>
+                </li>
+            @endforeach
+        </ol>
     @endif
 </div>

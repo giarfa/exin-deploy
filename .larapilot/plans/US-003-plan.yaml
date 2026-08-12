@@ -1100,27 +1100,33 @@ tasks:
       7. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Il template "Rilascio standard" e attivo, predefinito e ha esattamente cinque step ordinati
-      - [ ] I quattro tipi di campo sono tutti rappresentati, con un misto di obbligatori e facoltativi
-      - [ ] Esiste un secondo template disattivato
-      - [ ] I due progetti dimostrativi risultano associati al template predefinito
-      - [ ] Nessun ruolo scoperto nello stato iniziale del dataset
-      - [ ] `migrate:fresh --seed` produce un ambiente navigabile senza tabelle vuote
-      - [ ] Pint e Larastan verdi
+      - [x] Il template "Rilascio standard" e attivo, predefinito e ha esattamente cinque step ordinati
+      - [x] I quattro tipi di campo sono tutti rappresentati, con un misto di obbligatori e facoltativi
+      - [x] Esiste un secondo template disattivato
+      - [x] I due progetti dimostrativi risultano associati al template predefinito
+      - [x] Nessun ruolo scoperto nello stato iniziale del dataset
+      - [x] `migrate:fresh --seed` produce un ambiente navigabile senza tabelle vuote
+      - [x] Pint e Larastan verdi
 
       ## Test Data
-      - [ ] `DatabaseSeeder` compone template, step e campi con le factory, senza duplicare definizioni
-      - [ ] Le factory di TASK-01/02/03 restano la sola sorgente dei valori generati
-      - [ ] Nessuno scenario di release nel seeder: resta di US-011
+      - [x] `DatabaseSeeder` compone template, step e campi con le factory, senza duplicare definizioni
+      - [x] Le factory di TASK-01/02/03 restano la sola sorgente dei valori generati
+      - [x] Nessuno scenario di release nel seeder: resta di US-011
 
       ## Git Deliverables
       - Commit: `feat(US-003): TASK-14 dataset dimostrativo del template di rilascio`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-13
+    commit:
+      sha: 0ee654f575fe1ef183c78d2829ff9db7d67c299e
+      short_sha: 0ee654f
+      subject: 'feat(US-003): TASK-14 dataset dimostrativo del template di rilascio'
+      committed_at: '2026-08-12T18:34:01+02:00'
+      url: null
   -
     id: TASK-15
     title: 'Test: autorizzazione, flussi di configurazione e assenza di N+1'
@@ -1226,4 +1232,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:32:07+00:00'
+updated_at: '2026-08-12T16:34:02+00:00'
