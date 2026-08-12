@@ -766,12 +766,12 @@ tasks:
       9. Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Un amministratore avvia una release indicando progetto ed etichetta
-      - [ ] Le precondizioni non soddisfatte sono spiegate prima del tentativo, e ogni rifiuto e un messaggio e non un errore
-      - [ ] La conferma mostra la catena congelata con responsabile e stato, resi da icona e parola
-      - [ ] Il comando compare sull'elenco progetti senza introdurre query per riga
-      - [ ] Interfaccia usabile a 375, 768 e 1280 px
-      - [ ] Pint e Larastan verdi, suite verde
+      - [x] Un amministratore avvia una release indicando progetto ed etichetta
+      - [x] Le precondizioni non soddisfatte sono spiegate prima del tentativo, e ogni rifiuto e un messaggio e non un errore
+      - [x] La conferma mostra la catena congelata con responsabile e stato, resi da icona e parola
+      - [x] Il comando compare sull'elenco progetti senza introdurre query per riga
+      - [x] Interfaccia usabile a 375, 768 e 1280 px
+      - [x] Pint e Larastan verdi, suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -781,9 +781,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-08
+    commit:
+      sha: 8bd36fa49e2449bc7705f824576b02ecfdfd9281
+      short_sha: 8bd36fa
+      subject: 'feat(US-004): TASK-09 schermata di avvio della release'
+      committed_at: '2026-08-13T00:35:53+02:00'
+      url: null
   -
     id: TASK-10
     title: "Test: autorizzazione a due livelli e flusso di avvio dall'interfaccia"
@@ -872,4 +878,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:30:17+00:00'
+updated_at: '2026-08-12T22:35:53+00:00'
