@@ -582,7 +582,7 @@ tasks:
     id: TASK-07
     title: 'Policy di configurazione, rotte e navigazione'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
     body: |
@@ -626,13 +626,13 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Tre Policy registrate e applicate, con `delete` fuori dal filtro `before()` dove il vincolo vale anche
+      - [x] Tre Policy registrate e applicate, con `delete` fuori dal filtro `before()` dove il vincolo vale anche
             per gli amministratori
-      - [ ] Le quattro rotte esistono, sono sotto `auth` e protette dal middleware `can`
-      - [ ] Un `member` riceve 403 su tutte e quattro le rotte
-      - [ ] La navigazione mostra le voci di configurazione solo a chi e autorizzato, senza duplicati fra gruppi
-      - [ ] Nessun testo dell'interfaccia incastonato nelle viste: tutto in `lang/it/`
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] Le quattro rotte esistono, sono sotto `auth` e protette dal middleware `can`
+      - [x] Un `member` riceve 403 su tutte e quattro le rotte
+      - [x] La navigazione mostra le voci di configurazione solo a chi e autorizzato, senza duplicati fra gruppi
+      - [x] Nessun testo dell'interfaccia incastonato nelle viste: tutto in `lang/it/`
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -641,6 +641,12 @@ tasks:
       - Commit: `feat(US-002): TASK-07 autorizzazione, rotte e navigazione della configurazione`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: dd53ae8931a010d27ed88df6a1d19c183be805f7
+      short_sha: dd53ae8
+      subject: 'feat(US-002): TASK-07 autorizzazione, rotte e navigazione della configurazione'
+      committed_at: '2026-08-12T16:48:44+02:00'
+      url: null
   -
     id: TASK-08
     title: 'Schermata di gestione dei ruoli funzionali'
@@ -893,4 +899,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:47:05+00:00'
+updated_at: '2026-08-12T14:48:45+00:00'

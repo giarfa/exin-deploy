@@ -89,11 +89,22 @@ class Role extends Model
      * Numero di riferimenti per relazione, usato per spiegare all'utente perche
      * la cancellazione e stata rifiutata.
      *
+     * I conteggi gia caricati con `withCount()` vengono riusati: senza questo
+     * controllo un elenco che chiama il metodo per ogni riga produrrebbe un N+1
+     * proprio dove `withCount()` era stato messo per evitarlo.
+     *
      * @return Collection<string, int>
      */
     public function referenceCounts()
     {
-        $this->loadCount(self::REFERENCING_RELATIONS);
+        $missing = collect(self::REFERENCING_RELATIONS)
+            ->reject(fn (string $relation): bool => array_key_exists(
+                Str::snake($relation).'_count', $this->attributes
+            ));
+
+        if ($missing->isNotEmpty()) {
+            $this->loadCount($missing->all());
+        }
 
         return collect(self::REFERENCING_RELATIONS)
             ->mapWithKeys(fn (string $relation): array => [
