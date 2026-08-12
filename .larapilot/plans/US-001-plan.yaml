@@ -168,7 +168,7 @@ tasks:
     id: TASK-01
     title: 'Installare Livewire 4, Flux e Fortify'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |
@@ -202,13 +202,13 @@ tasks:
       8. `php artisan test` — la suite di serie resta verde
 
       ## Completion Criteria
-      - [ ] Livewire 4, Flux 2 e Fortify 1.38 installati e risolti senza conflitti
-      - [ ] `larastan/larastan` presente in `vendor/` e `php artisan larapilot:quality` eseguibile
-      - [ ] `config/fortify.php` pubblicato, con `registration` e passkeys disattivate
-      - [ ] `FortifyServiceProvider` registrato
-      - [ ] `npm run build` completa senza errori
-      - [ ] `composer audit` non segnala vulnerabilita
-      - [ ] Nessun componente Flux Pro utilizzato
+      - [x] Livewire 4, Flux 2 e Fortify 1.38 installati e risolti senza conflitti
+      - [x] `larastan/larastan` presente in `vendor/` e `php artisan larapilot:quality` eseguibile
+      - [x] `config/fortify.php` pubblicato, con `registration` e passkeys disattivate
+      - [x] `FortifyServiceProvider` registrato
+      - [x] `npm run build` completa senza errori
+      - [x] `composer audit` non segnala vulnerabilita
+      - [x] Nessun componente Flux Pro utilizzato
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -217,6 +217,12 @@ tasks:
       - Commit: `chore(US-001): TASK-01 installa Livewire 4, Flux e Fortify`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 42fd26dfe1dbf475c5ac374b23d2b7b627ab7bf7
+      short_sha: 42fd26d
+      subject: 'chore(US-001): TASK-01 installa Livewire 4, Flux e Fortify'
+      committed_at: '2026-08-12T12:21:15+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Baseline di sicurezza e configurazione SQLite'
@@ -687,4 +693,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:18:04+00:00'
+updated_at: '2026-08-12T10:21:15+00:00'
