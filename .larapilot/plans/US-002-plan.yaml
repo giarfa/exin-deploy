@@ -824,7 +824,7 @@ tasks:
     id: TASK-11
     title: 'Test: autorizzazione e flussi di configurazione'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-08
       - TASK-09
@@ -862,17 +862,23 @@ tasks:
       9. Non introdurre Playwright, Dusk, Pest browser o suite di viewport
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] L'autorizzazione e verificata sia a livello di rotta sia a livello di azione Livewire
-      - [ ] Ogni criterio di accettazione della spec ha almeno un test corrispondente, esclusi quelli di sola
+      - [x] I test passano in locale
+      - [x] L'autorizzazione e verificata sia a livello di rotta sia a livello di azione Livewire
+      - [x] Ogni criterio di accettazione della spec ha almeno un test corrispondente, esclusi quelli di sola
             verifica manuale
-      - [ ] L'intera suite del progetto resta verde
-      - [ ] La copertura corrisponde al bar `NORMAL`
+      - [x] L'intera suite del progetto resta verde
+      - [x] La copertura corrisponde al bar `NORMAL`
 
       ## Git Deliverables
       - Commit: `test(US-002): TASK-11 copre autorizzazione e flussi di configurazione`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: ebde806ed73883565937dad41617ba3bdd66ad45
+      short_sha: ebde806
+      subject: 'test(US-002): TASK-11 copre autorizzazione e flussi di configurazione'
+      committed_at: '2026-08-12T16:57:20+02:00'
+      url: null
   -
     id: TASK-12
     title: 'Documentazione baseline e CHANGELOG'
@@ -917,4 +923,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:54:36+00:00'
+updated_at: '2026-08-12T14:57:20+00:00'
