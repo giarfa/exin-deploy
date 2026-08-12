@@ -59,7 +59,7 @@ specs:
       title: 'Configurazione del processo'
     priority: HIGH
     points: 8
-    status: 'IN PROGRESS'
+    status: DONE
     body: |
       #### US-002: Ruoli funzionali, progetti e responsabili
 
@@ -77,21 +77,29 @@ specs:
       ritrovo quella mappatura già precompilata, modificabile sul progetto senza alterare il valore predefinito.
 
       **Criteri di accettazione**
-      - [ ] Un amministratore crea, modifica e disattiva ruoli funzionali (nome, descrizione)
-      - [ ] Un ruolo referenziato da un template o da una release non è cancellabile: il tentativo è rifiutato con messaggio esplicito e il ruolo resta disattivabile
-      - [ ] Un amministratore crea, modifica e disattiva progetti (nome, slug, descrizione)
-      - [ ] Lo slug del progetto è univoco: il duplicato è rifiutato in validazione e vincolato a livello di schema
-      - [ ] Un amministratore definisce la mappatura predefinita ruolo→persona valida per il team
-      - [ ] Alla creazione di un progetto la mappatura predefinita viene precompilata sul progetto
-      - [ ] Modificare la mappatura di un progetto non altera la mappatura predefinita, e viceversa
-      - [ ] Una sola persona per coppia progetto/ruolo, con vincolo di unicità a livello di schema e non solo di validazione
-      - [ ] Assegnare a un ruolo una persona disattivata è rifiutato con messaggio esplicito
-      - [ ] Un `member` non accede alla configurazione di ruoli, progetti e mappature (Policy lato server)
-      - [ ] Factory e seeder aggiornati per ruoli, progetti e mappature nello stesso commit delle migrazioni
+      - [x] Un amministratore crea, modifica e disattiva ruoli funzionali (nome, descrizione)
+      - [x] Un ruolo referenziato da un template o da una release non è cancellabile: il tentativo è rifiutato con messaggio esplicito e il ruolo resta disattivabile
+      - [x] Un amministratore crea, modifica e disattiva progetti (nome, slug, descrizione)
+      - [x] Lo slug del progetto è univoco: il duplicato è rifiutato in validazione e vincolato a livello di schema
+      - [x] Un amministratore definisce la mappatura predefinita ruolo→persona valida per il team
+      - [x] Alla creazione di un progetto la mappatura predefinita viene precompilata sul progetto
+      - [x] Modificare la mappatura di un progetto non altera la mappatura predefinita, e viceversa
+      - [x] Una sola persona per coppia progetto/ruolo, con vincolo di unicità a livello di schema e non solo di validazione
+      - [x] Assegnare a un ruolo una persona disattivata è rifiutato con messaggio esplicito
+      - [x] Un `member` non accede alla configurazione di ruoli, progetti e mappature (Policy lato server)
+      - [x] Factory e seeder aggiornati per ruoli, progetti e mappature nello stesso commit delle migrazioni
     status_history:
       - { status: PLANNED, at: '2026-08-12T14:25:59+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-12T14:35:16+00:00' }
+      - { status: REVIEW, at: '2026-08-12T15:02:25+00:00' }
+      - { status: DONE, at: '2026-08-12T15:41:15+00:00' }
     rework: false
+    merge_commit:
+      sha: e05b52a6ef8b2f22b17de84d49cfa7fc06d58953
+      short_sha: e05b52a
+      subject: 'fix(US-002): rilievi della revisione Robert e Lars'
+      committed_at: '2026-08-12T17:02:21+02:00'
+      url: null
   -
     code: US-003
     title: 'Template di workflow con step ordinati e campi richiesti'

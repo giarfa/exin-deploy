@@ -6,4 +6,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | app/** | .ai/rules/app.md |
 | composer.json | .ai/rules/general.md |
+| app/Models/ProjectRoleAssignment.php | .ai/rules/models.md |
 | tests/** | .ai/rules/tests.md |
