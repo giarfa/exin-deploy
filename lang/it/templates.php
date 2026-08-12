@@ -83,7 +83,6 @@ return [
      */
     'fields_heading' => 'Campi richiesti di :step',
     'fields_description' => 'Le informazioni che il responsabile deve fornire per chiudere lo step.',
-    'back_to_steps' => 'Torna agli step',
 
     'field_create_action' => 'Aggiungi un campo',
     'field_create_heading' => 'Nuovo campo',

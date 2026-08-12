@@ -78,8 +78,13 @@ Route::middleware('auth')->group(function (): void {
      * `scopeBindings()` non e cosmetico: senza, uno step appartenente a un altro
      * template sarebbe raggiungibile cambiando identificativo nell'indirizzo,
      * anche con l'autorizzazione sul template corretta.
+     *
+     * Il parametro si chiama `{stepDefinition}` e non `{step}` perche il binding
+     * annidato ne ricava il nome della relazione da interrogare
+     * (`stepDefinition` -> `stepDefinitions()`). Il segmento visibile
+     * dell'indirizzo resta `step`.
      */
-    Route::livewire('/template/{template}/step/{step}/campi', 'templates.fields')
+    Route::livewire('/template/{template}/step/{stepDefinition}/campi', 'templates.fields')
         ->can('manageSteps', 'template')
         ->scopeBindings()
         ->name('templates.fields');

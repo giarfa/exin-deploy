@@ -902,14 +902,14 @@ tasks:
       10. `php artisan test --compact`, Pint, `larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Aggiunta, modifica e cancellazione degli step funzionanti, con ruolo responsabile obbligatorio
-      - [ ] Le istruzioni sono modificabili e mostrate a chi configura
-      - [ ] Riordino con sposta su / sposta giu, accessibile da tastiera e annunciato
-      - [ ] Dopo cancellazione e riordino le posizioni restano contigue (regola nel concern, non nel componente)
-      - [ ] Un ruolo indicato per identificativo ma fuori dalle opzioni in elenco e rifiutato
-      - [ ] Elenco a query costanti rispetto al numero di step
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px
-      - [ ] Pint e Larastan verdi
+      - [x] Aggiunta, modifica e cancellazione degli step funzionanti, con ruolo responsabile obbligatorio
+      - [x] Le istruzioni sono modificabili e mostrate a chi configura
+      - [x] Riordino con sposta su / sposta giu, accessibile da tastiera e annunciato
+      - [x] Dopo cancellazione e riordino le posizioni restano contigue (regola nel concern, non nel componente)
+      - [x] Un ruolo indicato per identificativo ma fuori dalle opzioni in elenco e rifiutato
+      - [x] Elenco a query costanti rispetto al numero di step
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px
+      - [x] Pint e Larastan verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -919,9 +919,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-10
+    commit:
+      sha: 2819c5d0e5d4ccd96886f289061078b5e2414b21
+      short_sha: 2819c5d
+      subject: 'feat(US-003): TASK-11 schermata degli step con riordino'
+      committed_at: '2026-08-12T18:24:59+02:00'
+      url: null
   -
     id: TASK-12
     title: 'Schermata dei campi richiesti di uno step'
@@ -1208,4 +1214,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:22:37+00:00'
+updated_at: '2026-08-12T16:25:00+00:00'
