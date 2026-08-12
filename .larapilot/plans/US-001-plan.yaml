@@ -280,7 +280,7 @@ tasks:
     id: TASK-03
     title: 'Modello User con UUID, livello applicativo e stato attivo'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
     body: |
@@ -323,28 +323,34 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
 
       ## Completion Criteria
-      - [ ] `users.id` e un UUID e i nuovi record lo ricevono automaticamente
-      - [ ] `sessions.user_id` e una `foreignUuid` e il login mantiene la sessione senza errori
-      - [ ] `App\Enums\UserLevel` esiste con casi `Admin` e `Member`, ed e usato come cast
-      - [ ] `is_active` presente, indicizzato, con default `true`
-      - [ ] `User` usa `HasUuids` e mantiene la convenzione ad attributi `#[Fillable]` / `#[Hidden]`
-      - [ ] `isAdministrator()` restituisce `true` solo per il livello `Admin`
-      - [ ] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
+      - [x] `users.id` e un UUID e i nuovi record lo ricevono automaticamente
+      - [x] `sessions.user_id` e una `foreignUuid` e il login mantiene la sessione senza errori
+      - [x] `App\Enums\UserLevel` esiste con casi `Admin` e `Member`, ed e usato come cast
+      - [x] `is_active` presente, indicizzato, con default `true`
+      - [x] `User` usa `HasUuids` e mantiene la convenzione ad attributi `#[Fillable]` / `#[Hidden]`
+      - [x] `isAdministrator()` restituisce `true` solo per il livello `Admin`
+      - [x] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
 
       ## Test Data
-      - [ ] `database/factories/UserFactory.php` aggiornata con stati `admin()`, `member()`, `inactive()`
-      - [ ] `DatabaseSeeder` crea un amministratore e almeno quattro membri con dati realistici in italiano
-      - [ ] Factory e seeder aggiornati in **questo stesso task** delle modifiche a migrazione e modello
+      - [x] `database/factories/UserFactory.php` aggiornata con stati `admin()`, `member()`, `inactive()`
+      - [x] `DatabaseSeeder` crea un amministratore e almeno quattro membri con dati realistici in italiano
+      - [x] Factory e seeder aggiornati in **questo stesso task** delle modifiche a migrazione e modello
 
       ## Git Deliverables
       - Commit: `feat(US-001): TASK-03 User con UUID, livello applicativo e stato attivo`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 36643991106161d075574e178f9b4458ea420030
+      short_sha: '3664399'
+      subject: 'feat(US-001): TASK-03 User con UUID, livello applicativo e stato attivo'
+      committed_at: '2026-08-12T12:25:37+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: modello User, enum, hashing e regole password'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
     body: |
@@ -370,14 +376,20 @@ tasks:
       4. `php artisan test --compact --filter=UserTest` e `--filter=PasswordPolicyTest`
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] La copertura corrisponde al bar `NORMAL`: unit sul modello, feature sulla validazione
-      - [ ] Nessuno strumento browser o E2E introdotto
+      - [x] I test passano in locale
+      - [x] La copertura corrisponde al bar `NORMAL`: unit sul modello, feature sulla validazione
+      - [x] Nessuno strumento browser o E2E introdotto
 
       ## Git Deliverables
       - Commit: `test(US-001): TASK-04 copre modello User e regole password`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 1194c93119b5d3c2f8923c5d32efefddbcd24c7d
+      short_sha: 1194c93
+      subject: 'test(US-001): TASK-04 copre modello User e regole password'
+      committed_at: '2026-08-12T12:26:23+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Autenticazione Fortify: login, reset password, 2FA e blocco degli utenti disattivati'
@@ -699,4 +711,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:22:25+00:00'
+updated_at: '2026-08-12T10:26:23+00:00'
