@@ -5,7 +5,7 @@ epic:
   title: 'Configurazione del processo'
 priority: HIGH
 points: 13
-status: 'IN PROGRESS'
+status: REVIEW
 body: |
   #### US-003: Template di workflow con step ordinati e campi richiesti
 
@@ -42,4 +42,6 @@ status_history:
     at: '2026-08-12T15:55:01+00:00'
   - status: 'IN PROGRESS'
     at: '2026-08-12T16:02:29+00:00'
+  - status: REVIEW
+    at: '2026-08-12T16:52:57+00:00'
 rework: false
