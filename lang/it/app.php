@@ -4,6 +4,27 @@ return [
     'logout' => 'Esci',
 
     /*
+     * Navigazione. Le sezioni non ancora implementate restano visibili e marcate
+     * come previste: la struttura del prodotto deve essere leggibile da subito.
+     */
+    'nav_operational' => 'Operativo',
+    'nav_configuration' => 'Configurazione',
+    'nav_my_steps' => 'I miei step',
+    'nav_releases' => 'Release',
+    'nav_projects' => 'Progetti',
+    'nav_templates' => 'Template di workflow',
+    'nav_roles' => 'Ruoli',
+    'nav_members' => 'Membri del team',
+    'nav_planned' => 'in arrivo',
+
+    /*
+     * Tema. La preferenza e persistita da Flux in localStorage.
+     */
+    'theme_light' => 'Chiaro',
+    'theme_dark' => 'Scuro',
+    'theme_system' => 'Sistema',
+
+    /*
      * Home autenticata: e un segnaposto. La schermata di ingresso definitiva e
      * la vista operativa "i miei step" (US-007), che sostituira questo contenuto.
      */

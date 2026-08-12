@@ -456,7 +456,7 @@ tasks:
     id: TASK-06
     title: 'Test: flussi di autenticazione'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
     body: |
@@ -485,14 +485,20 @@ tasks:
       3. `php artisan test --compact --filter=Auth`
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] Ogni percorso di rifiuto e coperto, non solo il percorso felice
-      - [ ] Nessuno strumento browser o E2E introdotto
+      - [x] I test passano in locale
+      - [x] Ogni percorso di rifiuto e coperto, non solo il percorso felice
+      - [x] Nessuno strumento browser o E2E introdotto
 
       ## Git Deliverables
       - Commit: `test(US-001): TASK-06 copre i flussi di autenticazione`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 3b9393c9b44e0554dcf22a673e6439c271a5fdfc
+      short_sha: 3b9393c
+      subject: 'test(US-001): TASK-06 copre i flussi di autenticazione'
+      committed_at: '2026-08-12T12:39:33+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Shell applicativa Starter Kit e esclusione dagli indici'
@@ -717,4 +723,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:34:13+00:00'
+updated_at: '2026-08-12T10:39:33+00:00'

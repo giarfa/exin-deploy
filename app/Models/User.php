@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 /**
@@ -54,5 +55,19 @@ class User extends Authenticatable
     public function isAdministrator(): bool
     {
         return $this->level === UserLevel::Admin;
+    }
+
+    /**
+     * Iniziali del nome, usate come ripiego dell'avatar nell'interfaccia.
+     */
+    public function initials(): string
+    {
+        return Str::of($this->name)
+            ->trim()
+            ->explode(' ')
+            ->filter()
+            ->take(2)
+            ->map(fn (string $part): string => Str::upper(Str::substr($part, 0, 1)))
+            ->implode('');
     }
 }
