@@ -773,7 +773,7 @@ tasks:
     id: TASK-10
     title: 'Schermata della mappatura predefinita di team'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
     body: |
@@ -800,12 +800,12 @@ tasks:
       9. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Un amministratore definisce, modifica e rimuove la persona predefinita di ogni ruolo
-      - [ ] Un solo record predefinito per ruolo, coerente con il vincolo di schema
-      - [ ] Assegnare una persona disattivata e rifiutato con messaggio esplicito
-      - [ ] La schermata dichiara che la mappatura si applica ai progetti futuri, non a quelli esistenti
-      - [ ] Modificare la predefinita non altera i progetti gia creati
-      - [ ] Schermata usabile a 375, 768 e 1280 px
+      - [x] Un amministratore definisce, modifica e rimuove la persona predefinita di ogni ruolo
+      - [x] Un solo record predefinito per ruolo, coerente con il vincolo di schema
+      - [x] Assegnare una persona disattivata e rifiutato con messaggio esplicito
+      - [x] La schermata dichiara che la mappatura si applica ai progetti futuri, non a quelli esistenti
+      - [x] Modificare la predefinita non altera i progetti gia creati
+      - [x] Schermata usabile a 375, 768 e 1280 px
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -814,6 +814,12 @@ tasks:
       - Commit: `feat(US-002): TASK-10 mappatura predefinita di team`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: a8801885d93782da75a7a7848ed9cc7d5f79a829
+      short_sha: a880188
+      subject: 'feat(US-002): TASK-10 mappatura predefinita di team'
+      committed_at: '2026-08-12T16:54:36+02:00'
+      url: null
   -
     id: TASK-11
     title: 'Test: autorizzazione e flussi di configurazione'
@@ -911,4 +917,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:53:36+00:00'
+updated_at: '2026-08-12T14:54:36+00:00'
