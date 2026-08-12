@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Role;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -135,6 +134,11 @@ new class extends Component
     /**
      * Cancella un ruolo, se nessuno lo referenzia.
      *
+     * Il rifiuto di dominio viene deciso **prima** dell'autorizzazione, e non
+     * intercettando l'eccezione della Gate: cosi facendo, un membro non
+     * autorizzato riceverebbe il messaggio "e gia usato" al posto di un 403,
+     * mascherando un difetto di autorizzazione da vincolo di dominio.
+     *
      * Il rifiuto non e un errore generico: l'utente deve sapere **cosa** blocca la
      * cancellazione e che la disattivazione resta possibile, altrimenti riprova
      * all'infinito o cancella qualcos'altro.
@@ -143,42 +147,23 @@ new class extends Component
     {
         $role = Role::findOrFail($id);
 
-        try {
-            Gate::authorize('delete', $role);
-        } catch (AuthorizationException) {
+        if ($role->isReferenced()) {
+            Gate::authorize('viewAny', Role::class);
+
             $this->deletionError = __('roles.delete_refused', [
                 'name' => $role->name,
-                'usage' => $this->usageLabel($role),
+                'usage' => $role->usageLabel(),
             ]);
 
             return;
         }
 
+        Gate::authorize('delete', $role);
+
         $role->delete();
 
         $this->deletionError = null;
         unset($this->roles);
-    }
-
-    /**
-     * Descrizione leggibile di dove il ruolo e usato.
-     */
-    public function usageLabel(Role $role): string
-    {
-        $counts = $role->referenceCounts();
-        $parts = [];
-
-        if ($counts['projectAssignments'] > 0) {
-            $parts[] = trans_choice('roles.used_projects', $counts['projectAssignments'], [
-                'count' => $counts['projectAssignments'],
-            ]);
-        }
-
-        if ($counts['defaultAssignment'] > 0) {
-            $parts[] = __('roles.used_default');
-        }
-
-        return $parts === [] ? __('roles.unused') : implode(', ', $parts);
     }
 };
 ?>
@@ -258,7 +243,7 @@ new class extends Component
                             </span>
                         </flux:table.cell>
 
-                        <flux:table.cell class="text-sm">{{ $this->usageLabel($role) }}</flux:table.cell>
+                        <flux:table.cell class="text-sm">{{ $role->usageLabel() }}</flux:table.cell>
 
                         <flux:table.cell class="text-end whitespace-nowrap">
                             <flux:button wire:click="openEditForm('{{ $role->id }}')" size="sm" variant="ghost">

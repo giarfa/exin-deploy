@@ -883,7 +883,7 @@ tasks:
     id: TASK-12
     title: 'Documentazione baseline e CHANGELOG'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-11
     body: |
@@ -911,10 +911,10 @@ tasks:
       7. `php artisan test --compact` — suite completa verde prima della consegna in revisione
 
       ## Completion Criteria
-      - [ ] README aggiornato con la configurazione del processo e la natura non retroattiva della precompilazione
-      - [ ] Nota architetturale estesa alle nuove entita di definizione
-      - [ ] CHANGELOG aggiornato nella sezione Unreleased
-      - [ ] Suite completa verde, Pint e Larastan livello 5 verdi
+      - [x] README aggiornato con la configurazione del processo e la natura non retroattiva della precompilazione
+      - [x] Nota architetturale estesa alle nuove entita di definizione
+      - [x] CHANGELOG aggiornato nella sezione Unreleased
+      - [x] Suite completa verde, Pint e Larastan livello 5 verdi
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -923,4 +923,10 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:57:20+00:00'
+    commit:
+      sha: 041e1847311ec7bc1f7864db588eb111197485f9
+      short_sha: '041e184'
+      subject: 'docs(US-002): TASK-12 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-12T16:58:43+02:00'
+      url: null
+updated_at: '2026-08-12T14:58:44+00:00'

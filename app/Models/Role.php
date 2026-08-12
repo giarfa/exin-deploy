@@ -113,6 +113,32 @@ class Role extends Model
     }
 
     /**
+     * Descrizione leggibile di dove il ruolo e usato, mostrata in elenco e nel
+     * rifiuto di una cancellazione.
+     *
+     * Vive qui e non nel componente Livewire per due motivi: i conteggi che legge
+     * sono di questo modello, e un metodo pubblico su un componente Livewire e
+     * invocabile dal client, superficie che non serve aprire per un'etichetta.
+     */
+    public function usageLabel(): string
+    {
+        $counts = $this->referenceCounts();
+        $parts = [];
+
+        if ($counts['projectAssignments'] > 0) {
+            $parts[] = trans_choice('roles.used_projects', $counts['projectAssignments'], [
+                'count' => $counts['projectAssignments'],
+            ]);
+        }
+
+        if ($counts['defaultAssignment'] > 0) {
+            $parts[] = __('roles.used_default');
+        }
+
+        return $parts === [] ? __('roles.unused') : implode(', ', $parts);
+    }
+
+    /**
      * Ruoli attivi, gli unici proponibili in una nuova assegnazione.
      */
     #[Scope]

@@ -135,6 +135,20 @@ class RoleManagementTest extends TestCase
 
         Livewire::test('roles.index')->call('openCreateForm')->assertForbidden();
         Livewire::test('roles.index')->call('toggleActivation', $role->id)->assertForbidden();
+        Livewire::test('roles.index')->call('delete', $role->id)->assertForbidden();
+    }
+
+    public function test_a_member_deleting_a_referenced_role_is_forbidden_not_merely_refused(): void
+    {
+        // Il rifiuto di dominio non deve mascherare un difetto di autorizzazione:
+        // chi non e autorizzato riceve 403, non il messaggio "e gia usato".
+        $assignment = ProjectRoleAssignment::factory()->create();
+
+        $this->actingAs(User::factory()->member()->create());
+
+        Livewire::test('roles.index')
+            ->call('delete', $assignment->role_id)
+            ->assertForbidden();
     }
 
     public function test_the_listing_does_not_query_per_row(): void
