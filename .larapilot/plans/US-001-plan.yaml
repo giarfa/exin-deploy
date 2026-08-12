@@ -394,7 +394,7 @@ tasks:
     id: TASK-05
     title: 'Autenticazione Fortify: login, reset password, 2FA e blocco degli utenti disattivati'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-04
     body: |
@@ -429,15 +429,15 @@ tasks:
       8. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
 
       ## Completion Criteria
-      - [ ] Login con email e password funzionante, con messaggio di errore per credenziali errate
-      - [ ] Un utente con `is_active = false` non accede e riceve un messaggio dedicato
-      - [ ] Reset password funzionante end-to-end (mailer `log` in locale)
-      - [ ] 2FA TOTP attivabile, con QR di enrolment e codici di recupero; challenge richiesto al login
-      - [ ] `/register` restituisce 404: nessuna registrazione pubblica
-      - [ ] Nessuna rotta applicativa raggiungibile senza autenticazione; l'anonimo viene rediretto al login
-      - [ ] Le passkey restano disattivate
-      - [ ] I testi dell'interfaccia vivono in `lang/`
-      - [ ] I tentativi di login falliti sono registrati nel log applicativo
+      - [x] Login con email e password funzionante, con messaggio di errore per credenziali errate
+      - [x] Un utente con `is_active = false` non accede e riceve un messaggio dedicato
+      - [x] Reset password funzionante end-to-end (mailer `log` in locale)
+      - [x] 2FA TOTP attivabile, con QR di enrolment e codici di recupero; challenge richiesto al login
+      - [x] `/register` restituisce 404: nessuna registrazione pubblica
+      - [x] Nessuna rotta applicativa raggiungibile senza autenticazione; l'anonimo viene rediretto al login
+      - [x] Le passkey restano disattivate
+      - [x] I testi dell'interfaccia vivono in `lang/`
+      - [x] I tentativi di login falliti sono registrati nel log applicativo
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -446,6 +446,12 @@ tasks:
       - Commit: `feat(US-001): TASK-05 autenticazione Fortify con 2FA e blocco utenti disattivati`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: b20e08a3715289a366075cadab8b705de468904e
+      short_sha: b20e08a
+      subject: 'feat(US-001): TASK-05 autenticazione Fortify con 2FA e blocco utenti disattivati'
+      committed_at: '2026-08-12T12:34:13+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Test: flussi di autenticazione'
@@ -711,4 +717,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:26:23+00:00'
+updated_at: '2026-08-12T10:34:13+00:00'
