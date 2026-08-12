@@ -476,21 +476,27 @@ tasks:
       8. Nessun test browser, Dusk o Playwright: il bar e `NORMAL`
 
       ## Completion Criteria
-      - [ ] I vincoli unici sulle posizioni sono verificati aggirando la validazione
-      - [ ] `restrict` su `step_definitions.role_id` verificato, con il prerequisito sulle chiavi esterne accertato
-      - [ ] Un valore fuori dai quattro tipi e rifiutato sia da `from()` sia in lettura Eloquent
-      - [ ] Le relazioni di step e campi sono ordinate per posizione
-      - [ ] Il ruolo usato da uno step non e cancellabile e l'etichetta di utilizzo lo dice
-      - [ ] Suite verde
+      - [x] I vincoli unici sulle posizioni sono verificati aggirando la validazione
+      - [x] `restrict` su `step_definitions.role_id` verificato, con il prerequisito sulle chiavi esterne accertato
+      - [x] Un valore fuori dai quattro tipi e rifiutato sia da `from()` sia in lettura Eloquent
+      - [x] Le relazioni di step e campi sono ordinate per posizione
+      - [x] Il ruolo usato da uno step non e cancellabile e l'etichetta di utilizzo lo dice
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-003): TASK-04 copre modelli, vincoli di schema e tipo di campo`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione tenuta in locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: e43f9fa721a18b86f88008e2a8f3df4ed01bb746
+      short_sha: e43f9fa
+      subject: 'test(US-003): TASK-04 copre modelli, vincoli di schema e tipo di campo'
+      committed_at: '2026-08-12T18:11:47+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Test: contiguita e unicita delle posizioni dopo riordini e cancellazioni'
@@ -1166,4 +1172,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-15
-updated_at: '2026-08-12T16:10:00+00:00'
+updated_at: '2026-08-12T16:11:47+00:00'
