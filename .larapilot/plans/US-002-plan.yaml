@@ -182,7 +182,7 @@ tasks:
     id: TASK-00
     title: 'Integrare US-001 in develop e creare il branch di lavoro'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
     body: |
       ## Description
@@ -208,11 +208,11 @@ tasks:
       7. Commit di ancoraggio del branch (commit vuoto ammesso)
 
       ## Completion Criteria
-      - [ ] Nessuna modifica pendente nell'albero di lavoro prima del merge
-      - [ ] `develop` contiene i commit di US-001 e la suite di test e verde su `develop`
-      - [ ] Il branch `feature/US-002-ruoli-progetti-responsabili` esiste in locale e deriva da `develop`
-      - [ ] Titolo e corpo della PR interna redatti e tenuti in locale
-      - [ ] Nessun push eseguito
+      - [x] Nessuna modifica pendente nell'albero di lavoro prima del merge
+      - [x] `develop` contiene i commit di US-001 e la suite di test e verde su `develop`
+      - [x] Il branch `feature/US-002-ruoli-progetti-responsabili` esiste in locale e deriva da `develop`
+      - [x] Titolo e corpo della PR interna redatti e tenuti in locale
+      - [x] Nessun push eseguito
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -221,6 +221,12 @@ tasks:
       - Commit: `chore(US-002): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
+    commit:
+      sha: a76e6a9c23efab5bd8e20e7ad0ca1cb2fa985eea
+      short_sha: a76e6a9
+      subject: 'chore(US-002): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-12T16:35:55+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Modello Role con migrazione, factory e seeder'
@@ -851,4 +857,4 @@ tasks:
       - Commit: `docs(US-002): TASK-12 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
-updated_at: '2026-08-12T14:25:59+00:00'
+updated_at: '2026-08-12T14:36:02+00:00'

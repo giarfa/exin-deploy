@@ -3,16 +3,18 @@
 namespace Database\Seeders;
 
 use App\Enums\UserLevel;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Dataset dimostrativo del team.
+ * Dataset dimostrativo del team e della configurazione di processo.
  *
- * Qui vivono soltanto i membri: lo scenario completo (progetti, template di
- * workflow, release a meta catena e release conclusa) appartiene a US-011.
+ * Qui vivono membri, ruoli funzionali, progetti e mappature ruolo -> persona:
+ * lo scenario di esecuzione (template di workflow, release a meta catena e
+ * release conclusa) appartiene a US-011.
  */
 class DatabaseSeeder extends Seeder
 {
@@ -68,15 +70,47 @@ class DatabaseSeeder extends Seeder
     ];
 
     /**
+     * Ruoli funzionali del processo di rilascio.
+     *
+     * @var list<array{name: string, description: string}>
+     */
+    private const ROLES = [
+        ['name' => 'Dev Lead', 'description' => 'Responsabile tecnico del codice che entra nel rilascio.'],
+        ['name' => 'QA', 'description' => 'Verifica funzionale prima della consegna in produzione.'],
+        ['name' => 'DevOps', 'description' => 'Prepara ambienti e infrastruttura, esegue la consegna.'],
+        ['name' => 'PM', 'description' => 'Coordina il rilascio e comunica con gli stakeholder.'],
+        ['name' => 'Security', 'description' => 'Valuta i rischi di sicurezza introdotti dal rilascio.'],
+    ];
+
+    /**
      * Seed the application's database.
      */
     public function run(): void
+    {
+        $this->seedTeam();
+        $this->seedRoles();
+    }
+
+    /**
+     * Membri del team, con credenziali note per lo sviluppo.
+     */
+    private function seedTeam(): void
     {
         foreach (self::TEAM as $member) {
             User::factory()->create([
                 ...$member,
                 'password' => Hash::make(self::DEMO_PASSWORD),
             ]);
+        }
+    }
+
+    /**
+     * Catalogo dei ruoli funzionali, base della configurazione di processo.
+     */
+    private function seedRoles(): void
+    {
+        foreach (self::ROLES as $role) {
+            Role::factory()->create($role);
         }
     }
 }
