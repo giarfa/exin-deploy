@@ -227,7 +227,7 @@ tasks:
     id: TASK-02
     title: 'Baseline di sicurezza e configurazione SQLite'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
     body: |
@@ -256,12 +256,12 @@ tasks:
       6. `vendor/bin/pint --dirty --format agent`
 
       ## Completion Criteria
-      - [ ] `HASH_DRIVER=argon2id` attivo e documentato in `.env.example`
-      - [ ] Una password creata dall'applicazione risulta hashata con Argon2id, non con bcrypt
-      - [ ] `Password::defaults()` registrato in `AppServiceProvider::boot()`
-      - [ ] `PRAGMA journal_mode` restituisce `wal`
-      - [ ] `busy_timeout` e `synchronous` configurati e documentati
-      - [ ] Nessuna funzione SQLite-specifica introdotta nel codice applicativo
+      - [x] `HASH_DRIVER=argon2id` attivo e documentato in `.env.example`
+      - [x] Una password creata dall'applicazione risulta hashata con Argon2id, non con bcrypt
+      - [x] `Password::defaults()` registrato in `AppServiceProvider::boot()`
+      - [x] `PRAGMA journal_mode` restituisce `wal`
+      - [x] `busy_timeout` e `synchronous` configurati e documentati
+      - [x] Nessuna funzione SQLite-specifica introdotta nel codice applicativo
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -270,6 +270,12 @@ tasks:
       - Commit: `feat(US-001): TASK-02 baseline di sicurezza Argon2id e SQLite in WAL`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 275b237afee6bf47e707c4ddaae523858ade10d5
+      short_sha: 275b237
+      subject: 'feat(US-001): TASK-02 baseline di sicurezza Argon2id e SQLite in WAL'
+      committed_at: '2026-08-12T12:22:25+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Modello User con UUID, livello applicativo e stato attivo'
@@ -693,4 +699,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:21:15+00:00'
+updated_at: '2026-08-12T10:22:25+00:00'

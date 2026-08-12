@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserLevel;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -24,11 +25,15 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $name = fake('it_IT')->name();
+
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'name' => $name,
+            'email' => Str::slug($name, '.').'@'.fake()->unique()->numberBetween(1, 999999).'.gruppoexcellence.com',
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => static::$password ??= Hash::make('Rilascio-2026!'),
+            'level' => UserLevel::Member,
+            'is_active' => true,
             'remember_token' => Str::random(10),
         ];
     }
@@ -40,6 +45,36 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Amministratore: puo configurare il sistema e intervenire su qualsiasi release.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'level' => UserLevel::Admin,
+        ]);
+    }
+
+    /**
+     * Membro ordinario: opera solo sugli step di cui e responsabile.
+     */
+    public function member(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'level' => UserLevel::Member,
+        ]);
+    }
+
+    /**
+     * Membro disattivato: non accede piu, ma resta leggibile nello storico.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
         ]);
     }
 }
