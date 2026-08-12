@@ -443,23 +443,29 @@ tasks:
       6. `php artisan migrate:fresh --seed`, Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Tabella senza `updated_at`, con indice cronologico per release
-      - [ ] Enum con il vocabolario completo di FR-016 e il PHPDoc che dice quale spec scrive cosa
-      - [ ] `update()` e `delete()` sul modello sollevano `ReleaseEventIsAppendOnly`
-      - [ ] Factory creata; `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+      - [x] Tabella senza `updated_at`, con indice cronologico per release
+      - [x] Enum con il vocabolario completo di FR-016 e il PHPDoc che dice quale spec scrive cosa
+      - [x] `update()` e `delete()` sul modello sollevano `ReleaseEventIsAppendOnly`
+      - [x] Factory creata; `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
 
       ## Test Data
-      - [ ] `ReleaseEventFactory` creata nello stesso task della migrazione
-      - [ ] Seeder non toccato: registro popolato dallo scenario di US-011
+      - [x] `ReleaseEventFactory` creata nello stesso task della migrazione
+      - [x] Seeder non toccato: registro popolato dallo scenario di US-011
 
       ## Git Deliverables
       - Commit: `feat(US-004): TASK-03 registro delle transizioni in sola aggiunta`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: 88b58dccd96462dbd7af22744be2bd11f9c5080a
+      short_sha: 88b58dc
+      subject: 'feat(US-004): TASK-03 registro delle transizioni in sola aggiunta'
+      committed_at: '2026-08-13T00:20:45+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: modelli, vincoli di schema e sola aggiunta del registro'
@@ -836,4 +842,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:19:26+00:00'
+updated_at: '2026-08-12T22:20:45+00:00'
