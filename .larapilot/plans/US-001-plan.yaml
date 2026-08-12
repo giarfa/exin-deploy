@@ -119,7 +119,7 @@ tasks:
     id: TASK-00
     title: 'Inizializzare il repository git e il branch di lavoro'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
     body: |
       ## Description
@@ -145,11 +145,11 @@ tasks:
       7. Commit di ancoraggio del branch (commit vuoto ammesso)
 
       ## Completion Criteria
-      - [ ] Il repository git esiste, con commit iniziale che include codice e artefatti Larapilot
-      - [ ] `.gitignore` esclude `.env`, `vendor`, `node_modules` e i file del database SQLite
-      - [ ] I branch `main` e `develop` esistono
-      - [ ] Il branch `feature/US-001-accesso-membri-team` esiste in locale e ne deriva da `develop`
-      - [ ] Titolo e corpo della PR interna redatti e tenuti in locale
+      - [x] Il repository git esiste, con commit iniziale che include codice e artefatti Larapilot
+      - [x] `.gitignore` esclude `.env`, `vendor`, `node_modules` e i file del database SQLite
+      - [x] I branch `main` e `develop` esistono
+      - [x] Il branch `feature/US-001-accesso-membri-team` esiste in locale e ne deriva da `develop`
+      - [x] Titolo e corpo della PR interna redatti e tenuti in locale
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -158,6 +158,12 @@ tasks:
       - Commit: `chore(US-001): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
+    commit:
+      sha: 8fe5a685d0c732f1d8b54b3083354095c7cc5702
+      short_sha: 8fe5a68
+      subject: 'chore(US-001): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-12T12:17:50+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Installare Livewire 4, Flux e Fortify'
@@ -681,4 +687,4 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:11:39+00:00'
+updated_at: '2026-08-12T10:18:04+00:00'
