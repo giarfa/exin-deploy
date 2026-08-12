@@ -610,20 +610,26 @@ tasks:
       7. `php artisan test --compact --filter=Release`
 
       ## Completion Criteria
-      - [ ] Copia verificata campo per campo, non solo per conteggio
-      - [ ] Modifiche al template dopo l'avvio non alterano la release
-      - [ ] Ogni precondizione ha il proprio test, con rifiuto esplicito e nessuna scrittura parziale
-      - [ ] Unicita dell'etichetta per progetto coperta su entrambi i versanti
-      - [ ] Evento di avvio verificato; suite verde
+      - [x] Copia verificata campo per campo, non solo per conteggio
+      - [x] Modifiche al template dopo l'avvio non alterano la release
+      - [x] Ogni precondizione ha il proprio test, con rifiuto esplicito e nessuna scrittura parziale
+      - [x] Unicita dell'etichetta per progetto coperta su entrambi i versanti
+      - [x] Evento di avvio verificato; suite verde
 
       ## Git Deliverables
       - Commit: `test(US-004): TASK-06 copre snapshot congelato e precondizioni di avvio`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
+    commit:
+      sha: 22f6a2aeaf6379881567dc680ba873812c8f49be
+      short_sha: 22f6a2a
+      subject: 'test(US-004): TASK-06 copre snapshot congelato e precondizioni di avvio'
+      committed_at: '2026-08-13T00:27:02+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Test: isolamento dalle tabelle di definizione e query costanti'
@@ -854,4 +860,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:24:50+00:00'
+updated_at: '2026-08-12T22:27:02+00:00'
