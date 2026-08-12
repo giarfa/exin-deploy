@@ -48,6 +48,14 @@ new class extends Component
     }
 
     /**
+     * Membri del team: amministratori per primi, poi in ordine alfabetico.
+     *
+     * L'ordinamento per livello avviene sulla collezione e non in SQL: `ORDER BY
+     * level` ordinerebbe la stringa dell'enum, e alfabeticamente "member"
+     * precede "admin" — esattamente il contrario dell'intento. `sortByDesc` e
+     * stabile, quindi l'ordine per nome viene preservato dentro ogni livello.
+     * I volumi sono quelli di un team: l'ordinamento in memoria e adeguato.
+     *
      * @return \Illuminate\Support\Collection<int, User>
      */
     #[Computed]
@@ -55,9 +63,10 @@ new class extends Component
     {
         return User::query()
             ->select(['id', 'name', 'email', 'level', 'is_active'])
-            ->orderByDesc('level')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->sortByDesc(fn (User $member): bool => $member->isAdministrator())
+            ->values();
     }
 
     public function openCreateForm(): void
@@ -199,7 +208,7 @@ new class extends Component
                     <flux:table.cell class="break-all">{{ $member->email }}</flux:table.cell>
 
                     <flux:table.cell>
-                        <flux:badge size="sm" :color="$member->isAdministrator() ? 'zinc' : 'zinc'"
+                        <flux:badge size="sm" color="zinc"
                                     :variant="$member->isAdministrator() ? 'solid' : 'outline'">
                             {{ $member->level->label() }}
                         </flux:badge>

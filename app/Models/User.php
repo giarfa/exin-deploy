@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Fortify;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 /**
@@ -55,6 +56,30 @@ class User extends Authenticatable
     public function isAdministrator(): bool
     {
         return $this->level === UserLevel::Admin;
+    }
+
+    /**
+     * Indica se l'enrolment della verifica in due passaggi e stato avviato,
+     * indipendentemente dal fatto che sia poi stato confermato.
+     *
+     * Diverso da `hasEnabledTwoFactorAuthentication()` di Fortify, che con
+     * `confirm` attivo richiede anche la conferma.
+     */
+    public function hasStartedTwoFactorEnrolment(): bool
+    {
+        return ! is_null($this->two_factor_secret);
+    }
+
+    /**
+     * Chiave di configurazione da inserire a mano quando non si puo inquadrare
+     * il QR code.
+     *
+     * Usa l'encrypter di Fortify e non `decrypt()`: se il progetto configurasse
+     * un encrypter dedicato, la funzione globale leggerebbe con la chiave sbagliata.
+     */
+    public function twoFactorSecretForManualEntry(): string
+    {
+        return Fortify::currentEncrypter()->decrypt($this->two_factor_secret);
     }
 
     /**

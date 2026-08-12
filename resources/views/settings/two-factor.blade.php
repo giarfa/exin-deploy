@@ -1,8 +1,6 @@
 @php
     /** @var \App\Models\User $user */
     $user = auth()->user();
-    $enabled = ! is_null($user->two_factor_secret);
-    $confirmed = ! is_null($user->two_factor_confirmed_at);
 @endphp
 
 <x-layouts.app :title="__('app.two_factor_heading')">
@@ -17,14 +15,14 @@
         <flux:card class="space-y-5">
             <flux:heading size="lg" level="2">{{ __('app.two_factor_heading') }}</flux:heading>
 
-            @if (! $enabled)
+            @if (! $user->hasStartedTwoFactorEnrolment())
                 <flux:text>{{ __('app.two_factor_disabled') }}</flux:text>
 
                 <form method="POST" action="{{ route('two-factor.enable') }}">
                     @csrf
                     <flux:button type="submit" variant="primary">{{ __('app.two_factor_enable') }}</flux:button>
                 </form>
-            @elseif (! $confirmed)
+            @elseif (! $user->hasEnabledTwoFactorAuthentication())
                 <flux:text>{{ __('app.two_factor_scan') }}</flux:text>
 
                 <div class="rounded-lg bg-white p-4 dark:bg-zinc-100 [&_svg]:h-40 [&_svg]:w-40">
@@ -33,7 +31,9 @@
 
                 <div>
                     <flux:heading size="sm" level="3">{{ __('app.two_factor_secret') }}</flux:heading>
-                    <code class="mt-1 block break-all font-mono text-sm">{{ decrypt($user->two_factor_secret) }}</code>
+                    <code class="mt-1 block break-all font-mono text-sm">
+                        {{ $user->twoFactorSecretForManualEntry() }}
+                    </code>
                 </div>
 
                 <form method="POST" action="{{ route('two-factor.confirm') }}" class="space-y-4">
@@ -60,7 +60,7 @@
                     <flux:text class="mt-1">{{ __('app.two_factor_recovery_intro') }}</flux:text>
 
                     <ul class="mt-3 space-y-1 rounded-lg bg-zinc-50 p-4 font-mono text-sm dark:bg-zinc-800">
-                        @foreach (json_decode(decrypt($user->two_factor_recovery_codes), true) as $code)
+                        @foreach ($user->recoveryCodes() as $code)
                             <li>{{ $code }}</li>
                         @endforeach
                     </ul>

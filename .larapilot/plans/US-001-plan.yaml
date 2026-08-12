@@ -695,7 +695,7 @@ tasks:
     id: TASK-10
     title: 'Documentazione baseline e CHANGELOG'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-09
     body: |
@@ -726,13 +726,13 @@ tasks:
       5. Verificare che `.env.example` sia allineato al `.env` reale, senza segreti
 
       ## Completion Criteria
-      - [ ] README sostituito: descrive l'applicazione, non l'installazione di Larapilot
-      - [ ] Avvio locale documentato via Herd, senza istruzioni Sail o Docker
-      - [ ] Variabili d'ambiente e comandi di test e seed documentati
-      - [ ] Nota architetturale su definizione/istanza e regola dello snapshot presente
-      - [ ] Vincoli permanenti annotati (portabilita database, Flux free, nessuna registrazione, passkey off)
-      - [ ] `CHANGELOG.md` creato con sezione `Unreleased`
-      - [ ] `.env.example` allineato e privo di segreti
+      - [x] README sostituito: descrive l'applicazione, non l'installazione di Larapilot
+      - [x] Avvio locale documentato via Herd, senza istruzioni Sail o Docker
+      - [x] Variabili d'ambiente e comandi di test e seed documentati
+      - [x] Nota architetturale su definizione/istanza e regola dello snapshot presente
+      - [x] Vincoli permanenti annotati (portabilita database, Flux free, nessuna registrazione, passkey off)
+      - [x] `CHANGELOG.md` creato con sezione `Unreleased`
+      - [x] `.env.example` allineato e privo di segreti
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -741,4 +741,10 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:48:37+00:00'
+    commit:
+      sha: 6cc55a22eec4dc68b8e69bf34ca28f9c5b5b3e63
+      short_sha: 6cc55a2
+      subject: 'docs(US-001): TASK-10 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-12T12:50:02+02:00'
+      url: null
+updated_at: '2026-08-12T10:50:02+00:00'
