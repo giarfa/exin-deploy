@@ -108,7 +108,7 @@ specs:
       title: 'Configurazione del processo'
     priority: HIGH
     points: 13
-    status: PLANNED
+    status: 'IN PROGRESS'
     body: |
       #### US-003: Template di workflow con step ordinati e campi richiesti
 
@@ -142,6 +142,7 @@ specs:
       - [ ] Factory e seeder producono il template "Rilascio standard" con cinque step realistici e i relativi campi
     status_history:
       - { status: PLANNED, at: '2026-08-12T15:55:01+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-12T16:02:29+00:00' }
     rework: false
   -
     code: US-004
