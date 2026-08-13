@@ -12,7 +12,6 @@ use App\Exceptions\StepValuesAreInvalid;
 use App\Models\ReleaseStep;
 use App\Models\ReleaseStepField;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -436,45 +435,10 @@ new class extends Component
 
             <flux:heading size="lg" level="3">{{ __('releases.step_values_heading') }}</flux:heading>
 
-            {{-- Lista di definizione e non tabella: a 375 px due colonne di testo
-                 lungo obbligherebbero allo scorrimento orizzontale. --}}
-            <dl class="space-y-4">
-                @foreach ($this->fields as $field)
-                    <div>
-                        <dt class="text-sm font-medium text-zinc-800 dark:text-white">{{ $field->label }}</dt>
-
-                        <dd class="mt-0.5 text-sm break-words text-zinc-500 dark:text-white/70">
-                            @if ($field->value === null)
-                                {{ __('releases.step_value_not_provided') }}
-                            @elseif ($field->type === FieldType::Confirmation)
-                                <span class="inline-flex items-center gap-1.5">
-                                    <flux:icon name="check-circle" variant="mini" class="size-4 shrink-0" />
-                                    {{ __('releases.step_value_confirmed') }}
-                                </span>
-                            @elseif ($field->type === FieldType::Link && Str::startsWith($field->value, ['http://', 'https://']))
-                                {{--
-                                    Lo schema viene verificato **anche** qui, dove il
-                                    valore diventa un collegamento cliccabile:
-                                    `WellFormedLink` lo garantisce in scrittura, ma
-                                    una riga arrivata da un import o da una
-                                    correzione a mano sul database non passa da
-                                    quella regola, e un `javascript:` reso come href
-                                    sarebbe una superficie offerta a chi consulta lo
-                                    storico. Un valore non conforme resta leggibile
-                                    come testo.
-
-                                    `rel` esplicito: i browser recenti implicano
-                                    `noopener` su `target="_blank"`, ma dichiararlo
-                                    non dipende dalla versione di chi legge.
-                                --}}
-                                <flux:link :href="$field->value" external rel="noopener noreferrer">{{ $field->value }}</flux:link>
-                            @else
-                                {{ $field->value }}
-                            @endif
-                        </dd>
-                    </div>
-                @endforeach
-            </dl>
+            {{-- Stessa resa che il dettaglio della release mostra su ogni step
+                 chiuso della catena: una copia sola, perche dentro quel blocco vive
+                 la verifica dello schema del collegamento. --}}
+            <x-releases.step-values :fields="$this->fields" />
         </flux:card>
     @else
         <flux:card class="space-y-5">
