@@ -203,6 +203,46 @@ class CloseStepConcurrencyTest extends TestCase
         $this->assertEquals($concluded->completed_at, $release->completed_at);
     }
 
+    public function test_a_lost_race_on_the_last_step_says_the_release_was_concluded_not_handed_over(): void
+    {
+        $release = $this->releaseInProgress(steps: 1);
+        $step = $release->steps->first();
+        $rival = User::factory()->create();
+
+        // Stessa interferenza del test sopra, sull'ultimo step della catena: qui
+        // l'altro invio non ha passato il flusso a nessuno, ha concluso il rilascio,
+        // e il messaggio deve dire quello.
+        $interfered = false;
+
+        ReleaseStepField::saved(function () use (&$interfered, $step, $rival): void {
+            if ($interfered) {
+                return;
+            }
+
+            $interfered = true;
+
+            ReleaseStep::query()
+                ->whereKey($step->getKey())
+                ->where('status', ReleaseStepStatus::Active->value)
+                ->update([
+                    'status' => ReleaseStepStatus::Completed->value,
+                    'completed_by' => $rival->id,
+                    'completed_at' => now(),
+                ]);
+        });
+
+        try {
+            app(CloseStep::class)->handle($step, $this->validValuesFor($step), $step->assignedUser);
+            $this->fail('La chiusura ha sovrascritto una conclusione gia avvenuta.');
+        } catch (StepAlreadyClosed $refused) {
+            $this->assertTrue($interfered, 'L\'interferenza non e mai avvenuta: il test non sta misurando niente.');
+            $this->assertSame('releases.closing_already_concluded', $refused->reasonKey);
+        }
+
+        $this->assertSame(ReleaseStatus::InProgress, $release->fresh()->status);
+        $this->assertSame(0, ReleaseEvent::count());
+    }
+
     public function test_an_interrupted_completion_leaves_neither_the_step_closed_nor_the_release_completed(): void
     {
         $release = $this->releaseInProgress(steps: 1);

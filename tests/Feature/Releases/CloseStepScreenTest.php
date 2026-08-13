@@ -232,10 +232,34 @@ class CloseStepScreenTest extends TestCase
          */
         $component->assertDontSee(__('releases.step_close_action'));
         $component->assertDontSee(__('releases.step_save_action'));
-        $component->assertSee(__('releases.step_release_completed_notice', [
-            'release' => $release->label,
-            'date' => $release->fresh()->completed_at->format('d/m/Y H:i'),
-        ]));
+    }
+
+    public function test_a_step_reached_after_the_delivery_says_the_whole_release_is_closed(): void
+    {
+        $release = $this->releaseInProgress(steps: 1);
+        $step = $release->steps->first();
+
+        $this->actingAs($step->assignedUser);
+
+        $component = Livewire::test('releases.step', ['releaseStep' => $step]);
+
+        foreach ($this->validValuesFor($step) as $field => $value) {
+            $component->set('values.'.$field, $value);
+        }
+
+        $component->call('close')->assertHasNoErrors();
+
+        // Chi torna dopo, da un collegamento salvato, non ha visto l'annuncio: la
+        // pagina deve dirgli che e chiuso il rilascio intero, non solo il suo
+        // passaggio.
+        $release = $release->fresh();
+
+        $this->get(route('releases.step', $step))
+            ->assertOk()
+            ->assertSee(__('releases.step_release_completed_notice', [
+                'release' => $release->label,
+                'date' => $release->completed_at->format('d/m/Y H:i'),
+            ]));
     }
 
     public function test_a_blocked_step_offers_no_form_and_says_who_is_awaited(): void

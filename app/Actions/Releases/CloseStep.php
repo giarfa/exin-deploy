@@ -148,7 +148,16 @@ class CloseStep
                 ]);
 
             if ($closed === 0) {
-                throw StepAlreadyClosed::during($step);
+                /*
+                 * Il rifiuto dice quale delle due cose e successa. Sull'ultimo step
+                 * l'altro invio non ha passato il flusso a nessuno: ha concluso il
+                 * rilascio, e dire "il flusso e gia passato al responsabile
+                 * successivo" sarebbe falso quanto la promessa che US-006 ha tolto
+                 * dai testi.
+                 */
+                throw $step->nextStep() === null
+                    ? StepAlreadyClosed::whileConcludingRelease($step)
+                    : StepAlreadyClosed::during($step);
             }
 
             /*
@@ -186,17 +195,7 @@ class CloseStep
                  */
                 $this->completeRelease($release, $step, $actor, $now);
 
-                /*
-                 * La release aggiornata viaggia con lo step restituito: senza, il
-                 * chiamante avrebbe in mano uno step completato accanto a una release
-                 * che dice ancora "in corso", e la schermata annuncerebbe la consegna
-                 * di un rilascio apparentemente ancora aperto.
-                 */
-                return $step->setRelation('release', $release)->forceFill([
-                    'status' => ReleaseStepStatus::Completed,
-                    'completed_by' => $actor->id,
-                    'completed_at' => $now,
-                ])->syncOriginal();
+                return $this->realign($step, $release, $actor, $now);
             }
 
             $activated = ReleaseStep::query()
@@ -233,19 +232,29 @@ class CloseStep
                 ],
             ]);
 
-            /*
-             * Lo stato scritto viene riportato sul modello in memoria: la chiusura
-             * e passata dal query builder, quindi senza questo il chiamante
-             * riceverebbe uno step che dice ancora "attivo". `forceFill` perche
-             * `completed_by` e `completed_at` non sono attributi assegnabili in
-             * massa — li scrive solo questa Action.
-             */
-            return $step->forceFill([
-                'status' => ReleaseStepStatus::Completed,
-                'completed_by' => $actor->id,
-                'completed_at' => $now,
-            ])->syncOriginal();
+            return $this->realign($step, $release, $actor, $now);
         });
+    }
+
+    /**
+     * Riporta sul modello in memoria cio che la transazione ha scritto.
+     *
+     * La chiusura passa dal query builder, quindi senza questo il chiamante
+     * riceverebbe uno step che dice ancora "attivo". `forceFill` perche
+     * `completed_by` e `completed_at` non sono attributi assegnabili in massa — li
+     * scrive solo questa Action.
+     *
+     * La release viaggia con lo step su **entrambi** i rami: un contratto di ritorno
+     * che a volte porta la relazione e a volte no farebbe pagare al chiamante una
+     * query pigra a seconda di dove la catena e arrivata.
+     */
+    private function realign(ReleaseStep $step, Release $release, User $actor, CarbonInterface $now): ReleaseStep
+    {
+        return $step->setRelation('release', $release)->forceFill([
+            'status' => ReleaseStepStatus::Completed,
+            'completed_by' => $actor->id,
+            'completed_at' => $now,
+        ])->syncOriginal();
     }
 
     /**

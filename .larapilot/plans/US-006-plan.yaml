@@ -449,11 +449,11 @@ tasks:
       8. `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Il README descrive il ciclo di vita completo; nessuna nota che dia la conclusione per futura
-      - [ ] Vincolo permanente 11 chiuso e conteggio corretto
-      - [ ] CHANGELOG `Unreleased` aggiornato
-      - [ ] Regola di progetto registrata via `record-rule` sul perimetro delle Action di rilascio
-      - [ ] Suite completa verde, Pint e Larastan livello 5 verdi
+      - [x] Il README descrive il ciclo di vita completo; nessuna nota che dia la conclusione per futura
+      - [x] Vincolo permanente 11 chiuso e conteggio corretto
+      - [x] CHANGELOG `Unreleased` aggiornato
+      - [x] Regola di progetto registrata via `record-rule` sul perimetro delle Action di rilascio
+      - [x] Suite completa verde, Pint e Larastan livello 5 verdi
 
       ## Test Data
       - N/A — nessuna modifica a modelli o schema
@@ -463,9 +463,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo in locale, pronti per la revisione umana
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
       - TASK-04
       - TASK-05
-updated_at: '2026-08-13T16:38:04+00:00'
+    commit:
+      sha: 8531c5a77212aa28f42d17a936c58907f877b274
+      short_sha: 8531c5a
+      subject: 'docs(US-006): TASK-06 ciclo di vita della release, CHANGELOG e regola di progetto'
+      committed_at: '2026-08-13T18:40:09+02:00'
+      url: null
+updated_at: '2026-08-13T16:40:09+00:00'

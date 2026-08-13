@@ -14,6 +14,7 @@ use App\Models\ReleaseStepField;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -49,13 +50,23 @@ new class extends Component
      */
     public array $values = [];
 
+    /*
+     * Esiti dell'ultima operazione. `#[Locked]` perche li decide **solo** il
+     * server: senza, una richiesta costruita a mano potrebbe far comparire
+     * l'annuncio della consegna senza che alcuna chiusura sia avvenuta, e questa
+     * schermata ha il compito di testimoniarla.
+     */
+
     /** Motivo del rifiuto dell'ultima operazione, quando non riguarda un campo. */
+    #[Locked]
     public ?string $operationError = null;
 
     /** Conferma dell'ultima bozza salvata. */
+    #[Locked]
     public bool $saved = false;
 
     /** Chiusura avvenuta in questa sessione di pagina. */
+    #[Locked]
     public bool $closed = false;
 
     public function mount(): void
@@ -407,10 +418,12 @@ new class extends Component
                 ]) }}
             </flux:text>
 
-            @if ($releaseStep->release->status === ReleaseStatus::Completed)
+            @if ($releaseStep->release->status === ReleaseStatus::Completed && ! $closed)
                 {{-- Lo stato del rilascio accanto a quello del passaggio: chi arriva
                      da un collegamento salvato deve capire che e chiuso il rilascio
-                     intero, non soltanto il proprio step. --}}
+                     intero, non soltanto il proprio step. Non a chi ha appena
+                     chiuso: il riquadro sopra glielo ha gia detto, e ripeterlo a
+                     poche righe di distanza a 375 px si legge come un errore. --}}
                 <flux:text class="text-sm">
                     {{ __('releases.step_release_completed_notice', [
                         'release' => $releaseStep->release->label,

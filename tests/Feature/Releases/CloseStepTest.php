@@ -303,15 +303,18 @@ class CloseStepTest extends TestCase
         $this->assertSame($step->position, $concluded->payload['position']);
 
         /*
-         * Le due righe portano lo stesso istante — la risoluzione e il secondo, e la
-         * transazione dura molto meno — quindi l'ordine verificato qui e quello di
-         * **inserimento**: prima la chiusura del passaggio, poi la conclusione del
-         * rilascio, che e esattamente cio che il codice garantisce.
+         * Le due righe ci sono entrambe, e la conclusione non precede la chiusura.
+         * Piu di cosi il registro non permette di affermare: le due scritture
+         * avvengono nella stessa transazione, `created_at` ha risoluzione al secondo
+         * e la chiave primaria e un UUID, quindi nessun ordinamento portabile le
+         * distingue. Un'asserzione posizionale su una query senza `ORDER BY`
+         * passerebbe solo per l'ordine di rowid di SQLite, cioe per un dettaglio del
+         * motore che il vincolo di portabilita non consente di dare per buono.
          */
-        $this->assertSame(
-            [ReleaseEventAction::StepCompleted, ReleaseEventAction::ReleaseCompleted],
-            $events->pluck('action')->all()
-        );
+        $completed = $events->firstWhere('action', ReleaseEventAction::StepCompleted);
+
+        $this->assertNotNull($completed);
+        $this->assertTrue($concluded->created_at->greaterThanOrEqualTo($completed->created_at));
     }
 
     public function test_a_completed_release_leaves_those_in_progress_but_stays_readable(): void
