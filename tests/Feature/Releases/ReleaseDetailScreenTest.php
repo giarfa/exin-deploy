@@ -61,6 +61,15 @@ class ReleaseDetailScreenTest extends TestCase
 
         $names = $release->steps->map(fn (ReleaseStep $step): string => e($step->name))->all();
 
+        $this->assertCount(5, $names, 'La catena di prova deve avere cinque step distinti.');
+
+        // I nomi devono comparire **davvero**: senza questa verifica `strpos` tornerebbe
+        // `false` per tutti, il confronto sull'ordine sarebbe fra cinque zeri e il test
+        // passerebbe su una pagina che non rende alcuno step.
+        foreach ($names as $name) {
+            $this->assertStringContainsString($name, $body);
+        }
+
         // L'ordine e parte dell'informazione: `assertSee` non guarda la posizione,
         // quindi senza questo confronto togliere l'ordinamento lascerebbe la suite
         // verde su una catena mostrata a caso.

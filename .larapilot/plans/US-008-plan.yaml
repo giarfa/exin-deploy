@@ -507,10 +507,10 @@ tasks:
 
       ## Criteri di completamento
 
-      - [ ] `CHANGELOG.md` aggiornato nella sezione Unreleased
-      - [ ] La regola sulla Policy e registrata in `.ai/rules`
-      - [ ] Nessun commento nel codice descrive ancora il dettaglio della release come non esistente
-      - [ ] `php artisan larapilot:quality` senza rilievi e `php artisan test --compact` verde
+      - [x] `CHANGELOG.md` aggiornato nella sezione Unreleased
+      - [x] La regola sulla Policy e registrata in `.ai/rules`
+      - [x] Nessun commento nel codice descrive ancora il dettaglio della release come non esistente
+      - [x] `php artisan larapilot:quality` senza rilievi e `php artisan test --compact` verde
 
       ## Dati di prova
 
@@ -522,9 +522,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-04
       - TASK-05
       - TASK-06
-updated_at: '2026-08-13T21:14:56+00:00'
+    commit:
+      sha: 67bb597ac54860cff591cabd024c3287c1a1746f
+      short_sha: 67bb597
+      subject: 'docs(US-008): TASK-07 changelog e regola sulla lettura aperta della release'
+      committed_at: '2026-08-13T23:18:00+02:00'
+      url: null
+updated_at: '2026-08-13T21:18:00+00:00'

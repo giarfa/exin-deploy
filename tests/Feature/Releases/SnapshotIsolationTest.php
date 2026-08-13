@@ -178,6 +178,65 @@ class SnapshotIsolationTest extends TestCase
         );
     }
 
+    public function test_the_release_detail_reads_the_template_only_for_its_name(): void
+    {
+        /*
+         * Il dettaglio della release (US-008) e l'unico percorso di lettura che
+         * interroga `workflow_templates`, e la deroga e voluta: il criterio di
+         * accettazione chiede il **template di origine**, cioe da dove la release e
+         * nata. Il nome mostrato e quello attuale, e la nota accanto lo dichiara —
+         * catena, ordine e campi arrivano tutti dallo snapshot.
+         *
+         * Il template non e cancellabile finche una release lo referenzia
+         * (`restrictOnDelete` su `releases.workflow_template_id`), quindi la lettura
+         * non puo rompersi. Le altre tre tabelle restano vietate, e questo test lo
+         * dimostra sulla **pagina** e non su una query scritta qui dentro: una
+         * lettura costruita dal test resterebbe verde anche se domani il componente
+         * risalisse a `stepDefinitions` per sapere cosa uno step chiedeva.
+         */
+        $project = $this->projectReadyToRelease();
+        $release = app(StartRelease::class)->handle($project, 'v2.4.0', User::factory()->admin()->create());
+
+        $names = $release->steps()->pluck('name');
+
+        // Le definizioni non esistono piu: se il dettaglio ne dipendesse, la pagina
+        // perderebbe la catena invece di mostrarla congelata.
+        StepDefinition::where('workflow_template_id', $project->workflow_template_id)->delete();
+
+        $forbidden = array_values(array_diff(self::DEFINITION_TABLES, ['workflow_templates']));
+
+        $touched = [];
+        $observed = 0;
+
+        DB::listen(function (QueryExecuted $query) use (&$touched, &$observed, $forbidden): void {
+            $observed++;
+
+            foreach ($forbidden as $table) {
+                if (str_contains($query->sql, '"'.$table.'"') || str_contains($query->sql, ' '.$table.' ')) {
+                    $touched[] = $table;
+                }
+            }
+        });
+
+        // Un membro qualunque: la lettura del dettaglio e aperta a chiunque sia
+        // autenticato, e il percorso da verificare e quello che usera la maggioranza.
+        $response = $this->actingAs(User::factory()->member()->create())
+            ->get(route('releases.show', $release))
+            ->assertOk();
+
+        $this->assertGreaterThan(0, $observed, 'Nessuna query osservata: il test non sta misurando niente.');
+
+        $this->assertSame(
+            [],
+            array_values(array_unique($touched)),
+            'Il dettaglio della release ha interrogato una tabella di definizione: lo snapshot non e piu la sola fonte di verita.'
+        );
+
+        foreach ($names as $name) {
+            $response->assertSee($name);
+        }
+    }
+
     public function test_closing_a_step_never_touches_a_definition_table(): void
     {
         /*

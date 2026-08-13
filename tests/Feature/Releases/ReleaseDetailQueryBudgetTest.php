@@ -57,6 +57,76 @@ class ReleaseDetailQueryBudgetTest extends TestCase
         );
     }
 
+    public function test_rendering_the_page_costs_the_same_on_three_and_on_twelve_steps(): void
+    {
+        /*
+         * I due casi sopra misurano la lettura come il componente la scrive; questo
+         * misura **la pagina resa**, che e cio che l'utente paga. Senza, un eager
+         * loading tolto da `⚡show.blade.php` lascerebbe la suite verde: la replica
+         * di questo test continuerebbe a caricare bene per conto proprio.
+         */
+        $short = $this->releaseWith(steps: 3, fieldsPerStep: 2);
+        $long = $this->releaseWith(steps: 12, fieldsPerStep: 2);
+        $reader = User::factory()->create();
+
+        // Richiesta di riscaldamento: il primo accesso paga la sessione e le letture
+        // di primo avvio, che non appartengono alla catena.
+        $this->actingAs($reader)->get(route('releases.show', $short))->assertOk();
+
+        $shortCost = $this->queriesWhile(
+            fn () => $this->actingAs($reader)->get(route('releases.show', $short))->assertOk()
+        );
+        $longCost = $this->queriesWhile(
+            fn () => $this->actingAs($reader)->get(route('releases.show', $long))->assertOk()
+        );
+
+        $this->assertSame(
+            $shortCost,
+            $longCost,
+            "La pagina e costata {$shortCost} query su tre step e {$longCost} su dodici: manca un eager loading nel componente `releases.show`."
+        );
+    }
+
+    public function test_a_freshly_started_release_is_read_once_and_never_again(): void
+    {
+        /*
+         * Su una release appena avviata lo step attivo e il **primo** della catena:
+         * non ha un precedente da cui leggere l'istante, quindi `activationInstant()`
+         * ripiega su `release->started_at`. Senza la relazione inversa popolata a mano
+         * nel componente, quel ripiego risalirebbe alla release con una query propria.
+         *
+         * E **una sola** query, che nessun confronto sulla lunghezza della catena
+         * potrebbe vedere: per questo l'invariante qui non e il costo totale — che
+         * resterebbe un numero assoluto — ma il fatto che la riga della release si
+         * legga una volta sola, quella del binding di rotta.
+         */
+        $fresh = $this->releaseWith(steps: 4, fieldsPerStep: 2, activePosition: 1);
+        $reader = User::factory()->create();
+
+        // Richiesta di riscaldamento: il primo accesso paga letture di primo avvio.
+        $this->actingAs($reader)->get(route('releases.show', $fresh))->assertOk();
+
+        $statements = [];
+
+        DB::listen(function ($query) use (&$statements): void {
+            $statements[] = $query->sql;
+        });
+
+        $this->actingAs($reader)->get(route('releases.show', $fresh))->assertOk();
+
+        $reads = array_values(array_filter(
+            $statements,
+            fn (string $sql): bool => preg_match('/\bfrom\s+["`\[]?releases["`\]]?/i', $sql) === 1
+        ));
+
+        $this->assertCount(
+            1,
+            $reads,
+            'La riga della release deve essere letta una volta sola, dal binding di rotta: '.count($reads)
+            .' letture significano che qualcosa risale alla release step per step — probabilmente la relazione inversa non e popolata.'
+        );
+    }
+
     public function test_the_activation_instants_do_not_cost_a_single_query(): void
     {
         /*
@@ -145,9 +215,20 @@ class ReleaseDetailQueryBudgetTest extends TestCase
     /**
      * Release in corso con una catena della lunghezza richiesta: gli step prima di
      * quello attivo sono chiusi con i loro valori, quelli dopo sono bloccati.
+     *
+     * **Lo step attivo sta in penultima posizione**, e non e un dettaglio: la pagina
+     * legge i campi soltanto sugli step **chiusi** — e sull'attivo, per contarli —
+     * mentre su quelli bloccati non mostra nulla. Con lo step attivo in posizione 2,
+     * una catena di tre e una di dodici avrebbero **un solo** step chiuso ciascuna e
+     * il costo resterebbe costante anche senza alcun eager loading: il test
+     * passerebbe misurando nulla. Cosi invece cio che cresce con la catena e proprio
+     * il numero di step di cui la pagina legge campi e autore della chiusura.
+     * Resta comunque uno step bloccato in coda, cioe tutti e tre gli stati.
      */
-    private function releaseWith(int $steps, int $fieldsPerStep, int $activePosition = 2): Release
+    private function releaseWith(int $steps, int $fieldsPerStep, ?int $activePosition = null): Release
     {
+        $activePosition ??= max(1, $steps - 1);
+
         $release = Release::factory()
             ->for(Project::factory()->withTemplate())
             ->create(['started_at' => now()->subDays(3)]);

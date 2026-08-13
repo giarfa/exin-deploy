@@ -5,6 +5,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Applies to | Rule file |
 | --- | --- |
 | app/** | .ai/rules/app.md |
+| resources/views/components/releases/** | .ai/rules/components-releases.md |
 | composer.json | .ai/rules/general.md |
 | app/Models/ProjectRoleAssignment.php | .ai/rules/models.md |
 | app/Policies/ReleasePolicy.php | .ai/rules/policies.md |
