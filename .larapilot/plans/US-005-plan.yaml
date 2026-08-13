@@ -1,0 +1,921 @@
+code: US-005
+plan_body: |-
+  ## Technical Solution
+
+  Cuore dell'epica EP-003: US-004 ha congelato la catena e attivato il primo step, questa spec la fa
+  **avanzare**. Fin qui l'unica transizione scritta era l'avvio; da qui in poi esiste una macchina a stati con
+  un invariante che vale a ogni istante — al massimo **uno** step attivo per release — e un percorso di
+  scrittura che deve restare unico.
+
+  Le due regole di `.ai/rules/app.md` diventano entrambe esigibili: l'esecuzione legge **solo** lo snapshot, e
+  chiusura piu attivazione del successivo piu scrittura del registro stanno in **una sola transazione** con
+  protezione dal doppio invio.
+
+  **Nessuna migrazione.** Le colonne che questa spec riempie — `release_steps.completed_by`,
+  `release_steps.completed_at`, `release_step_fields.value` — esistono da US-004, create nullable e dichiarate
+  nel PHPDoc dei modelli come proprieta di US-005. Nessuna nuova tabella, nessun nuovo indice:
+  `unique(release_id, position)` e cio che rende decidibile "lo step successivo", e
+  `index(assigned_user_id, status)` copre la lettura per responsabile.
+
+  ### Le regole di chiusura vivono sullo snapshot
+
+  `FieldType` dichiara nel proprio PHPDoc che la semantica del valore fornito **non** gli appartiene. La regola
+  va dove sta il dato congelato:
+
+  | Metodo | Dove | Cosa decide |
+  | --- | --- | --- |
+  | `ReleaseStepField::closingRules()` | modello di istanza | le regole di validazione del proprio valore, da tipo e obbligatorieta |
+  | `ReleaseStepField::normalizeValue(mixed)` | modello di istanza | la forma con cui il valore finisce in colonna |
+  | `ReleaseStep::closingRules()` | modello di istanza | le regole dell'intero form, indicizzate per identificativo di campo |
+  | `ReleaseStep::closingAttributes()` | modello di istanza | i nomi leggibili per i messaggi, presi dalle etichette congelate |
+  | `ReleaseStep::nextStep()` | modello di istanza | lo step alla posizione successiva, `null` sull'ultimo |
+
+  Una sola fonte, due consumatori: il componente Livewire (per i messaggi sul campo) e l'Action (che rifiuta
+  comunque, perche e l'unico percorso di scrittura e non puo fidarsi di chi la chiama).
+
+  Regole per tipo, con `nullable` al posto di `required` sui campi opzionali:
+
+  | Tipo | Obbligatorio | Opzionale |
+  | --- | --- | --- |
+  | testo breve | `required`, `string`, `max:255` | `nullable`, `string`, `max:255` |
+  | testo lungo | `required`, `string`, `max:5000` | `nullable`, `string`, `max:5000` |
+  | link | `required`, `string`, `max:2048`, `App\Rules\WellFormedLink` | `nullable` + le stesse |
+  | conferma | `accepted` | `boolean` |
+
+  `App\Rules\WellFormedLink` e una regola propria e non `url:http,https`, e il motivo e il mockup: l'errore
+  deve dire **cosa correggere** ("manca lo schema `https://` e contiene uno spazio"), non "campo non valido". La
+  regola ispeziona il valore e compone il motivo — schema assente o diverso da http/https, spazi, host
+  mancante — riusando lo stile di `App\Rules\AssignableUser`, che gia oggi spiega il proprio rifiuto.
+
+  **Normalizzazione.** Il testo viene ripulito ai bordi (`trim`); la conferma finisce in colonna come `'1'`;
+  un campo **opzionale lasciato vuoto resta `null`**, non stringa vuota. La distinzione non e cosmetica: in
+  US-008 il dettaglio deve poter dire "non fornito" invece di mostrare una riga vuota, e una colonna che
+  contiene `''` non lo consente piu.
+
+  ### Action `App\Actions\Releases\CloseStep`
+
+  Unico percorso di avanzamento, `handle(ReleaseStep $step, array $values, User $actor): ReleaseStep`, tutto
+  dentro una `DB::transaction`:
+
+  1. **Lock sulla riga della release** — `Release::query()->whereKey(...)->lockForUpdate()->firstOrFail()`,
+     come impone `.ai/rules/app.md`.
+  2. **Rilettura dello step dentro la transazione**, con i campi in eager loading: lo stato che il chiamante
+     aveva in mano e di un istante prima.
+  3. **Rifiuto se lo step non e apribile** — release conclusa, step bloccato o gia completato:
+     `StepIsNotOpen`.
+  4. **Validazione dei valori** contro `closingRules()` — `StepValuesAreInvalid` porta il `MessageBag`, cosi
+     che il componente renda gli stessi messaggi senza rivalidare.
+  5. **Scrittura dei valori** sui campi dello snapshot.
+  6. **Chiusura in compare-and-swap** — un solo `update()` condizionato allo stato atteso:
+     `ReleaseStep::query()->whereKey($step)->where('status', Active)->update([...completato, completed_by, completed_at])`.
+     Se torna **0 righe**, un'altra transazione e passata prima: `StepAlreadyClosed`, rollback, nessun evento.
+  7. **Attivazione del successivo**, anch'essa condizionata (`where('status', Blocked)`).
+  8. **Due eventi** nel registro: `step_completato` (posizione, nome, numero di campi compilati) e
+     `step_attivato` (posizione, nome, responsabile). Non i valori: quelli vivono sui campi, e duplicarli nel
+     registro darebbe due fonti per lo stesso dato — FR-019, che avra bisogno del valore precedente, e uno
+     Should rinviato dal PRD.
+
+  **Perche il compare-and-swap e non il solo lock.** Su SQLite `lockForUpdate()` non produce SQL: la
+  grammatica non supporta `FOR UPDATE`, e la chiamata viene compilata a nulla. Il lock resta perche il
+  vincolo di portabilita del PRD impone che il codice sia corretto anche su MySQL e PostgreSQL, dove serve
+  davvero; la garanzia **effettiva su SQLite** e l'update condizionato, che e l'alternativa esplicitamente
+  prevista dall'invariante 3 del PRD ("un blocco pessimistico sulla riga della release **o** un controllo di
+  stato dentro la transazione"). Le due misure non si sovrappongono per ridondanza: coprono due motori
+  diversi, e il commento nel codice deve dirlo, altrimenti una revisione futura togliera quella che sul
+  proprio motore sembra inutile.
+
+  ### La chiusura dell'ultimo step e un confine dichiarato, non un buco
+
+  Chiudere l'ultimo step della catena **conclude la release**, ed e US-006 (FR-017). Qui il ramo terminale
+  esiste ed e chiuso da un rifiuto esplicito, `ReleaseCompletionIsNotAvailableYet`, con un messaggio che dice
+  che la conclusione arriva con la prossima spec.
+
+  E la scelta corretta fra le tre possibili: chiudere e lasciare la release `in_corso` senza step attivo
+  violerebbe l'invariante che questa spec ha il compito di **dimostrare con un test**; chiudere e concludere
+  significherebbe implementare US-006 dentro US-005 senza i suoi criteri di accettazione; rifiutare lascia il
+  sistema sempre coerente e concentra su un solo punto la modifica che US-006 dovra fare — sostituire il
+  `throw` con la conclusione. Il PHPDoc dell'eccezione lo dichiara.
+
+  ### Salvataggio senza chiusura
+
+  Il mockup espone "Salva senza chiudere" accanto alla chiusura, e su un form con testi lunghi compilato da
+  telefono e la differenza fra uno strumento usabile e uno da cui si esce perdendo il lavoro.
+  `App\Actions\Releases\SaveStepValues` scrive i valori **senza** transizione: stessa autorizzazione,
+  stesso requisito di step attivo, nessuna validazione di obbligatorieta (una bozza incompleta e il suo
+  scopo), ma **si** la validazione di forma sui campi compilati — salvare un link malformato significherebbe
+  riproporlo identico e rotto alla ripresa.
+
+  **Nessun evento nel registro.** Il registro documenta le **transizioni** (FR-016) e una bozza non lo e; il
+  vocabolario di `ReleaseEventAction` e nato completo in US-004 e non prevede questo caso. Aggiungere un
+  valore in colonna per un salvataggio intermedio gonfierebbe lo storico di righe che non raccontano nulla su
+  chi ha fatto cosa nel processo.
+
+  ### Autorizzazione, e il tentativo che va registrato
+
+  `App\Policies\ReleaseStepPolicy` nuova, sulla convenzione di `ReleasePolicy`:
+
+  | Ability | Chi | Nel filtro `before()` |
+  | --- | --- | --- |
+  | `view` | responsabile o amministratore, qualunque sia lo stato dello step | si |
+  | `fill` | responsabile o amministratore, **solo** su step attivo di release in corso | **no** (`NOT_FILTERED`) |
+  | `close` | come `fill` | **no** (`NOT_FILTERED`) |
+
+  `fill` e `close` restano fuori dal filtro dell'amministratore per la stessa ragione per cui `delete` ne e
+  fuori su `ReleasePolicy`: il vincolo "solo lo step attivo e compilabile" vale **anche** per un
+  amministratore, e un filtro che risponde `true` prima del metodo lo cancellerebbe. La riapertura di uno step
+  chiuso e FR-019, Should rinviato: nessuna scorciatoia che la lasci intendere.
+
+  **Deroga dichiarata alla protezione a due livelli.** Le altre rotte del progetto sono protette due volte —
+  `->can()` sul middleware e `Gate::authorize()` dentro il componente. Su questa rotta il middleware `can`
+  **non** viene applicato, e non e una dimenticanza: il criterio di accettazione chiede che il tentativo non
+  autorizzato sia registrato nel registro delle transizioni, e il middleware rifiuta **prima** che qualunque
+  codice applicativo possa scrivere. L'autorizzazione vive quindi in `mount()` e su ogni azione del
+  componente, sempre attraverso un unico punto che registra e poi rifiuta. Il commento sulla rotta deve
+  spiegarlo, altrimenti la prossima revisione lo leggera come un buco.
+
+  `App\Actions\Releases\RecordUnauthorizedStepAttempt` scrive `ReleaseEvent` con
+  `tentativo_non_autorizzato` (payload: ability negata, step, posizione) e un `Log::warning` con contesto
+  strutturato, distinto dal registro funzionale come prescrive il PRD (`### Sicurezza`).
+
+  **Solo i tentativi mutanti finiscono nel registro.** Un `view` negato produce log applicativo ma non riga di
+  registro: il registro e in sola aggiunta e non cancellabile, quindi chiunque potrebbe gonfiarlo
+  ricaricando un indirizzo. I tentativi che il prodotto deve poter dimostrare sono quelli di **compilare o
+  chiudere** uno step di cui non si risponde, ed e quello che FR-012 chiede.
+
+  ### Schermata
+
+  | Rotta | Componente | Contenuto |
+  | --- | --- | --- |
+  | `/step/{releaseStep}` | `releases.step` | istruzioni congelate, form dei quattro tipi, chiusura, salvataggio, riepilogo errori |
+
+  **Un solo parametro, e non `/rilasci/{release}/step/{releaseStep}`.** Lo step ha chiave primaria UUID: e
+  identificato da se, e la release si raggiunge dalla relazione. La forma annidata con `scopeBindings()`
+  avrebbe richiesto su `Release` una relazione di nome `releaseSteps()` — il binding annidato ricava il nome
+  dalla forma plurale del parametro, come dice il commento della rotta dei campi in US-003 — cioe un secondo
+  nome per `steps()`, destinato a divergere. Con un parametro solo non esiste ne il problema di scoping ne
+  l'identificativo ridondante nell'indirizzo.
+
+  Contratto del mockup `chiusura-step.html`, da rispettare voce per voce:
+
+  - **Riepilogo errori** in cima al form, `role="alert"`, con collegamenti ai campi in errore; riceve il focus
+    dopo un tentativo rifiutato.
+  - **Errori collegati** al proprio campo: `aria-invalid="true"` e `aria-describedby` verso il paragrafo di
+    errore **e** verso il testo di aiuto. Da verificare sul markup che Flux genera: se `flux:input` non emette
+    entrambi i riferimenti, si scende a `flux:field` + `flux:label` + `flux:description` + `flux:error`, che
+    danno controllo pieno e restano nel perimetro gratuito.
+  - **Obbligatorieta a parole**: asterisco `aria-hidden`, accanto `<span class="sr-only"> (obbligatorio)</span>`.
+  - **Istruzioni dello step** sopra i campi, e la dichiarazione di **a chi passa il flusso** alla chiusura —
+    e la mitigazione progettuale dell'assenza di notifiche (rischio accettato n.1 del PRD).
+  - **Un'azione primaria**, a piena larghezza sotto 768 px; `wire:loading` con `wire:target` sul pulsante di
+    chiusura contro il doppio invio dall'interfaccia — che resta una comodita: la correttezza e nell'Action.
+  - **Stati mai dal solo colore**, target touch 44x44 px sotto 1024 px, soglia responsive unica a 1024 px
+    (vincolo permanente 4 del README).
+  - Step **bloccato o completato**: nessun form. Lo step completato e in sola lettura con i valori forniti;
+    quello bloccato dice di chi si sta aspettando. Nascondere il form non e autorizzazione — la Policy
+    rifiuta comunque l'azione, ed e cio che il test verifica.
+
+  **Ponte di ingresso.** "I miei step" (US-007) e il dettaglio release (US-008) non esistono ancora: senza un
+  punto d'accesso la spec non sarebbe dimostrabile. Sulla catena mostrata dalla schermata di avvio (US-004) lo
+  step attivo espone "Apri e compila", visibile solo a chi la Policy autorizza. E dichiarato nel codice come
+  **ponte** verso US-007: la voce di navigazione **Release** resta `x-nav.planned`, perche la pagina che
+  promette e l'elenco (US-009).
+
+  Testi in `lang/it/releases.php` sotto un blocco dedicato alla chiusura, mai incastonati nelle viste, con il
+  tono del mockup: "Chiudi lo step e prosegui", non "Salva".
+
+  ### Documentazione
+
+  Il README chiude oggi la sezione sullo snapshot con "I diagrammi (entita-relazioni e macchina a stati)
+  arrivano con US-005". Questa spec paga quella promessa: `stateDiagram-v2` delle transizioni di step e
+  release, e `erDiagram` con le entita raggruppate in **definizione** e **istanza** e la copia all'avvio
+  marcata sul bordo. Piu la sezione narrativa su chiusura e avanzamento (ordine dei controlli, transazione,
+  doppio invio) e le voci di `CHANGELOG.md`.
+
+  ### Fuori perimetro
+
+  Conclusione della release e ultimo step (US-006); vista "i miei step" (US-007); dettaglio release completo
+  con registro (US-008); elenco, filtri e storico (US-009); consultazione del registro e visibilita dei
+  tentativi non autorizzati (US-010); scenario dimostrativo con release a meta catena (US-011, proprietario
+  della composizione in `DatabaseSeeder`). Riapertura (FR-019) e annullamento (FR-020) sono Should rinviati
+  dal PRD: nessun percorso, nessun messaggio e nessuno stato che li lascino intendere.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` (da `data.settings.git_mode`) — **nessun push automatico**
+  - Branch: `feature/US-005-chiusura-step-avanzamento` da `develop`
+  - TASK-00: bootstrap. `develop` e fermo al merge di US-003: i **15 commit di US-004**, approvata in revisione
+    umana il 2026-08-13, non sono ancora integrati, e questa spec avanza proprio sulle tabelle che US-004
+    introduce. TASK-00 li integra con un merge esplicito e poi crea il branch. Nell'albero di lavoro ci sono
+    tre file Larapilot modificati (`backlog.yaml`, `specs/US-004.yaml`, `usage/ledger.jsonl`): vanno committati
+    prima del merge, non trascinati sul nuovo branch
+  - Per task: un solo commit atomico in Conventional Commits (`type(US-005): TASK-NN sommario`)
+  - PR interna verso `develop`: titolo e corpo redatti e **tenuti in locale**; apertura remota e push solo su
+    richiesta esplicita dell'utente in sessione
+  - Merge in `develop` solo dopo approvazione umana in `/larapilot-review`
+  - Prima di ogni `task-done`: `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+    (Larastan livello 5) e suite verde
+
+  ## Test Data Strategy
+
+  - **Nessuna migrazione, nessun modello nuovo**: le factory delle quattro entita di istanza esistono da US-004
+    e coprono gia gli stati che questa spec attraversa — `ReleaseStepFactory::active()`, `blocked()`,
+    `completed()`, e i cinque stati per tipo di `ReleaseStepFieldFactory` piu `optional()`.
+  - **Un'aggiunta sola**: `ReleaseStepFieldFactory::filled(?string $value = null)` — campo dello snapshot con
+    un valore coerente col proprio tipo (URL valido per `link`, `'1'` per `confirmation`). Serve ai test di
+    questa spec e sara il mattone del dettaglio release (US-008) e dello scenario dimostrativo (US-011).
+    Scritta nello stesso task che introduce la normalizzazione del valore, cosi che le due convenzioni non
+    divergano.
+  - **Seeder non toccato.** `DatabaseSeeder` compone oggi solo la configurazione; la release a meta catena e
+    quella conclusa sono i deliverable di US-011, che se ne dichiara proprietario. Anticiparli qui creerebbe
+    due punti di composizione dello stesso scenario.
+  - Verifica prima di ogni `task-done` che tocca i dati: `php artisan migrate:fresh --seed`.
+
+  ## Test Strategy
+
+  - Bar: `NORMAL` (da `data.settings.testing`) — PHPUnit 12.5, feature e unit. **Nessun** test browser, Dusk,
+    Playwright o matrice di viewport: sono di competenza `BEST`.
+  - **Unit** — regole di chiusura per tipo e obbligatorieta; `App\Rules\WellFormedLink` sui suoi casi (schema
+    assente, schema non http/https, spazi, host mancante, indirizzo valido); normalizzazione del valore
+    (`trim`, conferma a `'1'`, opzionale vuoto a `null`); `ReleaseStep::nextStep()` incluso l'ultimo.
+  - **Feature, percorso felice** — chiusura valida: valori scritti, autore e istante registrati, step a
+    `completato`, successivo ad `attivo`, due eventi nel registro con attore e istante.
+  - **Feature, rifiuti** — obbligatorio vuoto (con indicazione del campo), link malformato, conferma
+    obbligatoria non spuntata; campo opzionale vuoto che **non** impedisce la chiusura. Nessuna scrittura
+    parziale dopo un rifiuto.
+  - **Feature, invarianti** — dopo ogni chiusura esiste al massimo uno step attivo per release; uno step
+    bloccato e uno completato non sono compilabili ne chiudibili nemmeno invocando l'azione Livewire
+    direttamente, che e il percorso che salta il middleware.
+  - **Feature, concorrenza** — due chiusure dello **stesso** step a partire dallo stato che il chiamante aveva
+    in mano: la seconda e rifiutata, l'avanzamento e uno e gli eventi sono due in totale, non quattro. E il
+    modo praticabile di dimostrare il compare-and-swap in un test a processo singolo; il PHPDoc del test dice
+    perche non si simulano due processi.
+  - **Feature, transazione unica** — un fallimento iniettato dopo la chiusura e prima dell'evento non deve
+    lasciare lo step chiuso: verifica di rollback completo.
+  - **Feature, autorizzazione** — responsabile ammesso; amministratore ammesso; altro membro rifiutato con
+    **403**, una riga `tentativo_non_autorizzato` nel registro e una voce nel log applicativo
+    (`Log::spy()`); membro disattivato rifiutato.
+  - **Feature, isolamento dallo snapshot** — la chiusura non interroga `workflow_templates`,
+    `step_definitions`, `field_definitions` ne `project_role_assignments`: stesso ascolto di query di
+    `SnapshotIsolationTest`, che questa spec estende invece di duplicare.
+  - **Feature, costo costante** — la lettura del form di chiusura costa lo stesso numero di query su uno step
+    con un campo e su uno con quattordici, sul modello di `StartReleaseQueryBudgetTest`.
+  - **Manual test handoff** (ammesso al bar `NORMAL`, e necessario qui): focus sul riepilogo errori dopo un
+    rifiuto, annuncio degli aggiornamenti Livewire, ordine di tabulazione, resa a 375 / 768 / 1280 px in tema
+    chiaro e scuro. Da riportare in `.larapilot/docs/test-results/US-005.md`.
+tasks:
+  -
+    id: TASK-00
+    title: 'Integrare US-004 in develop e creare il branch di lavoro'
+    body: |-
+      ## Description
+      Preparare Gitflow per questa spec. Il branch non puo partire dallo stato attuale di `develop`: US-004 e stata
+      approvata in revisione umana ma i suoi 15 commit non sono mai stati integrati, quindi `develop` e fermo al
+      merge di US-003 e non contiene `releases`, `release_steps`, `release_step_fields` e `release_events` — cioe
+      esattamente le tabelle su cui questa spec fa avanzare la catena.
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+
+      ## Steps
+      1. `git status --short`: committare i tre file Larapilot modificati (`.larapilot/backlog.yaml`,
+         `.larapilot/specs/US-004.yaml`, `.larapilot/usage/ledger.jsonl`) sul branch di US-004, per non trascinare
+         modifiche non committate sul nuovo branch
+      2. `git checkout develop`
+      3. `git merge --no-ff feature/US-004-avvio-release-snapshot -m "merge: integra US-004 avvio della release con snapshot congelato"`
+      4. `php artisan test --compact` su `develop` dopo il merge: l'integrazione non deve rompere la suite
+      5. `git checkout -b feature/US-005-chiusura-step-avanzamento`
+      6. Commit di ancoraggio del branch: `chore(US-005): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+      7. Redigere titolo e corpo della PR interna verso `develop` e **tenerli in locale**: nessun push
+
+      ## Completion Criteria
+      - [ ] `develop` contiene i commit di US-004 e la suite e verde su `develop`
+      - [ ] Il branch `feature/US-005-chiusura-step-avanzamento` esiste in locale e parte da `develop`
+      - [ ] Nessuna modifica non committata trascinata dal branch precedente
+      - [ ] Descrizione della PR interna redatta e tenuta in locale
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `chore(US-005): TASK-00 bootstrap feature branch` (piu il commit di merge su `develop`)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale verso `develop`, apertura remota solo su richiesta esplicita
+    type: Impl
+    status: TODO
+    dependencies: {}
+  -
+    id: TASK-01
+    title: 'Regola di validazione WellFormedLink con motivo esplicito'
+    body: |-
+      ## Description
+      Introdurre `App\Rules\WellFormedLink`, la regola che valida i campi di tipo link **dicendo cosa correggere**.
+      `url:http,https` rifiuterebbe con un messaggio generico; il mockup `chiusura-step.html` fissa il contratto
+      opposto ("Indirizzo non valido: manca lo schema (`https://`) e contiene uno spazio"), e un errore che non dice
+      la correzione costringe chi compila a indovinare.
+
+      ## Files Involved
+      - app/Rules/WellFormedLink.php
+      - lang/it/validation.php
+
+      ## Steps
+      1. `php artisan make:rule WellFormedLink --no-interaction`
+      2. Implementare `ValidationRule` sullo stile di `App\Rules\AssignableUser`: il rifiuto compone il motivo
+         dai difetti trovati, invece di emettere un messaggio unico
+      3. Casi da distinguere: schema assente; schema diverso da `http`/`https`; presenza di spazi; host mancante o
+         malformato. Piu difetti sullo stesso valore vengono elencati insieme, come nel mockup
+      4. Messaggi in `lang/it/validation.php` (sezione dedicata), mai stringhe nella classe: il PRD prescrive che
+         il testo dell'interfaccia passi da `lang/`
+      5. Nessuna verifica di raggiungibilita dell'indirizzo: sarebbe una chiamata di rete dentro una validazione, e
+         un report interno non e raggiungibile dal server. Dichiararlo nel PHPDoc
+      6. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] `WellFormedLink` rifiuta schema assente, schema non http/https, spazi e host mancante
+      - [ ] Il messaggio nomina i difetti trovati, non un generico "non valido"
+      - [ ] Nessun testo incastonato nella classe: tutto in `lang/it/validation.php`
+      - [ ] Il PHPDoc dichiara che la raggiungibilita non viene verificata, e perche
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `feat(US-005): TASK-01 regola di validazione dei campi link`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+  -
+    id: TASK-02
+    title: 'Regole di chiusura e normalizzazione del valore sullo snapshot'
+    body: |-
+      ## Description
+      Portare sui modelli di istanza le regole che decidono se uno step e chiudibile e come il valore fornito finisce
+      in colonna. `App\Enums\FieldType` dichiara nel proprio PHPDoc che questa semantica non gli appartiene: la
+      regola va dove sta il dato congelato, in una sola copia usata sia dal componente sia dall'Action.
+
+      ## Files Involved
+      - app/Models/ReleaseStepField.php
+      - app/Models/ReleaseStep.php
+      - database/factories/ReleaseStepFieldFactory.php
+
+      ## Steps
+      1. `ReleaseStepField::closingRules(): array` — regole da tipo e obbligatorieta:
+         testo breve `string|max:255`; testo lungo `string|max:5000`; link `string|max:2048` piu
+         `App\Rules\WellFormedLink`; conferma `accepted` se obbligatoria, `boolean` se opzionale. `required` sui
+         campi obbligatori, `nullable` sugli opzionali
+      2. `ReleaseStepField::normalizeValue(mixed $value): ?string` — `trim` sul testo, `'1'` sulla conferma
+         spuntata, **`null`** su un campo opzionale lasciato vuoto: in US-008 il dettaglio deve poter dire "non
+         fornito", e una colonna che contiene `''` non lo consente piu. Dichiararlo nel PHPDoc
+      3. `ReleaseStep::closingRules(): array` — le regole dell'intero form, indicizzate per identificativo di campo,
+         e `ReleaseStep::closingAttributes(): array` con le etichette congelate come nomi leggibili
+      4. `ReleaseStep::nextStep(): ?ReleaseStep` — lo step alla posizione successiva della stessa release, `null`
+         sull'ultimo. Legge solo lo snapshot; nessun accesso a `step_definitions`
+      5. `ReleaseStepFieldFactory::filled(?string $value = null)`: valore coerente col tipo (URL valido per `link`,
+         `'1'` per `confirmation`), cosi che lo stato prodotto sia uno che la chiusura puo davvero generare —
+         stessa disciplina con cui `ReleaseStepFactory::completed()` allinea `completed_by` al responsabile
+      6. `php artisan migrate:fresh --seed`, `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] `closingRules()` distingue i quattro tipi e i due livelli di obbligatorieta
+      - [ ] Un campo opzionale vuoto viene normalizzato a `null`, non a stringa vuota
+      - [ ] `nextStep()` legge solo lo snapshot e torna `null` sull'ultimo step
+      - [ ] `ReleaseStepFieldFactory::filled()` produce valori validi per il tipo del campo
+      - [ ] `migrate:fresh --seed` riesce
+
+      ## Test Data
+      - [ ] `database/factories/ReleaseStepFieldFactory.php` aggiornato con lo stato `filled()`
+      - [ ] `DatabaseSeeder` non toccato: lo scenario con release a meta catena e di US-011
+      - [ ] Factory aggiornata nello **stesso** task della convenzione di normalizzazione
+
+      ## Git Deliverables
+      - Commit: `feat(US-005): TASK-02 regole di chiusura e normalizzazione dei valori`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-01
+  -
+    id: TASK-03
+    title: 'Test: regole per tipo, link malformato e normalizzazione'
+    body: |-
+      ## Description
+      Coprire con test unitari le regole introdotte da TASK-01 e TASK-02, prima che l'Action le usi: sono la base su
+      cui poggia ogni rifiuto di chiusura, e un errore qui si manifesterebbe come un falso rifiuto in produzione.
+
+      ## Files Involved
+      - tests/Unit/Rules/WellFormedLinkTest.php
+      - tests/Unit/Models/ReleaseStepFieldTest.php
+      - tests/Unit/Models/ReleaseStepTest.php (esistente — da estendere)
+
+      ## Steps
+      1. `php artisan make:test --phpunit --unit Rules/WellFormedLinkTest` e
+         `php artisan make:test --phpunit --unit Models/ReleaseStepFieldTest`
+      2. `WellFormedLink`: indirizzo valido ammesso; schema assente, schema non http/https, spazi interni e host
+         mancante rifiutati; il messaggio nomina i difetti trovati
+      3. `closingRules()`: `required` presente sui campi obbligatori e `nullable` sugli opzionali; `accepted` sulla
+         conferma obbligatoria e `boolean` su quella opzionale; `WellFormedLink` presente solo sui campi link
+      4. `normalizeValue()`: `trim` sul testo, conferma spuntata a `'1'`, opzionale vuoto a `null`
+      5. Estendere `ReleaseStepTest` con `nextStep()`: step intermedio, ultimo step, e uno step di un'altra release
+         che non deve comparire
+      6. Usare le factory esistenti — nessuna definizione duplicata nei test
+      7. `php artisan test --compact --filter=WellFormedLink` e `--filter=ReleaseStep`
+
+      ## Completion Criteria
+      - [ ] Test verdi in locale
+      - [ ] Quattro tipi e due livelli di obbligatorieta coperti
+      - [ ] Copertura allineata al bar `NORMAL`: nessun test browser o di viewport
+
+      ## Git Deliverables
+      - Commit: `test(US-005): TASK-03 copre regole di chiusura e validazione dei link`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-02
+  -
+    id: TASK-04
+    title: 'Eccezioni di dominio della chiusura e Policy dello step'
+    body: |-
+      ## Description
+      Introdurre le eccezioni che descrivono i rifiuti dell'avanzamento e la Policy che decide chi puo compilare e
+      chiudere. Ogni rifiuto ha la propria eccezione e il proprio messaggio: un errore unico costringerebbe chi
+      chiude a indovinare quale delle cinque situazioni lo sta bloccando, come gia deciso in US-004 per l'avvio.
+
+      ## Files Involved
+      - app/Exceptions/StepIsNotOpen.php
+      - app/Exceptions/StepValuesAreInvalid.php
+      - app/Exceptions/StepAlreadyClosed.php
+      - app/Exceptions/ReleaseCompletionIsNotAvailableYet.php
+      - app/Policies/ReleaseStepPolicy.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. `StepIsNotOpen` — release conclusa, step bloccato o gia completato, con costruttori nominati che
+         distinguono i tre casi
+      2. `StepValuesAreInvalid` — porta il `MessageBag` prodotto dalla validazione, cosi che il componente renda gli
+         stessi messaggi senza rivalidare (due validazioni divergerebbero)
+      3. `StepAlreadyClosed` — sollevata quando l'update condizionato non trova piu lo step attivo: e il doppio
+         invio, non un errore dell'utente, e il messaggio lo dice
+      4. `ReleaseCompletionIsNotAvailableYet` — ramo terminale della catena. Il PHPDoc dichiara che US-006 (FR-017)
+         sostituisce il `throw` con la conclusione, e perche rifiutare e preferibile a lasciare una release
+         `in_corso` senza step attivo — violerebbe l'invariante che questa spec deve dimostrare
+      5. `ReleaseStepPolicy`: `view` (responsabile o amministratore, qualunque stato), `fill` e `close`
+         (responsabile o amministratore **e** step attivo di release in corso). `fill` e `close` in `NOT_FILTERED`
+         fuori dal filtro `before()`, come `delete` su `ReleasePolicy`: il vincolo dello step attivo vale anche per
+         un amministratore
+      6. Messaggi in `lang/it/releases.php`, nel blocco della chiusura
+      7. `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Quattro eccezioni di dominio, ciascuna con il proprio messaggio
+      - [ ] `ReleaseStepPolicy` nega `fill` e `close` su step bloccato o completato anche all'amministratore
+      - [ ] Il PHPDoc di `ReleaseCompletionIsNotAvailableYet` dichiara il confine con US-006
+      - [ ] Nessun messaggio incastonato nel codice
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `feat(US-005): TASK-04 eccezioni di dominio e Policy dello step`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-02
+  -
+    id: TASK-05
+    title: 'Action CloseStep: transazione unica, compare-and-swap e avanzamento'
+    body: |-
+      ## Description
+      Il cuore della spec: `App\Actions\Releases\CloseStep`, unico percorso di avanzamento. Chiusura dello step,
+      attivazione del successivo e scrittura dei due eventi in **una sola transazione**, con protezione dal doppio
+      invio come impone `.ai/rules/app.md`.
+
+      ## Files Involved
+      - app/Actions/Releases/CloseStep.php
+
+      ## Steps
+      1. `handle(ReleaseStep $step, array $values, User $actor): ReleaseStep`, interamente dentro `DB::transaction`
+      2. Lock sulla riga della release: `Release::query()->whereKey(...)->lockForUpdate()->firstOrFail()`
+      3. Rilettura dello step dentro la transazione con i campi in eager loading — lo stato del chiamante e di un
+         istante prima. Nessuna query per campo, qualunque sia la lunghezza del form
+      4. Rifiuti, nell'ordine: release conclusa, step non attivo (`StepIsNotOpen`); valori non validi contro
+         `closingRules()` (`StepValuesAreInvalid` con il `MessageBag`)
+      5. Scrittura dei valori normalizzati sui campi dello snapshot
+      6. Chiusura in **compare-and-swap**: un solo `update()` condizionato a `status = attivo` che scrive
+         `completato`, `completed_by` e `completed_at`. Zero righe aggiornate significa che un'altra transazione e
+         passata prima: `StepAlreadyClosed`, rollback, nessun evento
+      7. Attivazione del successivo da `nextStep()`, anch'essa condizionata a `status = bloccato`. Nessun
+         successivo: `ReleaseCompletionIsNotAvailableYet` (US-006), con la transazione annullata
+      8. Due eventi: `step_completato` (posizione, nome, numero di campi compilati) e `step_attivato` (posizione,
+         nome, responsabile). **Non** i valori: vivono sui campi, e duplicarli darebbe due fonti per lo stesso dato
+      9. Commentare **perche** lock e compare-and-swap coesistono: su SQLite `lockForUpdate()` non produce SQL (la
+         grammatica non supporta `FOR UPDATE`), quindi la garanzia effettiva e l'update condizionato — che e
+         l'alternativa prevista dall'invariante 3 del PRD; il lock serve su MySQL e PostgreSQL, dove il vincolo di
+         portabilita impone che il codice resti corretto. Senza il commento, una revisione futura toglierebbe quella
+         che sul proprio motore sembra inutile
+      10. Nessuna lettura di `step_definitions`, `field_definitions`, `workflow_templates` o
+          `project_role_assignments`: l'esecuzione legge solo lo snapshot
+      11. `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Chiusura, attivazione del successivo e due eventi in una sola transazione
+      - [ ] Compare-and-swap sullo stato: il secondo invio e rifiutato e non produce ne avanzamento ne evento
+      - [ ] Il ramo dell'ultimo step rifiuta con `ReleaseCompletionIsNotAvailableYet`
+      - [ ] Nessuna query sulle tabelle di definizione
+      - [ ] Costo in query indipendente dal numero di campi dello step
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `feat(US-005): TASK-05 chiusura dello step e avanzamento in una transazione`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-04
+  -
+    id: TASK-06
+    title: 'Action SaveStepValues: salvataggio senza chiusura'
+    body: |-
+      ## Description
+      `App\Actions\Releases\SaveStepValues` scrive i valori compilati **senza** far avanzare la catena. Il mockup
+      espone "Salva senza chiudere" accanto alla chiusura, e su un form con testi lunghi compilato da telefono e la
+      differenza fra uno strumento usabile e uno da cui si esce perdendo il lavoro.
+
+      ## Files Involved
+      - app/Actions/Releases/SaveStepValues.php
+
+      ## Steps
+      1. `handle(ReleaseStep $step, array $values, User $actor): ReleaseStep` dentro `DB::transaction`
+      2. Stesse precondizioni di stato della chiusura: release in corso e step attivo (`StepIsNotOpen`). Una bozza
+         su uno step bloccato o completato non ha significato
+      3. Validazione **di forma sui soli campi compilati**, senza obbligatorieta: una bozza incompleta e il suo
+         scopo, ma salvare un link malformato significherebbe riproporlo identico e rotto alla ripresa. Riuso di
+         `closingRules()` con `required` rilassato — nessuna seconda copia delle regole
+      4. Scrittura dei valori normalizzati; nessuna transizione di stato, nessuna scrittura su `completed_by` o
+         `completed_at`
+      5. **Nessun evento nel registro**, e dichiararlo nel PHPDoc: il registro documenta le transizioni (FR-016) e
+         una bozza non lo e. Il vocabolario di `ReleaseEventAction` e nato completo in US-004 e non prevede il caso;
+         aggiungerne uno gonfierebbe lo storico di righe che non raccontano nulla sul processo
+      6. `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] I valori vengono salvati senza chiudere lo step ne attivare il successivo
+      - [ ] Nessuna riga scritta nel registro delle transizioni
+      - [ ] Un campo obbligatorio vuoto non impedisce il salvataggio; un link malformato si
+      - [ ] Le regole di forma sono riusate da `closingRules()`, non riscritte
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `feat(US-005): TASK-06 salvataggio dei valori senza chiusura`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-05
+  -
+    id: TASK-07
+    title: 'Registrazione del tentativo non autorizzato: registro e log applicativo'
+    body: |-
+      ## Description
+      `App\Actions\Releases\RecordUnauthorizedStepAttempt`: il criterio di accettazione chiede che un tentativo
+      non autorizzato sia rifiutato con 403 **e** tracciato sia nel log applicativo sia nel registro delle
+      transizioni. Sono due destinazioni distinte, come prescrive il PRD (`### Sicurezza`), e una sola non basta.
+
+      ## Files Involved
+      - app/Actions/Releases/RecordUnauthorizedStepAttempt.php
+
+      ## Steps
+      1. `handle(ReleaseStep $step, User $actor, string $ability): void`
+      2. `ReleaseEvent` con azione `tentativo_non_autorizzato` e payload: ability negata, posizione e nome dello
+         step. E l'unico valore del vocabolario di US-004 rimasto non scritto oltre a quelli di US-006
+      3. `Log::warning` con contesto strutturato (release, step, attore, ability), distinto dal registro funzionale:
+         il primo serve a chi presidia il sistema, il secondo e una prova di processo
+      4. Registrare **solo i tentativi mutanti** (`fill`, `close`). Un `view` negato produce log ma non riga di
+         registro: il registro e in sola aggiunta e non cancellabile, quindi un ricaricamento di indirizzo potrebbe
+         gonfiarlo. FR-012 parla di compilare e chiudere. Dichiararlo nel PHPDoc
+      5. Nessuna transazione: la registrazione non deve poter essere annullata dal rifiuto che l'ha causata
+      6. `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Il tentativo mutante non autorizzato produce una riga nel registro e una voce nel log
+      - [ ] Un `view` negato produce solo la voce di log
+      - [ ] La scrittura non viene annullata insieme al rifiuto
+      - [ ] Il PHPDoc spiega perche i tentativi di sola lettura non entrano nel registro
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `feat(US-005): TASK-07 registrazione dei tentativi non autorizzati`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-04
+  -
+    id: TASK-08
+    title: 'Test: chiusura valida, rifiuti di validazione e invariante dello step attivo'
+    body: |-
+      ## Description
+      Coprire il percorso felice e i rifiuti dell'Action, e l'invariante che il PRD dichiara portante: al massimo uno
+      step attivo per release.
+
+      ## Files Involved
+      - tests/Feature/Releases/CloseStepTest.php
+      - tests/Feature/Releases/SaveStepValuesTest.php
+
+      ## Steps
+      1. `php artisan make:test --phpunit Releases/CloseStepTest` e `Releases/SaveStepValuesTest`
+      2. Percorso felice: valori scritti sui campi, `completed_by` e `completed_at` registrati, step a `completato`,
+         successivo ad `attivo`, due eventi (`step_completato`, `step_attivato`) con attore e istante
+      3. Rifiuti: campo obbligatorio vuoto (il messaggio nomina il campo), link malformato, conferma obbligatoria non
+         spuntata. Dopo ogni rifiuto: nessun valore scritto, nessuna transizione, nessun evento
+      4. Campo opzionale lasciato vuoto: la chiusura riesce e la colonna resta `null`
+      5. Invariante: dopo ogni chiusura esiste esattamente uno step attivo per release; su una catena di tre step
+         percorsa fino al secondo, il terzo resta bloccato
+      6. Ultimo step: `ReleaseCompletionIsNotAvailableYet`, release ancora `in_corso` e ultimo step ancora `attivo`
+         dopo il rifiuto — il confine con US-006 non deve lasciare stati intermedi
+      7. Step bloccato e step completato: `StepIsNotOpen` in entrambi i casi
+      8. `SaveStepValuesTest`: valori salvati senza transizione, obbligatorio vuoto ammesso, link malformato
+         rifiutato, registro invariato
+      9. Usare le factory esistenti (`active()`, `blocked()`, `completed()`, `filled()`)
+      10. `php artisan test --compact --filter=CloseStep` e `--filter=SaveStepValues`
+
+      ## Completion Criteria
+      - [ ] Test verdi in locale
+      - [ ] Percorso felice, quattro rifiuti di validazione e campo opzionale coperti
+      - [ ] Invariante "al massimo uno step attivo" verificato da test
+      - [ ] Ramo dell'ultimo step verificato senza stati intermedi
+
+      ## Git Deliverables
+      - Commit: `test(US-005): TASK-08 copre chiusura, rifiuti e invariante dello step attivo`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-06
+  -
+    id: TASK-09
+    title: 'Test: doppio invio concorrente, transazione unica e isolamento dallo snapshot'
+    body: |-
+      ## Description
+      I tre criteri che nessuna prova manuale puo dimostrare: un solo avanzamento su due richieste concorrenti, il
+      rollback completo di una transazione interrotta, e l'assenza di letture sulle tabelle di definizione.
+
+      ## Files Involved
+      - tests/Feature/Releases/CloseStepConcurrencyTest.php
+      - tests/Feature/Releases/SnapshotIsolationTest.php (esistente — da estendere)
+      - tests/Feature/Releases/CloseStepQueryBudgetTest.php
+
+      ## Steps
+      1. Concorrenza: due chiamate a `CloseStep` sullo **stesso** modello step, la seconda a partire dallo stato che
+         il chiamante aveva in mano prima della prima. Attese: `StepAlreadyClosed`, un solo avanzamento, due eventi
+         in totale e non quattro. Il PHPDoc del test dichiara perche non si simulano due processi — su SQLite in
+         memoria non e riproducibile — e perche il compare-and-swap e cio che viene effettivamente verificato
+      2. Transazione unica: iniettare un fallimento dopo la chiusura e prima della scrittura dell'evento (per
+         esempio un guardiano temporaneo su `ReleaseEvent::creating`) e verificare che lo step sia tornato `attivo`,
+         il successivo `bloccato` e i valori non scritti
+      3. Estendere `SnapshotIsolationTest` con la chiusura: ascolto delle query e fallimento se ne compare una su
+         `workflow_templates`, `step_definitions`, `field_definitions` o `project_role_assignments`. Estendere il
+         test esistente invece di duplicarne l'impianto
+      4. Budget di query sul modello di `StartReleaseQueryBudgetTest`: la lettura del form di chiusura costa lo
+         stesso su uno step con un campo e su uno con quattordici
+      5. `php artisan test --compact --filter=CloseStepConcurrency`, `--filter=SnapshotIsolation`,
+         `--filter=CloseStepQueryBudget`
+
+      ## Completion Criteria
+      - [ ] Il doppio invio produce un solo avanzamento e due eventi in totale
+      - [ ] Un fallimento a meta transazione non lascia lo step chiuso
+      - [ ] La chiusura non interroga nessuna tabella di definizione
+      - [ ] Il costo in query non dipende dal numero di campi dello step
+      - [ ] Test verdi in locale
+
+      ## Git Deliverables
+      - Commit: `test(US-005): TASK-09 copre concorrenza, transazione e isolamento dello snapshot`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-08
+  -
+    id: TASK-10
+    title: 'Rotta e schermata di chiusura dello step'
+    body: |-
+      ## Description
+      La schermata su cui il responsabile compila e chiude, conforme al mockup
+      `.larapilot/mockups/superficie-operativa/chiusura-step.html`. Componente Livewire a file singolo, sulla
+      convenzione delle schermate esistenti.
+
+      ## Files Involved
+      - routes/web.php
+      - resources/views/components/releases/⚡step.blade.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. Rotta `Route::livewire('/step/{releaseStep}', 'releases.step')->name('releases.step')` dentro il gruppo
+         `auth`. **Un solo parametro** e non `/rilasci/{release}/step/{releaseStep}`: lo step ha chiave primaria
+         UUID e la release si raggiunge dalla relazione; la forma annidata con `scopeBindings()` avrebbe richiesto
+         su `Release` una relazione di nome `releaseSteps()`, cioe un secondo nome per `steps()`. Commentarlo
+      2. **Nessun `->can()` sul middleware**, in deroga dichiarata alla protezione a due livelli del progetto: il
+         middleware rifiuta prima che il codice applicativo possa registrare il tentativo, e la registrazione e un
+         criterio di accettazione. Il commento della rotta deve spiegarlo, altrimenti la prossima revisione lo
+         leggera come un buco
+      3. Autorizzazione in `mount()` e su **ogni** azione (`close`, `save`) attraverso un unico punto privato che
+         invoca `RecordUnauthorizedStepAttempt` e poi `abort(403)`. Le azioni Livewire non ripassano dal middleware
+      4. Caricamento con eager loading: campi dello step, release, progetto, responsabile e step successivo — nessuna
+         query per campo. Solo snapshot
+      5. Form dai quattro tipi: `flux:input` (testo breve), `flux:textarea` (testo lungo), `flux:input type="url"`
+         (link), `flux:checkbox` (conferma). Solo componenti Flux **gratuiti**
+      6. Contratto di accessibilita del mockup: riepilogo errori in cima con `role="alert"`, collegamenti ai campi e
+         focus dopo un rifiuto; `aria-invalid` e `aria-describedby` verso errore **e** testo di aiuto;
+         obbligatorieta annunciata a parole (asterisco `aria-hidden` piu `sr-only` " (obbligatorio)"). Verificare il
+         markup generato da Flux: se non emette entrambi i riferimenti, scendere a
+         `flux:field` + `flux:label` + `flux:description` + `flux:error`
+      7. Istruzioni congelate sopra i campi e dichiarazione di **a chi passa il flusso** alla chiusura: e la
+         mitigazione progettuale dell'assenza di notifiche (rischio accettato n.1 del PRD)
+      8. Stato non apribile: step completato in sola lettura con i valori forniti, step bloccato con l'indicazione di
+         chi si sta aspettando. Nessun form — e comunque la Policy a rifiutare l'azione
+      9. Rifiuti dell'Action catturati e resi come messaggi, mai come 500: stesso trattamento di `releases.start`.
+         `StepValuesAreInvalid` alimenta il bag di errori del componente; `StepAlreadyClosed` e
+         `ReleaseCompletionIsNotAvailableYet` diventano callout
+      10. Mobile first: azione primaria a piena larghezza sotto 768 px, azioni in linea sopra, target touch 44x44 px
+          sotto 1024 px, soglia unica a 1024 px. `wire:loading` con `wire:target` sul pulsante di chiusura contro il
+          doppio invio dall'interfaccia — comodita, non correttezza
+      11. Testi in `lang/it/releases.php`, con il tono del mockup ("Chiudi lo step e prosegui", non "Salva")
+      12. Verifica manuale del layout a 375, 768 e 1280 px in tema chiaro e scuro
+      13. `npm run build` se necessario, `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] La schermata compila e chiude uno step attivo, e salva senza chiudere
+      - [ ] Errori collegati al campo con `aria-describedby`, riepilogo con `role="alert"` che riceve il focus
+      - [ ] Obbligatorieta annunciata a parole, non dal solo asterisco
+      - [ ] Step bloccato e completato non offrono form; la Policy rifiuta comunque l'azione
+      - [ ] Nessun rifiuto dell'Action produce un 500
+      - [ ] Interfaccia usabile a 375 / 768 / 1280 px, tema chiaro e scuro
+      - [ ] Nessun componente Flux Pro introdotto
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `feat(US-005): TASK-10 schermata di chiusura dello step`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-07
+      - TASK-06
+  -
+    id: TASK-11
+    title: 'Ponte di ingresso dalla catena della release avviata'
+    body: |-
+      ## Description
+      Rendere la schermata raggiungibile. "I miei step" (US-007) e il dettaglio release (US-008) non esistono
+      ancora: senza un punto d'accesso questa spec non sarebbe dimostrabile.
+
+      ## Files Involved
+      - resources/views/components/releases/⚡start.blade.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. Sulla catena mostrata dopo l'avvio, lo step **attivo** espone "Apri e compila" verso `releases.step`
+      2. Il comando compare solo quando la Policy lo consente (`@can('fill', $step)`): nasconderlo non e
+         autorizzazione, ma mostrarlo a chi verrebbe rifiutato e cattiva interfaccia
+      3. Commentare nel codice che e un **ponte** verso US-007, non la navigazione definitiva
+      4. La voce di navigazione **Release** resta `x-nav.planned`: la pagina che promette e l'elenco (US-009), e
+         trasformarla ora direbbe il falso
+      5. Eager loading invariato: la catena mostrata carica gia il responsabile con `with`
+      6. `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Dallo step attivo della catena si raggiunge la schermata di chiusura
+      - [ ] Il comando e visibile solo a chi la Policy autorizza
+      - [ ] Il carattere provvisorio del percorso e dichiarato nel codice
+      - [ ] Nessuna query aggiuntiva introdotta sulla schermata di avvio
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `feat(US-005): TASK-11 ingresso alla chiusura dalla catena della release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-10
+  -
+    id: TASK-12
+    title: "Test: autorizzazione, tracciamento del rifiuto e flusso dall'interfaccia"
+    body: |-
+      ## Description
+      Coprire FR-012 lato interfaccia: chi puo compilare e chiudere, cosa accade a chi non puo, e il flusso completo
+      dalla schermata. Il percorso che conta e quello che **salta** il middleware, cioe l'invocazione diretta
+      dell'azione Livewire.
+
+      ## Files Involved
+      - tests/Feature/Releases/ReleaseStepPolicyTest.php
+      - tests/Feature/Releases/CloseStepScreenTest.php
+
+      ## Steps
+      1. `php artisan make:test --phpunit Releases/ReleaseStepPolicyTest` e `Releases/CloseStepScreenTest`
+      2. Policy: responsabile ammesso su `view`, `fill`, `close`; amministratore ammesso; altro membro negato;
+         `fill` e `close` negati **anche all'amministratore** su step bloccato o completato e su release conclusa
+      3. Interfaccia, percorso felice: il responsabile compila i quattro tipi, chiude, e la pagina conferma
+         l'avanzamento; il successivo risulta attivo
+      4. Rifiuti resi a schermo: obbligatorio mancante, link malformato, conferma non spuntata — con il messaggio
+         collegato al campo e nessuna transizione avvenuta
+      5. Tentativo non autorizzato: un altro membro invoca `close` direttamente sull'azione Livewire. Attese:
+         **403**, una riga `tentativo_non_autorizzato` nel registro, una voce nel log applicativo (`Log::spy()`),
+         nessuna transizione
+      6. Step bloccato e completato: nessun form reso, e l'azione invocata direttamente comunque rifiutata
+      7. Ingresso dalla catena: il comando "Apri e compila" e presente per il responsabile e assente per chi non e
+         autorizzato
+      8. Attenzione a `.ai/rules/tests.md`: in questo progetto `session('errors')` e un array e le asserzioni di
+         risposta fallite riportano un errore fuorviante. Leggere `Location` e gli errori a mano quando serve
+      9. `php artisan test --compact --filter=ReleaseStepPolicy` e `--filter=CloseStepScreen`
+      10. Suite completa: `php artisan test --compact`
+
+      ## Completion Criteria
+      - [ ] Test verdi in locale e suite completa verde
+      - [ ] 403, riga di registro e voce di log verificati sul tentativo non autorizzato
+      - [ ] Rifiuto di `fill`/`close` all'amministratore su step non attivo verificato
+      - [ ] Flusso completo dall'interfaccia coperto, senza test browser
+
+      ## Git Deliverables
+      - Commit: `test(US-005): TASK-12 copre autorizzazione, tracciamento e flusso di chiusura`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione locale
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-11
+  -
+    id: TASK-13
+    title: 'Documentazione: diagrammi Mermaid, nota architetturale e CHANGELOG'
+    body: |-
+      ## Description
+      Pagare la promessa che il README ha lasciato in US-004 ("I diagrammi arrivano con US-005") e documentare
+      chiusura e avanzamento. E un criterio di accettazione esplicito della spec, non un extra.
+
+      ## Files Involved
+      - README.md
+      - CHANGELOG.md
+      - .larapilot/docs/test-results/US-005.md
+
+      ## Steps
+      1. `README.md` — `stateDiagram-v2` della macchina a stati: lo step (`bloccato` -> `attivo` -> `completato`) e
+         la release (`in_corso` -> `conclusa`, con la conclusione marcata come US-006), con le transizioni
+         annotate dall'evento che scrivono nel registro
+      2. `README.md` — `erDiagram` con le entita raggruppate in **definizione** e **istanza**, la copia all'avvio
+         marcata sul bordo fra i due gruppi, e la dichiarazione che nessuna freccia di lettura torna dall'istanza
+         alla definizione
+      3. `README.md` — sezione narrativa "Chiusura di uno step e avanzamento": ordine dei controlli, transazione
+         unica, compare-and-swap e perche convive con il lock, invariante dello step attivo, confine con US-006,
+         deroga alla protezione a due livelli sulla rotta di chiusura, registrazione dei tentativi non autorizzati
+      4. Sostituire la frase "I diagrammi ... arrivano con US-005": una promessa mantenuta non va lasciata scritta
+         al futuro
+      5. Aggiornare l'elenco dei vincoli permanenti: il punto 9 dice che la semantica per tipo di `value`
+         "appartiene alla chiusura dello step (US-005)" — ora esiste, e va indicato dove
+      6. `CHANGELOG.md`, sezione `Unreleased` / `Added`: chiusura con validazione, avanzamento sequenziale,
+         salvataggio senza chiusura, autorizzazione e tracciamento dei tentativi
+      7. `.larapilot/docs/test-results/US-005.md` con l'esito della suite e le **verifiche manuali** consegnate:
+         focus sul riepilogo errori, annuncio degli aggiornamenti Livewire, ordine di tabulazione, resa a
+         375 / 768 / 1280 px nei due temi
+      8. Verificare che i due diagrammi Mermaid siano sintatticamente validi
+
+      ## Completion Criteria
+      - [ ] `stateDiagram-v2` della macchina a stati presente e valido
+      - [ ] `erDiagram` presente, con definizione e istanza distinte
+      - [ ] Nota architetturale su chiusura e avanzamento scritta, e la promessa al futuro rimossa
+      - [ ] `CHANGELOG.md` aggiornato
+      - [ ] Verifiche manuali riportate in `.larapilot/docs/test-results/US-005.md`
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `docs(US-005): TASK-13 diagrammi della macchina a stati e nota di avanzamento`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione finale della PR interna verso `develop`, tenuta in locale
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-12
+updated_at: '2026-08-13T08:56:21+00:00'

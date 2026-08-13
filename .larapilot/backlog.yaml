@@ -210,7 +210,7 @@ specs:
       title: 'Esecuzione del rilascio'
     priority: CRITICAL
     points: 8
-    status: PLANNED
+    status: 'IN PROGRESS'
     body: |
       #### US-005: Chiusura di uno step con validazione e avanzamento sequenziale
 
@@ -247,6 +247,7 @@ specs:
       - [ ] Nota architetturale estesa con diagramma Mermaid della macchina a stati e diagramma ER che distingue tabelle di definizione e di istanza
     status_history:
       - { status: PLANNED, at: '2026-08-13T08:56:21+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-13T09:00:44+00:00' }
     rework: false
   -
     code: US-006
