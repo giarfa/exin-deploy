@@ -365,7 +365,7 @@ tasks:
     id: TASK-05
     title: 'Immutabilita verificata a livello di applicazione e fuso orario'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-04
     body: |-
@@ -394,15 +394,21 @@ tasks:
       4. `php artisan test --filter="ReleaseEventAppendOnly|ReleaseLogInstant"`
 
       ## Completion Criteria
-      - [ ] Nessuna rotta applicativa fuori dalla lista bianca accetta metodi di scrittura
-      - [ ] Gli istanti sono memorizzati in UTC e resi nel fuso dell'applicazione
-      - [ ] Lo stesso istante e reso identico su registro e dettaglio
-      - [ ] I test passano
+      - [x] Nessuna rotta applicativa fuori dalla lista bianca accetta metodi di scrittura
+      - [x] Gli istanti sono memorizzati in UTC e resi nel fuso dell'applicazione
+      - [x] Lo stesso istante e reso identico su registro e dettaglio
+      - [x] I test passano
 
       ## Git Deliverables
       - Commit: `test(US-010): TASK-05 immutabilita a livello di applicazione e fuso orario`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: 628cfb072d27aeed37f169b0a8031b805d8a15de
+      short_sha: 628cfb0
+      subject: 'test(US-010): TASK-05 immutabilita a livello di applicazione e fuso orario'
+      committed_at: '2026-08-14T00:33:21+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Budget di query del registro'
@@ -476,4 +482,4 @@ tasks:
       - Commit: `docs(US-010): TASK-07 changelog, README e regola sul registro`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:29:14+00:00'
+updated_at: '2026-08-13T22:33:22+00:00'
