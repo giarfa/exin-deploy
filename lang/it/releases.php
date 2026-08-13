@@ -57,7 +57,7 @@ return [
     'closing_blocked_step_blocked' => 'Questo step non e ancora aperto: si attende la chiusura di quelli che lo precedono.',
     'closing_blocked_step_completed' => 'Questo step e gia stato chiuso: i valori forniti sono in sola lettura.',
     'closing_already_closed' => 'Lo step e stato chiuso da un altro invio: l\'avanzamento e avvenuto una sola volta, e il flusso e gia passato al responsabile successivo.',
-    'closing_last_step' => 'Questo e l\'ultimo step della catena e la conclusione del rilascio non e ancora disponibile: lo step resta aperto e in carico a te.',
+    'closing_already_concluded' => 'La release e stata conclusa da un altro invio: la conclusione e avvenuta una sola volta, e il rilascio risulta consegnato.',
 
     /*
      * Schermata di chiusura. Il tono e quello del mockup: "Chiudi lo step e
@@ -75,7 +75,7 @@ return [
      * notifiche (rischio accettato n.1 del PRD). Chi chiude sa chi avvisare a voce.
      */
     'step_hands_over_to' => 'Alla chiusura di questo step il flusso passa a :name — :step.',
-    'step_hands_over_last' => 'Questo e l\'ultimo step della catena: la conclusione del rilascio arriva con una prossima versione dello strumento, e per ora lo step non si chiude.',
+    'step_hands_over_last' => 'Questo e l\'ultimo step della catena: alla sua chiusura la release risulta consegnata e conclusa.',
 
     'step_required_marker' => ' (obbligatorio)',
     'step_optional_hint' => 'Campo opzionale: la sua assenza non impedisce la chiusura.',
@@ -90,6 +90,15 @@ return [
     'step_saved_notice' => 'Bozza salvata. Lo step resta aperto e in carico a te: puoi riprendere quando vuoi.',
     'step_closed_heading' => 'Step chiuso',
     'step_closed_handed_over' => 'Il flusso e passato a :name — :step. Avvisalo: lo strumento non invia notifiche.',
+
+    /*
+     * Conclusione della release (US-006). L'annuncio dice che il rilascio e
+     * consegnato e che lo storico resta: non promette nulla su una riapertura, che
+     * e FR-019 e resta fuori perimetro.
+     */
+    'step_release_completed_heading' => 'Rilascio consegnato',
+    'step_release_completed_announced' => 'La release :release e conclusa: consegnata il :date. Non ci sono altri step da chiudere e lo storico resta consultabile.',
+    'step_release_completed_notice' => 'Il rilascio e concluso: la release :release e stata consegnata il :date. L\'intero rilascio e in sola lettura.',
 
     'step_completed_heading' => 'Step completato',
     'step_completed_explained' => 'Chiuso da :name il :date. Le informazioni fornite sono in sola lettura.',

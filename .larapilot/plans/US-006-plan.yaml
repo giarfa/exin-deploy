@@ -276,19 +276,25 @@ tasks:
       11. Nessuna suite browser, Dusk, Playwright o matrice di viewport (`settings.testing: NORMAL`)
 
       ## Completion Criteria
-      - [ ] Il test di confine di US-005 e sostituito, non rimosso: le sue asserzioni ricompaiono invertite
-      - [ ] Coperti AC 1, 2, 4, 5, 6
-      - [ ] Verificata l'assenza di `step_attivato` sul ramo terminale
-      - [ ] Suite verde
+      - [x] Il test di confine di US-005 e sostituito, non rimosso: le sue asserzioni ricompaiono invertite
+      - [x] Coperti AC 1, 2, 4, 5, 6
+      - [x] Verificata l'assenza di `step_attivato` sul ramo terminale
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-006): TASK-02 conclusione della release, invariante e registro`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: f749f849403c0fbb167b50f838ecfc932ace2658
+      short_sha: f749f84
+      subject: 'test(US-006): TASK-02 conclusione della release, invariante e registro'
+      committed_at: '2026-08-13T18:33:04+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Schermata e testi: consegna annunciata, riapertura mai promessa'
@@ -444,4 +450,4 @@ tasks:
       - TASK-02
       - TASK-04
       - TASK-05
-updated_at: '2026-08-13T16:31:04+00:00'
+updated_at: '2026-08-13T16:33:04+00:00'

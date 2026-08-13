@@ -3,6 +3,7 @@
 namespace Tests\Feature\Releases;
 
 use App\Enums\FieldType;
+use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseStepStatus;
 use App\Models\Release;
 use App\Models\ReleaseEvent;
@@ -198,7 +199,7 @@ class CloseStepScreenTest extends TestCase
         $this->assertSame(0, ReleaseEvent::count());
     }
 
-    public function test_the_last_step_of_the_chain_explains_that_it_cannot_be_closed_yet(): void
+    public function test_the_last_step_of_the_chain_hands_the_release_over_as_delivered(): void
     {
         $release = $this->releaseInProgress(steps: 1);
         $step = $release->steps->first();
@@ -207,19 +208,20 @@ class CloseStepScreenTest extends TestCase
 
         $component = Livewire::test('releases.step', ['releaseStep' => $step]);
 
+        // La schermata annuncia la consegna gia prima dell'invio: chiudere questo
+        // step non passa il flusso a nessuno, lo conclude.
         $component->assertSee(__('releases.step_hands_over_last'));
 
         foreach ($this->validValuesFor($step) as $field => $value) {
             $component->set('values.'.$field, $value);
         }
 
-        // Il rifiuto e un messaggio, mai un 500.
         $component->call('close')
             ->assertHasNoErrors()
-            ->assertSee(__('releases.closing_last_step'));
+            ->assertSee(__('releases.step_release_completed_heading'));
 
-        $this->assertSame(ReleaseStepStatus::Active, $step->fresh()->status);
-        $this->assertSame(0, ReleaseEvent::count());
+        $this->assertSame(ReleaseStatus::Completed, $release->fresh()->status);
+        $this->assertSame(ReleaseStepStatus::Completed, $step->fresh()->status);
     }
 
     public function test_a_blocked_step_offers_no_form_and_says_who_is_awaited(): void
