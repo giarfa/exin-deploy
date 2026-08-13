@@ -114,6 +114,10 @@ new class extends Component
      * Eager loading obbligatorio: senza, il pannello di conferma farebbe una
      * query per step per mostrarne il responsabile.
      *
+     * La release viene caricata insieme perche `ReleaseStepPolicy` la legge per
+     * decidere `fill` — il comando di apertura dello step attivo. Senza,
+     * `loadMissing('release')` dentro la Policy la caricherebbe una riga per volta.
+     *
      * @return \Illuminate\Database\Eloquent\Collection<int, ReleaseStep>
      */
     #[Computed]
@@ -121,7 +125,7 @@ new class extends Component
     {
         return ReleaseStep::query()
             ->where('release_id', $this->startedId)
-            ->with('assignedUser:id,name')
+            ->with(['assignedUser:id,name', 'release:id,status'])
             ->ordered()
             ->get();
     }
@@ -276,6 +280,27 @@ new class extends Component
                             />
                             {{ $step->status->label() }}
                         </span>
+
+                        {{--
+                            **Ponte** verso la schermata di chiusura, non la
+                            navigazione definitiva: "i miei step" (US-007) e il
+                            dettaglio release (US-008) non esistono ancora, e senza
+                            un punto d'accesso questa catena resterebbe una pagina
+                            senza uscite.
+
+                            Il comando compare solo quando la Policy lo consente.
+                            Nasconderlo non e autorizzazione — quella vive nel
+                            componente di destinazione — ma mostrarlo a chi verrebbe
+                            rifiutato e cattiva interfaccia.
+                        --}}
+                        @can('fill', $step)
+                            <div class="mt-2">
+                                <flux:button :href="route('releases.step', $step)" size="sm" variant="primary"
+                                             icon="pencil-square">
+                                    {{ __('releases.step_open_action') }}
+                                </flux:button>
+                            </div>
+                        @endcan
                     </li>
                 @endforeach
             </ol>

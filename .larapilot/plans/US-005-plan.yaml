@@ -821,13 +821,13 @@ tasks:
       13. `npm run build` se necessario, `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] La schermata compila e chiude uno step attivo, e salva senza chiudere
-      - [ ] Errori collegati al campo con `aria-describedby`, riepilogo con `role="alert"` che riceve il focus
-      - [ ] Obbligatorieta annunciata a parole, non dal solo asterisco
-      - [ ] Step bloccato e completato non offrono form; la Policy rifiuta comunque l'azione
-      - [ ] Nessun rifiuto dell'Action produce un 500
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px, tema chiaro e scuro
-      - [ ] Nessun componente Flux Pro introdotto
+      - [x] La schermata compila e chiude uno step attivo, e salva senza chiudere
+      - [x] Errori collegati al campo con `aria-describedby`, riepilogo con `role="alert"` che riceve il focus
+      - [x] Obbligatorieta annunciata a parole, non dal solo asterisco
+      - [x] Step bloccato e completato non offrono form; la Policy rifiuta comunque l'azione
+      - [x] Nessun rifiuto dell'Action produce un 500
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px, tema chiaro e scuro
+      - [x] Nessun componente Flux Pro introdotto
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -837,10 +837,16 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
       - TASK-06
+    commit:
+      sha: 0c8ff235b5b00b52f1898a4bb40b999d1ff6f959
+      short_sha: 0c8ff23
+      subject: 'feat(US-005): TASK-10 schermata di chiusura dello step'
+      committed_at: '2026-08-13T11:31:15+02:00'
+      url: null
   -
     id: TASK-11
     title: 'Ponte di ingresso dalla catena della release avviata'
@@ -978,4 +984,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-12
-updated_at: '2026-08-13T09:21:26+00:00'
+updated_at: '2026-08-13T09:31:19+00:00'
