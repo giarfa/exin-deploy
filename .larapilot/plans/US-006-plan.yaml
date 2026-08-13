@@ -1,0 +1,435 @@
+code: US-006
+plan_body: |-
+  ## Soluzione tecnica
+
+  Ultima spec di EP-003, e la piu piccola: US-005 ha costruito l'intera macchina di avanzamento e si e fermata **un passo prima** del capolinea. Il ramo terminale di `App\Actions\Releases\CloseStep` oggi solleva `ReleaseCompletionIsNotAvailableYet`; questa spec sostituisce quel `throw` con la conclusione della release. Il predecessore ha lasciato il punto di innesto documentato nell'eccezione stessa: "la scrittura di `completed_by` e `completed_at` su `releases`, il passaggio a `conclusa` e l'evento `release_conclusa`. Il ramo terminale di `CloseStep` e il punto in cui quel codice entra — non serve altro."
+
+  Il piano prende quella frase alla lettera. Il valore di questa spec non e la quantita di codice: e chiudere il ciclo di vita in modo che l'invariante portante del PRD valga **a ogni istante**, doppio invio incluso.
+
+  ### Nessuna migrazione, nessuna classe nuova
+
+  | Cosa serve | Dove esiste gia | Da quando |
+  | --- | --- | --- |
+  | `releases.completed_by`, `releases.completed_at` | migrazione `create_releases_table` | US-004 (vincolo permanente 11 del README) |
+  | `ReleaseStatus::Completed` (`conclusa`) | `App\Enums\ReleaseStatus` | US-004 |
+  | `ReleaseEventAction::ReleaseCompleted` (`release_conclusa`) | `App\Enums\ReleaseEventAction` | US-004, nato completo per non migrare dati dopo |
+  | `Release::completedBy()` | `App\Models\Release` | US-004 |
+  | `Release::inProgress()` (scope) | `App\Models\Release` | US-004 |
+  | `ReleaseFactory::completed()` | `database/factories/ReleaseFactory.php` | US-004 |
+
+  Zero migrazioni, zero indici nuovi, zero tabelle. Le colonne sono nate nullable proprio per essere riempite qui.
+
+  ### Perche la conclusione resta dentro `CloseStep`
+
+  Un'Action `CompleteRelease` separata sarebbe la scelta ovvia per SOLID, e qui e la scelta sbagliata: introdurrebbe un **secondo percorso pubblico** di scrittura sullo stato della release, invocabile fuori dalla transazione che chiude lo step. L'invariante del PRD (numero 2) non e "esistono classi piccole", e "chiusura, attivazione e scrittura del registro stanno in una sola transazione": una release che passa a `conclusa` senza che l'ultimo step sia chiuso — o viceversa — e proprio lo stato intermedio che nessuna schermata sa raccontare.
+
+  La conclusione diventa quindi un **metodo privato** di `CloseStep`, invocato dal ramo `next === null` dentro la stessa `DB::transaction`. La deviazione da "una Action per operazione" e deliberata e va annotata nel PHPDoc della classe, altrimenti la prossima revisione la estrae.
+
+  ### Il ramo terminale, riscritto
+
+  L'ordine attuale del codice — calcolo di `$next`, poi scrittura dei due eventi in fondo — non regge due esiti diversi. La sequenza dentro la transazione diventa:
+
+  1. lock sulla riga della release + rilettura dello step (invariati)
+  2. controlli di stato, normalizzazione, validazione (invariati)
+  3. scrittura dei valori sui campi dello snapshot (invariata)
+  4. **compare-and-swap sullo step** condizionato a `attivo` (invariato); zero righe -> `StepAlreadyClosed`
+  5. evento `step_completato` (spostato qui: appartiene a entrambi i rami)
+  6. `$next = $step->nextStep()`
+      - **`$next !== null`** -> attivazione condizionata a `bloccato` + evento `step_attivato` (invariato)
+      - **`$next === null`** -> conclusione della release + evento `release_conclusa` (nuovo)
+
+  ### Compare-and-swap anche sulla release
+
+  La conclusione **non** e un `$release->update()` sul modello gia letto: e un update condizionato, con la stessa forma della chiusura dello step.
+
+  ```php
+  $concluded = Release::query()
+      ->whereKey($release->getKey())
+      ->where('status', ReleaseStatus::InProgress->value)
+      ->update([
+          'status' => ReleaseStatus::Completed->value,
+          'completed_by' => $actor->id,
+          'completed_at' => $now,
+          'updated_at' => $now,
+      ]);
+
+  if ($concluded === 0) {
+      throw StepAlreadyClosed::whileConcludingRelease($step);
+  }
+  ```
+
+  Il motivo e identico a quello gia registrato in `.ai/rules/releases.md`: su SQLite `lockForUpdate()` non produce SQL — la grammatica non supporta `FOR UPDATE` — quindi la garanzia effettiva contro la doppia conclusione e l'update condizionato. Il lock serve su MySQL e PostgreSQL, dove il vincolo di portabilita impone che il codice resti corretto.
+
+  In pratica il secondo invio viene gia rifiutato prima, dalla rilettura dello step dentro la transazione (`StepIsNotOpen::stepIsCompleted`). Il CAS sulla release e la difesa che regge anche se quel controllo un giorno cambiasse forma: costa una clausola `where`, e senza di essa la correttezza dipenderebbe da un `if` scritto trenta righe piu su.
+
+  ### `StepAlreadyClosed` porta la propria chiave di traduzione
+
+  Oggi il componente rende `__('releases.closing_already_closed')` con la chiave scritta a mano, e quel messaggio dice "il flusso e gia passato al responsabile successivo" — falso sull'ultimo step, dove non c'e nessun successivo. L'eccezione adotta quindi la forma gia usata da `StepIsNotOpen`: costruttore privato piu `public readonly string $reasonKey`, due costruttori nominati (`during()`, `whileConcludingRelease()`), e il componente rende `__($refused->reasonKey)`. Una sola fonte per il messaggio, accanto al motivo che lo ha prodotto.
+
+  ### Due eventi sul capolinea, non uno
+
+  Lo stesso principio di US-005: il registro documenta le **transizioni** (FR-016), e sull'ultimo step ne avvengono due — un passaggio si chiude e un rilascio si conclude. Il payload di `release_conclusa` porta `label`, `step` e `position` dello step finale: niente conteggio degli step, che costerebbe una query per dire cio che la posizione dell'ultimo gia dice.
+
+  ### La sola lettura non e codice nuovo: e una dimostrazione
+
+  Tre dei sette criteri di accettazione sono gia soddisfatti dal codice esistente, e il piano li **verifica** invece di reimplementarli:
+
+  | Criterio | Chi lo soddisfa gia |
+  | --- | --- |
+  | nessuno step compilabile o riapribile su release conclusa, **nemmeno da un amministratore** | `ReleaseStepPolicy::mayAct()` — nega quando `release->status !== InProgress`, e `fill`/`close` sono in `NOT_FILTERED`, quindi il filtro `before()` non le decide |
+  | tentativo di chiudere/modificare rifiutato con 403 | `authorizeOrRecord()` in `⚡step.blade.php`, al montaggio e su ogni azione Livewire |
+  | release conclusa fuori da quelle in corso | scope `Release::inProgress()` |
+
+  In piu, come difesa di dominio indipendente dall'interfaccia, `CloseStep` e `SaveStepValues` sollevano gia `StepIsNotOpen::releaseIsCompleted()` quando la release non e `in_corso`.
+
+  Nota di sicurezza (Lars): il 403 su una release conclusa passa da `authorizeOrRecord()` e quindi **lascia una riga nel registro** come tentativo non autorizzato. E il comportamento voluto — un tentativo di modificare un rilascio consegnato e esattamente cio che il registro deve provare — e va annotato, perche a prima lettura sembra rumore.
+
+  ### Cosa questa spec non fa
+
+  FR-019 (riapertura o correzione di uno step da parte di un amministratore) resta **fuori perimetro**, rinviata oltre l'MVP dal PRD. Il criterio di accettazione chiede in piu che **il messaggio all'utente non prometta il contrario**: `lang/it/releases.php` contiene oggi due stringhe che dopo questa spec mentono, e vanno trattate come deliverable e non come rifinitura.
+
+  | Chiave | Oggi | Dopo |
+  | --- | --- | --- |
+  | `step_hands_over_last` | "la conclusione del rilascio arriva con una prossima versione dello strumento, e per ora lo step non si chiude" | dice che alla chiusura la release risulta consegnata e conclusa |
+  | `closing_last_step` | rifiuto "la conclusione non e ancora disponibile" | **rimossa** insieme al `catch` che la rendeva |
+  | `step_closing_is_final` | "riaprire uno step non e previsto in questa versione" | invariata: gia corretta, ed e la frase che tiene fede a FR-019 |
+
+  Fuori perimetro anche: elenco e filtri delle release (US-009), dettaglio con catena e valori (US-008), registro consultabile (US-010), scenario dimostrativo con una release conclusa nel seeder (US-011, FR-018). Questa spec scrive l'evento; mostrarlo appartiene a US-010.
+
+  ## Git & Branching
+
+  - Modalita: **`GITFLOW`** (da `settings.git_mode`) — nessun push automatico, nessuna PR remota
+  - **Precondizione**: `feature/US-005-chiusura-step-avanzamento` e approvata (`DONE`) ma non ancora integrata: `develop` e indietro di 18 commit. TASK-00 la integra prima di ramificare, come ha fatto TASK-00 di US-005 con US-004
+  - Branch: `feature/US-006-conclusione-release` da `develop`
+  - Un solo commit atomico per task, Conventional Commits `type(US-006): TASK-NN sintesi`
+  - Descrizione di PR verso `develop` preparata **in locale**; apertura remota solo se richiesta esplicitamente in sessione
+  - Merge in `develop` solo dopo approvazione umana in `/larapilot-review`
+
+  ## Strategia dei dati di prova
+
+  - **Nessuna nuova entita, nessuna migrazione**: non c'e factory da creare
+  - `ReleaseFactory::completed()` esiste gia e produce release concluse con autore e istante coerenti (`completed_by` = `started_by`); il suo PHPDoc dice "che US-006 scrivera" e va allineato al presente nello stesso task che scrive la conclusione
+  - `ReleaseStepFactory::completed()` esiste gia: gli scenari di release conclusa nei test si compongono da queste due
+  - Lo **scenario dimostrativo** nel `DatabaseSeeder` (release a meta catena + release conclusa con registro popolato) resta di US-011 per esplicita delimitazione della sua spec: qui il seeder non si tocca
+  - Verifica comunque `php artisan migrate:fresh --seed` prima di ogni `task-done` che tocchi modelli o factory
+
+  ## Strategia di test
+
+  - Bar: **`NORMAL`** (da `settings.testing`) — feature/unit/policy PHPUnit. **Nessun** Playwright, Dusk, Pest browser, matrice di viewport o E2E di percorso
+  - Test interlacciati con l'implementazione: TASK-02 subito dopo l'Action, TASK-04 subito dopo la schermata
+  - **Il confine di US-005 inverte di segno**: `CloseStepTest::test_the_last_step_is_refused_because_completing_the_release_is_not_available_yet` e `CloseStepScreenTest::test_the_last_step_of_the_chain_explains_that_it_cannot_be_closed_yet` asseriscono il rifiuto che questa spec toglie. Vanno **sostituiti**, non cancellati: ogni asserzione che descriveva il confine deve ricomparire come asserzione sulla conclusione
+
+  | Copertura | Dove | Criterio |
+  | --- | --- | --- |
+  | chiusura dell'ultimo step -> release conclusa con autore e istante | `CloseStepTest` | AC 1 |
+  | zero step attivi su release conclusa; catena a un solo step | `CloseStepTest` | AC 2 |
+  | evento `release_conclusa` nel registro, dopo `step_completato`, senza `step_attivato` | `CloseStepTest` | AC 5 |
+  | release conclusa assente dallo scope `inProgress`, e ancora leggibile | `CloseStepTest` | AC 6 |
+  | `fill`/`close` negate anche a un amministratore su release conclusa | `ReleaseStepPolicyTest` | AC 3 |
+  | `CloseStep` e `SaveStepValues` rifiutano con `StepIsNotOpen::releaseIsCompleted` | `CloseStepTest`, `SaveStepValuesTest` | AC 4 |
+  | azione Livewire invocata direttamente -> 403 + tentativo registrato | `CloseStepScreenTest` | AC 3, AC 4 |
+  | schermata: conclusione annunciata, nessuna promessa di riapertura | `CloseStepScreenTest` | AC 1, AC 7 |
+  | doppio invio sull'ultimo step -> una sola conclusione, un solo evento | `CloseStepConcurrencyTest` | invariante 3 del PRD |
+  | transazione unica: interruzione a meta non lascia la release conclusa | `CloseStepConcurrencyTest` | invariante 2 del PRD |
+
+  **Consegna manuale (Anne)**: percorrere la catena dimostrativa fino all'ultimo step da 375 px e verificare che il riquadro di conclusione sia leggibile senza scorrimento orizzontale e che nessun comando suggerisca la riapertura.
+
+  ## Cancello di qualita
+
+  `vendor/bin/pint --dirty` e `php artisan larapilot:quality` (Pint + Larastan livello 5) prima di ogni `task-done`. Nota da `.ai/rules/general.md`: `larastan/larastan` e in `require-dev` ma potrebbe non essere in `vendor/` — serve `composer install` perche il comando sia eseguibile.
+
+  ## Rischi e trappole
+
+  1. **Il `catch` orfano.** Rimuovere `ReleaseCompletionIsNotAvailableYet` senza togliere il `catch` nel componente lascia un ramo morto che Larastan segnala; toglierlo senza aggiornare `lang/it/releases.php` lascia una chiave che nessuno rende. I tre file si toccano insieme (TASK-01 il dominio, TASK-03 interfaccia e testi).
+  2. **L'ordine degli eventi.** Spostare la scrittura di `step_completato` prima del bivio e la parte piu facile da sbagliare: se resta in fondo al solo ramo con successore, la chiusura dell'ultimo step non lo registra piu e US-010 mostrerebbe una catena con un buco.
+  3. **`forceFill` sul valore di ritorno.** La chiusura passa dal query builder, quindi lo step in memoria va riallineato come oggi; sul ramo terminale va riallineata **anche** la release, altrimenti la schermata dopo `reload()` mostrerebbe una release ancora `in_corso` accanto a uno step completato.
+  4. **Il registro si riempie di tentativi legittimi.** Un amministratore che apre uno step di release conclusa passa da `view`, non da `fill`: nessuna riga. Solo l'invocazione diretta di `close`/`save` la produce. Verificarlo esplicitamente evita che una revisione futura "corregga" `authorizeOrRecord` credendo a un difetto.
+  5. **Vincolo permanente 11 del README** dichiara `release_conclusa` fra i valori non ancora scritti, con un conteggio ("due") gia incoerente col proprio elenco. Va chiuso e corretto in TASK-06, non lasciato a marcire.
+tasks:
+  -
+    id: TASK-00
+    title: 'Integrare US-005 in develop e creare il branch di lavoro'
+    body: |-
+      ## Description
+      US-005 e approvata (`DONE`) ma vive ancora solo su `feature/US-005-chiusura-step-avanzamento`: `develop` e indietro di 18 commit e non contiene ne `CloseStep` ne la schermata di chiusura, cioe esattamente il codice che questa spec modifica. Ramificare da `develop` senza integrare produrrebbe un branch su cui il ramo terminale da riscrivere non esiste.
+
+      Stessa sequenza gia adottata da TASK-00 di US-005 con US-004. Modalita `GITFLOW`: nessun push, nessuna PR remota.
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+
+      ## Steps
+      1. Verificare che l'albero di lavoro sia pulito: `git status --short`
+      2. `git checkout develop`
+      3. `git merge --no-ff feature/US-005-chiusura-step-avanzamento -m "merge: integra US-005 chiusura step e avanzamento sequenziale"`
+      4. Verificare che la suite resti verde sul merge: `php artisan test --compact`
+      5. `git checkout -b feature/US-006-conclusione-release`
+      6. Commit di ancoraggio del branch: `git commit --allow-empty -m "chore(US-006): TASK-00 bootstrap feature branch"`
+      7. Redigere titolo e corpo della PR verso `develop` (titolo `US-006: Conclusione della release come consegna in produzione`; corpo con collegamento al piano e elenco dei task) e tenerli **in locale**
+
+      ## Completion Criteria
+      - [ ] `develop` contiene il merge di US-005 e la suite e verde su quel commit
+      - [ ] Il branch `feature/US-006-conclusione-release` esiste in locale e parte da `develop`
+      - [ ] Descrizione di PR verso `develop` redatta in locale (nessuna apertura remota)
+
+      ## Test Data
+      - N/A — nessuna modifica a modelli o schema
+
+      ## Git Deliverables
+      - Commit di merge: `merge: integra US-005 chiusura step e avanzamento sequenziale` su `develop`
+      - Commit: `chore(US-006): TASK-00 bootstrap feature branch` (vuoto)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale; apertura remota solo su richiesta esplicita
+    type: Impl
+    status: TODO
+    dependencies: {}
+  -
+    id: TASK-01
+    title: 'Conclusione della release nel ramo terminale di CloseStep'
+    body: |-
+      ## Description
+      Sostituire il `throw ReleaseCompletionIsNotAvailableYet` con la conclusione vera: passaggio della release a `conclusa` in compare-and-swap, scrittura di `completed_by` e `completed_at`, evento `release_conclusa` — tutto dentro la transazione che chiude l'ultimo step.
+
+      E il punto di innesto che US-005 ha lasciato documentato nell'eccezione stessa. La conclusione resta un **metodo privato** di `CloseStep` e non diventa una Action pubblica: una `CompleteRelease` invocabile dall'esterno sarebbe un secondo percorso di scrittura sullo stato della release, cioe l'opposto dell'invariante "chiusura, avanzamento ed evento in una sola transazione". La deviazione va annotata nel PHPDoc, altrimenti la prossima revisione estrae la classe.
+
+      ## Files Involved
+      - app/Actions/Releases/CloseStep.php
+      - app/Exceptions/ReleaseCompletionIsNotAvailableYet.php (**eliminato**)
+      - app/Exceptions/StepAlreadyClosed.php
+      - app/Models/Release.php (PHPDoc)
+      - app/Enums/ReleaseEventAction.php (PHPDoc)
+      - database/factories/ReleaseFactory.php (PHPDoc dello stato `completed()`)
+
+      ## Steps
+      1. Riordinare il corpo della transazione: dopo il compare-and-swap sullo step, scrivere l'evento `step_completato` **prima** del bivio, perche appartiene a entrambi i rami. Verificare che il payload resti quello odierno (`position`, `step`, `fields_filled`)
+      2. Calcolare `$next = $step->nextStep()`; ramo con successore invariato (attivazione condizionata a `bloccato` + evento `step_attivato`)
+      3. Ramo `$next === null`: invocare il nuovo metodo privato `completeRelease(Release $release, ReleaseStep $step, User $actor, CarbonInterface $now): void`
+      4. Dentro `completeRelease`, update condizionato: `Release::query()->whereKey(...)->where('status', ReleaseStatus::InProgress->value)->update([...])` con `status`, `completed_by`, `completed_at`, `updated_at`. Zero righe -> `throw StepAlreadyClosed::whileConcludingRelease($step)`
+      5. Commentare **perche** il CAS non e ridondante col `lockForUpdate()` gia presente, richiamando `.ai/rules/releases.md`: su SQLite il lock non produce SQL, la garanzia effettiva e l'update condizionato; il lock serve su MySQL e PostgreSQL, dove il vincolo di portabilita impone che il codice resti corretto
+      6. Scrivere l'evento `ReleaseEventAction::ReleaseCompleted` con `release_step_id` = lo step finale e payload `['label' => $release->label, 'step' => $step->name, 'position' => $step->position]`. **Non** contare gli step: la posizione dell'ultimo dice gia la lunghezza della catena, e un `count()` sarebbe una query per un dato gia in mano
+      7. Riallineare in memoria **anche** la release oltre allo step: senza, dopo `reload()` la schermata mostrerebbe una release ancora `in_corso` accanto a uno step completato
+      8. `StepAlreadyClosed`: costruttore privato con `public readonly string $reasonKey`, come `StepIsNotOpen`. `during()` -> `'releases.closing_already_closed'`; nuovo `whileConcludingRelease()` -> `'releases.closing_already_concluded'`. Aggiornare il PHPDoc della classe: ora descrive due doppi invii distinti
+      9. Eliminare `app/Exceptions/ReleaseCompletionIsNotAvailableYet.php` e il suo `use` in `CloseStep` (il `catch` nel componente e di TASK-03)
+      10. Aggiornare i PHPDoc che rinviano a US-006 al presente: `Release` ("ricevono significato in US-006"), `ReleaseEventAction` ("`ReleaseCompleted` di US-006"), `ReleaseFactory::completed()` ("che US-006 scrivera"). Il `@throws` di `handle()` perde `ReleaseCompletionIsNotAvailableYet`
+      11. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+      12. `php artisan test --compact tests/Feature/Releases/` — a questo punto i due test di confine di US-005 **falliscono**, ed e atteso: li sostituisce TASK-02
+
+      ## Completion Criteria
+      - [ ] La chiusura dell'ultimo step porta la release a `conclusa` con `completed_by` e `completed_at` valorizzati
+      - [ ] La conclusione avviene in compare-and-swap condizionato a `in_corso`, con il motivo commentato nel codice
+      - [ ] Il registro riceve `step_completato` **e** `release_conclusa`; sul ramo terminale nessun `step_attivato`
+      - [ ] `ReleaseCompletionIsNotAvailableYet` non esiste piu e non e piu referenziata dal dominio
+      - [ ] `StepAlreadyClosed` porta `reasonKey` e distingue chiusura dello step da conclusione della release
+      - [ ] Lo step **e** la release restituiti sono riallineati in memoria
+      - [ ] Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - [ ] Nessuna nuova entita: nessuna factory da creare, nessuna migrazione
+      - [ ] `ReleaseFactory::completed()` verificata coerente con cio che l'Action scrive (stato, autore, istante) e PHPDoc allineato al presente
+      - [ ] `php artisan migrate:fresh --seed` completa senza errori
+
+      ## Git Deliverables
+      - Commit: `feat(US-006): TASK-01 conclusione della release alla chiusura dell'ultimo step`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+  -
+    id: TASK-02
+    title: 'Test: conclusione, invariante degli step attivi e registro'
+    body: |-
+      ## Description
+      Invertire di segno il confine lasciato da US-005 e coprire i criteri che nessuna prova manuale dimostra: la release conclusa non ha alcuno step attivo, la conclusione e nel registro, e la release esce da quelle in corso restando leggibile.
+
+      `CloseStepTest::test_the_last_step_is_refused_because_completing_the_release_is_not_available_yet` va **sostituito**, non cancellato: ogni asserzione che descriveva il rifiuto deve ricomparire come asserzione sulla conclusione. Riusare gli helper privati gia presenti nella classe (`releaseInProgress()`, `validValuesFor()`): duplicarli in un file nuovo darebbe due scenari destinati a divergere.
+
+      ## Files Involved
+      - tests/Feature/Releases/CloseStepTest.php
+      - tests/Feature/Releases/SaveStepValuesTest.php
+      - tests/Unit/Models/ReleaseTest.php (commenti che rinviano a US-006)
+
+      ## Steps
+      1. Usare le factory esistenti (`ReleaseFactory`, `ReleaseStepFactory`, `ReleaseStepFieldFactory`) e gli helper della classe — nessuna definizione di factory nei test
+      2. Sostituire il test di confine con `test_closing_the_last_step_completes_the_release`: stato `conclusa`, `completed_by` = attore, `completed_at` valorizzato, lo step finale completato
+      3. `test_a_completed_release_has_no_active_step`: percorrere l'intera catena e verificare zero step in stato `attivo`; e l'invariante 1 del PRD, il caso "zero"
+      4. `test_a_single_step_chain_completes_on_the_first_closure`: catena da un solo step, conclusione immediata
+      5. `test_the_completion_is_recorded_in_the_register`: presenza di `release_conclusa` con attore, istante e riferimento allo step finale; ordine cronologico dopo `step_completato`; **assenza** di `step_attivato` sul ramo terminale
+      6. `test_a_completed_release_leaves_those_in_progress_but_stays_readable`: assente da `Release::query()->inProgress()`, ancora recuperabile per chiave con la catena leggibile (AC 6, storico a tempo indeterminato)
+      7. `test_a_step_of_a_completed_release_cannot_be_closed`: `CloseStep` su una release conclusa solleva `StepIsNotOpen::releaseIsCompleted` senza scrivere nulla
+      8. In `SaveStepValuesTest`, test speculare: nemmeno il salvataggio di una bozza passa su release conclusa
+      9. Aggiornare i commenti di `ReleaseTest` che rinviavano a "chi implementera la conclusione (US-006)"
+      10. `php artisan test --compact tests/Feature/Releases/CloseStepTest.php tests/Feature/Releases/SaveStepValuesTest.php tests/Unit/Models/ReleaseTest.php`
+      11. Nessuna suite browser, Dusk, Playwright o matrice di viewport (`settings.testing: NORMAL`)
+
+      ## Completion Criteria
+      - [ ] Il test di confine di US-005 e sostituito, non rimosso: le sue asserzioni ricompaiono invertite
+      - [ ] Coperti AC 1, 2, 4, 5, 6
+      - [ ] Verificata l'assenza di `step_attivato` sul ramo terminale
+      - [ ] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-006): TASK-02 conclusione della release, invariante e registro`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-01
+  -
+    id: TASK-03
+    title: 'Schermata e testi: consegna annunciata, riapertura mai promessa'
+    body: |-
+      ## Description
+      La schermata di chiusura dice ancora che la conclusione "arriva con una prossima versione dello strumento". Dopo TASK-01 e falso, e il criterio di accettazione 7 chiede esplicitamente che il messaggio all'utente non prometta cio che il rilascio non fa: la conclusione ora c'e, la **riapertura** (FR-019) no.
+
+      ## Files Involved
+      - resources/views/components/releases/⚡step.blade.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. Rimuovere il `catch (ReleaseCompletionIsNotAvailableYet)` e il relativo `use`: la classe non esiste piu, e lasciarlo produrrebbe un ramo morto segnalato da Larastan
+      2. Rendere il rifiuto del doppio invio da `__($refused->reasonKey)` invece della chiave scritta a mano, cosi che la conclusione concorrente mostri il proprio messaggio
+      3. `lang/it/releases.php`: rimuovere `closing_last_step`; aggiungere `closing_already_concluded` ("La release e stata conclusa da un altro invio: la conclusione e avvenuta una sola volta.")
+      4. Riscrivere `step_hands_over_last`: alla chiusura di questo step la release risulta consegnata e conclusa. Nessun accenno a versioni future dello strumento
+      5. Aggiungere il riquadro di conclusione mostrato dopo la chiusura dell'ultimo step (ramo `$closed` con `nextStep` nullo): etichetta della release, istante della consegna, e il fatto che lo storico resta consultabile. **Nessun comando** e nessuna frase che suggerisca la riapertura
+      6. Sullo step gia completato di una release conclusa, indicare lo stato del rilascio accanto ai valori in sola lettura — chi arriva da un collegamento salvato deve capire che il rilascio e chiuso, non solo il proprio passaggio
+      7. `step_closing_is_final` resta invariata: e la frase che tiene fede a FR-019
+      8. Mobile first: il riquadro nasce a 375 px, nessuno scorrimento orizzontale, `aria-live="polite"` come gli altri annunci della pagina. Soglia unica `max-lg:` — vincolo permanente 4 del README. Solo componenti Flux gratuiti — vincolo 2
+      9. `npm run build` se necessario; smoke visivo a 375, 768 e 1280 px
+      10. `vendor/bin/pint --dirty --format agent`; `php artisan test --compact tests/Feature/Releases/`
+
+      ## Completion Criteria
+      - [ ] Nessun riferimento residuo a `ReleaseCompletionIsNotAvailableYet` o a `closing_last_step` nel codice e nei testi
+      - [ ] La chiusura dell'ultimo step annuncia la consegna con etichetta e istante
+      - [ ] Nessun testo promette la riapertura di uno step (AC 7)
+      - [ ] Il rifiuto del doppio invio rende il messaggio coerente col caso che lo ha prodotto
+      - [ ] Riquadro leggibile a 375 px senza scorrimento orizzontale
+
+      ## Test Data
+      - N/A — nessuna modifica a modelli o schema
+
+      ## Git Deliverables
+      - Commit: `feat(US-006): TASK-03 schermata e testi della conclusione della release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-01
+  -
+    id: TASK-04
+    title: 'Test: sola lettura della release conclusa e rifiuto tracciato'
+    body: |-
+      ## Description
+      Dimostrare che una release conclusa e in sola lettura **per chiunque**, amministratori inclusi, e che il tentativo di forzarla e rifiutato con 403 e registrato. Non c'e codice nuovo da coprire: `ReleaseStepPolicy::mayAct()` nega gia quando la release non e `in_corso`, e `fill`/`close` sono in `NOT_FILTERED` proprio perche quel vincolo valga anche per un amministratore. Il criterio di accettazione chiede la prova, e senza test una revisione futura potrebbe spostare quelle ability sotto il filtro `before()` senza accorgersi di cosa rompe.
+
+      ## Files Involved
+      - tests/Feature/Releases/ReleaseStepPolicyTest.php
+      - tests/Feature/Releases/CloseStepScreenTest.php
+
+      ## Steps
+      1. Riusare le factory esistenti; comporre la release conclusa con `ReleaseFactory::completed()` e `ReleaseStepFactory::completed()`
+      2. `ReleaseStepPolicyTest`: `fill` e `close` negate al responsabile assegnato su release conclusa
+      3. Stesso caso per un **amministratore**: la negazione non passa dal filtro `before()`, che per queste due ability non decide (AC 3)
+      4. `view` resta consentita: lo storico si consulta a tempo indeterminato, e negarla renderebbe illeggibile cio che la spec vuole conservare
+      5. `CloseStepScreenTest`: sostituire `test_the_last_step_of_the_chain_explains_that_it_cannot_be_closed_yet` con il percorso completo dall'interfaccia — il responsabile compila l'ultimo step, chiude, e la pagina annuncia la conclusione con la release passata a `conclusa`
+      6. Verificare che nessun testo reso contenga una promessa di riapertura (AC 7)
+      7. Invocazione **diretta** dell'azione Livewire `close` su uno step di release conclusa, saltando il percorso dell'interfaccia: esito 403 e tentativo registrato nel registro delle transizioni (AC 4). E il percorso che il middleware non copre, per la deroga dichiarata al vincolo permanente 12
+      8. Verificare l'altro lato della stessa moneta: la sola **consultazione** di uno step di release conclusa non genera righe di tentativo non autorizzato — passa da `view`. Senza questo, una revisione futura leggerebbe le righe legittime come un difetto
+      9. `php artisan test --compact tests/Feature/Releases/ReleaseStepPolicyTest.php tests/Feature/Releases/CloseStepScreenTest.php`
+      10. Nessuna suite browser o E2E (`settings.testing: NORMAL`)
+
+      ## Completion Criteria
+      - [ ] Coperti AC 3 e AC 4, amministratore incluso
+      - [ ] Lo screen test di confine di US-005 e sostituito dal percorso di conclusione
+      - [ ] Il rifiuto sull'invocazione diretta lascia traccia; la consultazione no
+      - [ ] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-006): TASK-04 sola lettura della release conclusa e rifiuto tracciato`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-03
+  -
+    id: TASK-05
+    title: 'Test: doppia conclusione concorrente e transazione unica'
+    body: |-
+      ## Description
+      Estendere le due prove che nessuna verifica manuale puo dare, dal capolinea: due invii dell'ultimo step producono **una sola** conclusione e un solo evento `release_conclusa`, e una transazione interrotta a meta non lascia la release conclusa con lo step ancora aperto (o viceversa).
+
+      Stessa premessa gia documentata in `CloseStepConcurrencyTest`: la suite gira su SQLite, dove due connessioni concorrenti non sono riproducibili in modo deterministico. Cio che si verifica e la difesa che regge su tutti i motori — il compare-and-swap sullo stato — non il `lockForUpdate()`, che su SQLite non produce SQL e quindi non e osservabile.
+
+      ## Files Involved
+      - tests/Feature/Releases/CloseStepConcurrencyTest.php
+
+      ## Steps
+      1. Riusare gli helper e le factory gia presenti nella classe
+      2. `test_a_second_submission_of_the_last_step_does_not_complete_the_release_twice`: seconda chiamata a partire dal modello che il chiamante aveva in mano prima della prima. Un solo evento `release_conclusa`, `completed_by` e `completed_at` invariati rispetto alla prima conclusione
+      3. Annotare quale rifiuto arriva e perche: la rilettura dentro la transazione intercetta il secondo invio prima del compare-and-swap sulla release, quindi `StepIsNotOpen` e non `StepAlreadyClosed`. Il CAS sulla release resta la difesa che regge se quel controllo cambiasse forma — lo stesso ragionamento gia scritto per la chiusura dello step
+      4. `test_an_interrupted_completion_leaves_neither_the_step_closed_nor_the_release_completed`: far fallire una scrittura dentro la transazione sul ramo terminale e verificare che release e step tornino entrambi allo stato di partenza, registro compreso (invariante 2 del PRD)
+      5. `php artisan test --compact tests/Feature/Releases/CloseStepConcurrencyTest.php`
+
+      ## Completion Criteria
+      - [ ] Il doppio invio sull'ultimo step produce una sola conclusione e un solo evento
+      - [ ] Una conclusione interrotta non lascia stati intermedi persistiti
+      - [ ] Il commento spiega cosa il test dimostra su SQLite e cosa no
+      - [ ] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-006): TASK-05 doppia conclusione concorrente e transazione unica`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-01
+  -
+    id: TASK-06
+    title: 'Documentazione: ciclo di vita chiuso, CHANGELOG e regola di progetto'
+    body: |-
+      ## Description
+      Chiudere nella documentazione il ciclo di vita che il codice ora completa. Il README descrive ancora la macchina a stati come se `in_corso --> conclusa` non esistesse, e il vincolo permanente 11 elenca `release_conclusa` fra i valori mai scritti — con un conteggio ("due") gia incoerente col proprio elenco.
+
+      Sotto `effort: STANDARD` la documentazione di baseline e dovuta: nessun documento nuovo, solo l'allineamento di cio che oggi dice il falso.
+
+      ## Files Involved
+      - README.md
+      - CHANGELOG.md
+      - .ai/rules/releases.md (via `record-rule`)
+
+      ## Steps
+      1. README, diagramma Mermaid della macchina a stati: la transizione `in_corso --> conclusa` non e piu annotata come futura; rimuovere il paragrafo "Finche `in_corso --> conclusa` non esiste (US-006), la chiusura dell'ultimo step della catena viene rifiutata" e sostituirlo con cio che accade ora, ribadendo che nessuna freccia torna indietro (FR-019 fuori perimetro)
+      2. README, sezione sull'esecuzione: descrivere la conclusione come parte della stessa transazione della chiusura dell'ultimo step, e l'invariante nel suo caso "zero step attivi"
+      3. README, vincolo permanente 11: `releases.completed_by` e `completed_at` sono ora scritte; correggere il conteggio degli `ReleaseEventAction` non ancora usati e lasciare intatto il **motivo** per cui l'enum e nato completo
+      4. CHANGELOG, sezione `Unreleased` -> `Added`: "**Conclusione della release** (US-006, FR-017): la chiusura dell'ultimo step della catena conclude il rilascio con autore e istante della consegna. Una release conclusa non ha alcuno step attivo, non compare fra quelle in corso ed e in sola lettura per chiunque, amministratori inclusi. La conclusione e registrata nel registro delle transizioni. La riapertura di uno step resta fuori perimetro." — stile e lingua delle voci esistenti
+      5. Registrare con `record-rule` (glob `app/Actions/Releases/**`) la regola durevole che il codice da solo non spiega: **anche** la conclusione della release passa da un update condizionato a `in_corso`, per lo stesso motivo gia registrato per la chiusura dello step. Aggiornare la regola esistente in `.ai/rules/releases.md` invece di crearne una seconda sullo stesso perimetro
+      6. Verificare che i diagrammi Mermaid siano ancora resi correttamente
+      7. `php artisan test --compact` — suite completa prima della consegna
+      8. `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [ ] Il README descrive il ciclo di vita completo; nessuna nota che dia la conclusione per futura
+      - [ ] Vincolo permanente 11 chiuso e conteggio corretto
+      - [ ] CHANGELOG `Unreleased` aggiornato
+      - [ ] Regola di progetto registrata via `record-rule` sul perimetro delle Action di rilascio
+      - [ ] Suite completa verde, Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a modelli o schema
+
+      ## Git Deliverables
+      - Commit: `docs(US-006): TASK-06 ciclo di vita della release, CHANGELOG e regola di progetto`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: finalizzare titolo e corpo in locale, pronti per la revisione umana
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-02
+      - TASK-04
+      - TASK-05
+updated_at: '2026-08-13T16:16:11+00:00'
