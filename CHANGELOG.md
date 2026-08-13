@@ -170,6 +170,12 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   predefinita e due progetti di cui uno con una sostituzione. Include ora il template
   "Rilascio standard" con cinque step e quattordici campi, e un secondo template
   disattivato.
+- **Scenario di esecuzione dimostrativo** (US-011, FR-018): `migrate:fresh --seed` produce
+  ora anche tre rilasci — uno consegnato con la catena tutta chiusa e il registro completo,
+  uno a meta catena con valori realistici sul primo step, e uno appena avviato e fermo sul
+  primo. Ogni schermata operativa ha quindi qualcosa da mostrare senza dover ricostruire uno
+  scenario a mano. I rilasci sono prodotti chiamando le Action reali e non scrivendo righe:
+  il registro delle transizioni che ne risulta e quello che il processo produce davvero.
 - Documentazione baseline: README con avvio via Herd, nota architetturale sulla separazione
   fra definizione e istanza, questo changelog.
 

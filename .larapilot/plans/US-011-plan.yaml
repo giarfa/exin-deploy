@@ -210,7 +210,7 @@ tasks:
     id: TASK-02
     title: 'Copertura dello scenario dimostrativo'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
     body: |-
@@ -237,13 +237,19 @@ tasks:
       5. `php artisan test --filter=DatabaseSeeder`
 
       ## Completion Criteria
-      - [ ] Ogni criterio di accettazione ha un test
-      - [ ] I test passano
+      - [x] Ogni criterio di accettazione ha un test
+      - [x] I test passano
 
       ## Git Deliverables
       - Commit: `test(US-011): TASK-02 copertura dello scenario dimostrativo`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: 9941ce2ccc792d9fb4966092afe6d2247811f819
+      short_sha: 9941ce2
+      subject: 'test(US-011): TASK-02 copertura dello scenario dimostrativo'
+      committed_at: '2026-08-14T00:47:08+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Changelog, README e regola sul seeder'
@@ -283,4 +289,4 @@ tasks:
       - Commit: `docs(US-011): TASK-03 changelog, README e regola sull'ambiente dimostrativo`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:44:01+00:00'
+updated_at: '2026-08-13T22:47:08+00:00'

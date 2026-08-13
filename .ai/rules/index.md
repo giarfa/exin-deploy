@@ -11,4 +11,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Policies/ReleasePolicy.php, app/Policies/ReleaseEventPolicy.php | .ai/rules/policies.md |
 | app/Actions/Releases/** | .ai/rules/releases.md |
 | routes/web.php | .ai/rules/routes.md |
+| database/seeders/** | .ai/rules/seeders.md |
 | tests/** | .ai/rules/tests.md |

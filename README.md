@@ -58,7 +58,38 @@ La mappatura dimostrativa copre tutti i ruoli previsti dal template, quindi lo s
 iniziale e quello sano. Per vedere la segnalazione dei **ruoli scoperti**, rimuovi un
 responsabile dalla pagina dei responsabili di un progetto.
 
-Lo scenario di **esecuzione** — release in corso, release conclusa — arriva con US-011.
+E semina infine lo scenario di **esecuzione**: tre rilasci, uno per ciascuna forma che le
+schermate devono saper mostrare.
+
+| Release | Progetto | Cosa dimostra |
+| --- | --- | --- |
+| `v2.3.0` | Portale Clienti | rilascio **consegnato**: catena tutta chiusa, registro completo con undici voci |
+| `v2.4.0` | Portale Clienti | rilascio **a meta catena**: primo step chiuso con valori veri, secondo attivo |
+| `2026.08.1` | Gestionale Magazzino | rilascio **appena avviato**, fermo sul primo step |
+
+La terza non e un di piu: e l'unica forma in cui lo step attivo e il primo della catena, dove
+`ReleaseStep::activationInstant()` non ha un precedente da cui leggere l'istante e ripiega su
+`release.started_at`. E il ramo che ogni rilascio nuovo percorre.
+
+I tre rilasci sono prodotti **chiamando le Action reali** (`StartRelease`, `CloseStep`) e non
+scrivendo righe, in deroga dichiarata alla convenzione che il resto del seeder segue. La
+configurazione e uno **stato**: si dichiara, ed e piu chiaro che ricostruirlo. Un rilascio e un
+**processo**, e il suo stato *e* la sequenza di transizioni che lo ha prodotto: scriverlo a
+mano significherebbe replicare nel seeder lo snapshot, la risoluzione dei responsabili,
+l'invariante dello step attivo unico e i payload di cinque tipi di evento — il dominio in un
+secondo posto, destinato a divergere. Il registro delle transizioni e proprio cio che una
+scrittura a mano falsificherebbe meglio: righe di forma giusta e contenuto inventato.
+
+Gli istanti sono riportati indietro nel tempo dopo la chiusura: le Action scrivono `now()`, ed
+e giusto che lo facciano, ma un ambiente in cui tutto e successo nello stesso secondo non
+mostrerebbe ne le durate ("aperto da 2 giorni") ne l'ordinamento dello storico.
+
+Il template **disattivato** resta senza release e nessun tentativo non autorizzato viene
+seminato: il primo perche `StartRelease` lo rifiuterebbe — un ambiente dimostrativo che
+contenga uno stato irriproducibile dall'applicazione mente — il secondo perche la traccia di
+qualcuno che ha provato a fare cio che non poteva, con il nome di una persona del team di
+esempio, in un ambiente condiviso si presta a essere letta male. Chi vuole vederla la produce
+aprendo lo step di un altro.
 
 Non ci sono istruzioni Sail o Docker: l'ambiente locale scelto nel PRD e Herd.
 
@@ -402,9 +433,9 @@ condivisi**: il dettaglio della release riusa lo scope dell'istante di attivazio
 (US-009) legge lo stesso stato. Vanno letti come tali e non come dettaglio interno di
 questa schermata.
 
-Finche US-011 non e consegnata, `migrate:fresh --seed` produce un ambiente **senza release**:
-la schermata mostra lo stato vuoto, ed e corretto. Per provarla si avvia una release
-dall'interfaccia (`/progetti/{progetto}/rilascio`).
+`migrate:fresh --seed` produce tre rilasci (US-011), quindi la schermata ha qualcosa da
+mostrare da subito. Per vedere invece lo **stato vuoto** — che e un criterio di accettazione a
+sua volta — basta accedere con un membro che non abbia step in carico.
 
 #### Il dettaglio della release
 
