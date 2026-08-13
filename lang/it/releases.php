@@ -213,4 +213,34 @@ return [
      * vocabolario che finisce anche in colonna.
      */
     'log_heading' => 'Registro delle transizioni',
+    'log_breadcrumb' => 'Registro',
+    'log_intro' => 'Cronologia completa di :project · :label, dall\'avvio in poi.',
+    'log_append_only' => 'Il registro e in sola aggiunta: una voce scritta non si modifica e non si cancella, da nessuna schermata e da nessun amministratore. E la condizione perche valga come prova di cosa e successo.',
+
+    'log_actor' => 'Per mano di :name',
+    'log_on_step' => 'Step :position — :step',
+    'log_on_release' => 'Riguarda il rilascio nel suo insieme, non un singolo step',
+
+    'log_detail_started' => 'Processo congelato da :template, :steps step copiati nella release.',
+    'log_detail_step_completed' => '{0} Nessuna informazione fornita|{1} Un\'informazione fornita|[2,*] :count informazioni fornite',
+    'log_detail_step_activated' => 'Il flusso e passato a :name.',
+    'log_detail_release_completed' => 'La release :label risulta consegnata.',
+    'log_detail_unauthorized' => 'Tentativo di :ability, rifiutato.',
+
+    /*
+     * Le ability tracciate sono quelle che avrebbero cambiato lo stato del
+     * rilascio, cioe le sole che `RecordUnauthorizedStepAttempt` scrive nel
+     * registro. `unknown` copre una riga scritta da una versione precedente:
+     * il registro e in sola aggiunta, quindi nessuno potra tornare a completarla.
+     */
+    'log_ability_fill' => 'compilazione dello step',
+    'log_ability_close' => 'chiusura dello step',
+    'log_ability_unknown' => 'operazione non registrata',
+
+    'log_admin_only' => 'Questa voce e visibile ai soli amministratori.',
+
+    'log_empty_heading' => 'Nessuna voce nel registro',
+    'log_empty_explained' => 'Non dovrebbe accadere su una release avviata: l\'avvio scrive sempre la prima riga. Se vedi questo messaggio, segnalalo.',
+
+    'log_back_to_release' => 'Torna al dettaglio della release',
 ];
