@@ -167,6 +167,8 @@ return [
     'index_without_active_step' => 'Nessuno step attivo',
     'index_waiting_on_nobody' => 'Nessun responsabile in attesa',
     'index_delivered_by_unknown' => 'Autore non registrato',
+    'index_completed_at_unknown' => 'Istante non registrato',
+    'index_duration_unknown' => 'Non calcolabile',
 
     'index_empty_in_progress_heading' => 'Nessun rilascio in corso',
     'index_empty_in_progress_explained' => 'Compariranno qui non appena una release verra avviata su un progetto.',

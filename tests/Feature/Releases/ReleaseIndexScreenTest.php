@@ -3,11 +3,14 @@
 namespace Tests\Feature\Releases;
 
 use App\Enums\ReleaseStatus;
+use App\Enums\ReleaseStepStatus;
 use App\Models\Project;
 use App\Models\Release;
 use App\Models\ReleaseStep;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -150,6 +153,34 @@ class ReleaseIndexScreenTest extends TestCase
         $both->assertSee('v2.3.0');
     }
 
+    public function test_the_filter_buttons_change_the_sections_without_a_reload(): void
+    {
+        $this->releaseInProgress(label: 'v2.4.0');
+        $this->releaseCompleted(label: 'v2.3.0');
+
+        /*
+         * Gli altri casi entrano dall'indirizzo, che e il percorso della
+         * condivisione; questo entra dai **comandi**, che e il percorso di chi usa
+         * la pagina. Sono due strade diverse verso lo stesso filtro, e i bottoni
+         * potrebbero restare fermi senza che nessun test sull'indirizzo se ne
+         * accorga.
+         */
+        Livewire::actingAs($this->member())
+            ->test('releases.index')
+            ->assertSee('v2.4.0')
+            ->assertSee('v2.3.0')
+            ->set('statusFilter', ReleaseStatus::InProgress->value)
+            ->assertSee('v2.4.0')
+            ->assertDontSee('v2.3.0')
+            ->set('statusFilter', ReleaseStatus::Completed->value)
+            ->assertSee('v2.3.0')
+            ->assertDontSee('v2.4.0')
+            // Il ritorno alla vista d'insieme: il terzo valore esiste per questo.
+            ->set('statusFilter', 'tutte')
+            ->assertSee('v2.4.0')
+            ->assertSee('v2.3.0');
+    }
+
     public function test_an_unknown_status_in_the_address_shows_everything_instead_of_failing(): void
     {
         $this->releaseInProgress(label: 'v2.4.0');
@@ -216,6 +247,38 @@ class ReleaseIndexScreenTest extends TestCase
             ->get(route('releases.index'))
             ->assertOk()
             ->assertSee('v2.4.0');
+    }
+
+    public function test_an_incoherent_row_degrades_instead_of_bringing_down_the_page(): void
+    {
+        /*
+         * Nessun percorso applicativo produce queste due righe: `CloseStep` scrive
+         * stato e istante nella stessa transazione. Ma una riga arrivata da un
+         * import o da una correzione a mano sul database non passa da li, e su uno
+         * strumento che esiste perche nulla resti fermo in silenzio la peggiore
+         * risposta possibile e una pagina che non si apre — seguita da una release
+         * sparita senza traccia.
+         */
+        $orphan = $this->releaseInProgress(label: 'v2.4.0');
+        $orphan->steps()->update(['status' => ReleaseStepStatus::Blocked]);
+
+        $truncated = $this->releaseCompleted(label: 'v2.3.0');
+        $truncated->forceFill(['completed_at' => null, 'completed_by' => null])->save();
+
+        // Stessa convenzione di `ReleaseStepPolicyTest`: l'attesa e dichiarata prima
+        // della lettura, cosi che la riga mancante faccia fallire il test.
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(fn (string $message): bool => str_contains($message, 'senza step attivo'));
+
+        $response = $this->actingAs($this->member())->get(route('releases.index'))->assertOk();
+
+        // Entrambe restano a elenco, dichiarando cio che manca invece di tacerlo.
+        $response->assertSee('v2.4.0');
+        $response->assertSee(__('releases.index_without_active_step'));
+        $response->assertSee('v2.3.0');
+        $response->assertSee(__('releases.index_completed_at_unknown'));
+        $response->assertSee(__('releases.index_duration_unknown'));
     }
 
     public function test_a_guest_is_redirected_to_the_login(): void

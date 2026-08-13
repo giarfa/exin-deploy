@@ -480,7 +480,7 @@ tasks:
     id: TASK-07
     title: 'Changelog, README e regole di progetto'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-06
     body: |-
@@ -504,8 +504,8 @@ tasks:
       4. Se in TASK-01 il componente `x-nav.planned` e stato rimosso, registralo nel changelog.
 
       ## Completion Criteria
-      - [ ] Changelog e README aggiornati
-      - [ ] `.ai/rules/policies.md` non contiene piu un rinvio gia risolto
+      - [x] Changelog e README aggiornati
+      - [x] `.ai/rules/policies.md` non contiene piu un rinvio gia risolto
 
       ## Test Data
       - N/A — nessuna modifica di modelli o schema
@@ -514,4 +514,10 @@ tasks:
       - Commit: `docs(US-009): TASK-07 changelog, README e regola sull'elenco delle release`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:11:09+00:00'
+    commit:
+      sha: ef99c2bc28ded533989871cf1bef5df2206785f0
+      short_sha: ef99c2b
+      subject: "docs(US-009): TASK-07 changelog, README e regole sull'elenco delle release"
+      committed_at: '2026-08-14T00:14:08+02:00'
+      url: null
+updated_at: '2026-08-13T22:14:08+00:00'

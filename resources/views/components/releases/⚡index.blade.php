@@ -262,49 +262,79 @@ new class extends Component
     }
 
     /**
-     * Responsabile che trattiene il flusso, e da quanto.
+     * Chi trattiene il flusso e da quanto, indicizzato per release.
+     *
+     * **Proprieta calcolata e non un metodo pubblico**, per una ragione che non si
+     * vede leggendo il Blade: in Livewire ogni metodo pubblico e invocabile dal
+     * browser come azione. Una funzione di sola lettura non farebbe danni, ma
+     * questa scrive nel log — e un'azione remota richiamabile a ripetizione che
+     * scrive nel log e un modo per annegare le righe che contano. Le proprieta
+     * calcolate non sono invocabili, e il valore si costruisce comunque una volta
+     * sola invece che a ogni cella.
      *
      * Una release in corso ha sempre uno step attivo per invariante. Se un dato
-     * incoerente entrasse, la riga resta a elenco con la propria etichetta invece di
+     * incoerente entrasse, la riga resta a elenco dichiarando cosa manca invece di
      * sparire — su uno strumento che esiste perche nulla resti fermo in silenzio,
      * una release svanita dall'elenco sarebbe il difetto peggiore possibile — ma
      * **lascia traccia** nel log, come fa "i miei step".
      *
-     * @return array{name: string|null, step: string|null, position: int|null, duration: string|null}
+     * @return array<string, array{name: string|null, step: string|null, position: int|null, duration: string|null}>
      */
-    public function waitingOn(Release $release): array
+    #[Computed]
+    public function waitingByRelease(): array
     {
-        if ($release->activeStep === null) {
-            Log::warning('Release in corso senza step attivo, resa senza responsabile in attesa.', [
-                'release_id' => $release->id,
-            ]);
+        return $this->inProgressReleases
+            ->mapWithKeys(function (Release $release): array {
+                if ($release->activeStep === null) {
+                    Log::warning('Release in corso senza step attivo, resa senza responsabile in attesa.', [
+                        'release_id' => $release->id,
+                    ]);
 
-            return ['name' => null, 'step' => null, 'position' => null, 'duration' => null];
-        }
+                    return [$release->id => [
+                        'name' => null, 'step' => null, 'position' => null, 'duration' => null,
+                    ]];
+                }
 
-        return [
-            'name' => $release->activeStep->assignedUser->name,
-            'step' => $release->activeStep->name,
-            'position' => $release->activeStep->position,
-            'duration' => $release->activeStep
-                ->activationInstant()
-                ->diffForHumans(syntax: CarbonInterface::DIFF_ABSOLUTE),
-        ];
+                return [$release->id => [
+                    'name' => $release->activeStep->assignedUser->name,
+                    'step' => $release->activeStep->name,
+                    'position' => $release->activeStep->position,
+                    'duration' => $release->activeStep
+                        ->activationInstant()
+                        ->diffForHumans(syntax: CarbonInterface::DIFF_ABSOLUTE),
+                ]];
+            })
+            ->all();
     }
 
     /**
-     * Durata del rilascio: dall'avvio alla consegna.
+     * Durata di ogni rilascio concluso — dall'avvio alla consegna — indicizzata per
+     * release; `null` senza istante di consegna.
      *
      * Due parti come nel mockup ("1 giorno, 6 ore"): la sola unita maggiore direbbe
      * "1 giorno" tanto per venticinque ore quanto per quarantasette.
+     *
+     * Il ripiego non e difensivismo: `CloseStep` scrive stato e istante nella stessa
+     * transazione, quindi una release conclusa senza `completed_at` e un dato che
+     * nessun percorso applicativo produce. Ma la sezione in corso degrada gia su
+     * dati incoerenti invece di far fallire la pagina, e lo storico non puo essere
+     * l'unica meta schermata che si rompe: una riga arrivata da un import o da una
+     * correzione a mano sul database porterebbe giu l'intero elenco.
+     *
+     * @return array<string, string|null>
      */
-    public function deliveryDuration(Release $release): string
+    #[Computed]
+    public function durationByRelease(): array
     {
-        return $release->completed_at->diffForHumans(
-            $release->started_at,
-            syntax: CarbonInterface::DIFF_ABSOLUTE,
-            parts: 2,
-        );
+        return $this->completedReleases
+            ->mapWithKeys(fn (Release $release): array => [
+                $release->id => $release->completed_at?->diffForHumans(
+                    $release->started_at,
+                    syntax: CarbonInterface::DIFF_ABSOLUTE,
+                    parts: 2,
+                ),
+            ])
+            ->all();
     }
 };
 ?>
@@ -409,7 +439,7 @@ new class extends Component
 
                 <tbody class="max-lg:block max-lg:space-y-3">
                     @foreach ($this->inProgressReleases as $release)
-                        @php($waiting = $this->waitingOn($release))
+                        @php($waiting = $this->waitingByRelease[$release->id])
 
                         <tr wire:key="in-progress-{{ $release->id }}"
                             class="border-b border-zinc-200 last:border-b-0 dark:border-zinc-700 max-lg:block max-lg:space-y-1.5 max-lg:rounded-xl max-lg:border max-lg:bg-white max-lg:p-4 dark:max-lg:bg-zinc-900">
@@ -542,11 +572,20 @@ new class extends Component
                             </x-releases.list-cell>
 
                             <x-releases.list-cell :label="$columns['completed_at']" class="whitespace-nowrap">
-                                <span>{{ $release->completed_at->format('d/m/Y H:i') }}</span>
+                                {{-- `completed_at` puo mancare solo su un dato
+                                     incoerente, per la stessa ragione di
+                                     `completedBy`: la conclusione scrive stato e
+                                     istante nella stessa transazione. --}}
+                                <span>
+                                    {{ $release->completed_at?->format('d/m/Y H:i')
+                                        ?? __('releases.index_completed_at_unknown') }}
+                                </span>
                             </x-releases.list-cell>
 
                             <x-releases.list-cell :label="$columns['duration']">
-                                <span class="max-lg:text-right">{{ $this->deliveryDuration($release) }}</span>
+                                <span class="max-lg:text-right">
+                                    {{ $this->durationByRelease[$release->id] ?? __('releases.index_duration_unknown') }}
+                                </span>
                             </x-releases.list-cell>
                         </tr>
                     @endforeach
