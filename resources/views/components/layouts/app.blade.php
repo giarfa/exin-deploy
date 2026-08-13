@@ -38,7 +38,11 @@
                 </flux:navlist.item>
 
                 {{-- Voci non ancora implementate: disabilitate, non nascoste, perche la
-                     struttura del prodotto deve essere leggibile da subito. --}}
+                     struttura del prodotto deve essere leggibile da subito.
+
+                     Resta pianificata anche ora che una release si avvia: la pagina che
+                     questa voce promette e l'**elenco** delle release (US-009), non la
+                     schermata di avvio, che si raggiunge dal progetto su cui si rilascia. --}}
                 <x-nav.planned icon="rocket-launch">{{ __('app.nav_releases') }}</x-nav.planned>
             </flux:navlist.group>
 

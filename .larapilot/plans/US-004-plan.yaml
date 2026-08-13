@@ -242,9 +242,9 @@ tasks:
       7. Redigere titolo e corpo della PR interna verso `develop` e **tenerli in locale**: nessun push
 
       ## Completion Criteria
-      - [ ] `develop` contiene i commit di US-003 e la suite e verde su `develop`
-      - [ ] Il branch `feature/US-004-avvio-release-snapshot` esiste in locale e parte da `develop`
-      - [ ] Descrizione della PR interna redatta e tenuta in locale
+      - [x] `develop` contiene i commit di US-003 e la suite e verde su `develop`
+      - [x] Il branch `feature/US-004-avvio-release-snapshot` esiste in locale e parte da `develop`
+      - [x] Descrizione della PR interna redatta e tenuta in locale
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -254,8 +254,14 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale verso `develop`, apertura remota solo su richiesta esplicita
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: 749415753599bdfeac1f56a97a06f54d8b756160
+      short_sha: '7494157'
+      subject: 'chore(US-004): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-13T00:13:21+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Enum di stato e modello Release con migrazione e factory'
@@ -297,24 +303,30 @@ tasks:
          `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] `ReleaseStatus` con due soli casi ed etichette italiane
-      - [ ] Tabella `releases` con unicita `(project_id, label)` e indice su `status` creati nella stessa migrazione
-      - [ ] Modello con cast dichiarati anche in PHPDoc e relazioni verso progetto, template e autore
-      - [ ] `ReleaseFactory` produce etichette plausibili e uno stato `completed()`
-      - [ ] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+      - [x] `ReleaseStatus` con due soli casi ed etichette italiane
+      - [x] Tabella `releases` con unicita `(project_id, label)` e indice su `status` creati nella stessa migrazione
+      - [x] Modello con cast dichiarati anche in PHPDoc e relazioni verso progetto, template e autore
+      - [x] `ReleaseFactory` produce etichette plausibili e uno stato `completed()`
+      - [x] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
 
       ## Test Data
-      - [ ] `database/factories/ReleaseFactory.php` creata nello stesso task della migrazione
-      - [ ] Seeder non toccato: lo scenario di esecuzione e perimetro dichiarato di US-011
+      - [x] `database/factories/ReleaseFactory.php` creata nello stesso task della migrazione
+      - [x] Seeder non toccato: lo scenario di esecuzione e perimetro dichiarato di US-011
 
       ## Git Deliverables
       - Commit: `feat(US-004): TASK-01 modello della release e stato del rilascio`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: dcb065aa99e3015404d3f87af237b59148ff9b2a
+      short_sha: dcb065a
+      subject: 'feat(US-004): TASK-01 modello della release e stato del rilascio'
+      committed_at: '2026-08-13T00:16:29+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Snapshot della catena: ReleaseStep e ReleaseStepField'
@@ -369,25 +381,31 @@ tasks:
       9. `php artisan migrate:fresh --seed`, Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Le due tabelle esistono con unicita di posizione e indici di lettura previsti dal PRD
-      - [ ] `role_name` congelato accanto a `role_id`, con il motivo nel PHPDoc
-      - [ ] I modelli non usano `OrderedByPosition` e ne spiegano il perche
-      - [ ] Un ruolo referenziato da uno step di release non e cancellabile, e l'elenco ruoli non introduce N+1
-      - [ ] Factory con gli stati previsti per step e per i quattro tipi di campo
-      - [ ] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+      - [x] Le due tabelle esistono con unicita di posizione e indici di lettura previsti dal PRD
+      - [x] `role_name` congelato accanto a `role_id`, con il motivo nel PHPDoc
+      - [x] I modelli non usano `OrderedByPosition` e ne spiegano il perche
+      - [x] Un ruolo referenziato da uno step di release non e cancellabile, e l'elenco ruoli non introduce N+1
+      - [x] Factory con gli stati previsti per step e per i quattro tipi di campo
+      - [x] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
 
       ## Test Data
-      - [ ] `ReleaseStepFactory` e `ReleaseStepFieldFactory` create nello stesso task delle migrazioni
-      - [ ] Seeder non toccato: composizione dello scenario di esecuzione in US-011
+      - [x] `ReleaseStepFactory` e `ReleaseStepFieldFactory` create nello stesso task delle migrazioni
+      - [x] Seeder non toccato: composizione dello scenario di esecuzione in US-011
 
       ## Git Deliverables
       - Commit: `feat(US-004): TASK-02 snapshot degli step e dei campi di una release`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: 37a7990eb4f34332e68321f294fdc96878bb889e
+      short_sha: 37a7990
+      subject: 'feat(US-004): TASK-02 snapshot degli step e dei campi di una release'
+      committed_at: '2026-08-13T00:19:25+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Registro delle transizioni in sola aggiunta'
@@ -425,23 +443,29 @@ tasks:
       6. `php artisan migrate:fresh --seed`, Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Tabella senza `updated_at`, con indice cronologico per release
-      - [ ] Enum con il vocabolario completo di FR-016 e il PHPDoc che dice quale spec scrive cosa
-      - [ ] `update()` e `delete()` sul modello sollevano `ReleaseEventIsAppendOnly`
-      - [ ] Factory creata; `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+      - [x] Tabella senza `updated_at`, con indice cronologico per release
+      - [x] Enum con il vocabolario completo di FR-016 e il PHPDoc che dice quale spec scrive cosa
+      - [x] `update()` e `delete()` sul modello sollevano `ReleaseEventIsAppendOnly`
+      - [x] Factory creata; `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
 
       ## Test Data
-      - [ ] `ReleaseEventFactory` creata nello stesso task della migrazione
-      - [ ] Seeder non toccato: registro popolato dallo scenario di US-011
+      - [x] `ReleaseEventFactory` creata nello stesso task della migrazione
+      - [x] Seeder non toccato: registro popolato dallo scenario di US-011
 
       ## Git Deliverables
       - Commit: `feat(US-004): TASK-03 registro delle transizioni in sola aggiunta`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: 88b58dccd96462dbd7af22744be2bd11f9c5080a
+      short_sha: 88b58dc
+      subject: 'feat(US-004): TASK-03 registro delle transizioni in sola aggiunta'
+      committed_at: '2026-08-13T00:20:45+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: modelli, vincoli di schema e sola aggiunta del registro'
@@ -475,19 +499,25 @@ tasks:
       7. `php artisan test --compact --filter=Release`
 
       ## Completion Criteria
-      - [ ] I vincoli di unicita e di integrita sono verificati aggirando i modelli
-      - [ ] Enum e cast coperti su lettura e su etichetta
-      - [ ] Il registro rifiuta modifica e cancellazione
-      - [ ] Suite verde
+      - [x] I vincoli di unicita e di integrita sono verificati aggirando i modelli
+      - [x] Enum e cast coperti su lettura e su etichetta
+      - [x] Il registro rifiuta modifica e cancellazione
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-004): TASK-04 copre modelli, vincoli di schema e registro`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: fa27be8276db7c5c235772e1727bbd34d9b3dc14
+      short_sha: fa27be8
+      subject: 'test(US-004): TASK-04 copre modelli, vincoli di schema e registro'
+      committed_at: '2026-08-13T00:22:47+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Action StartRelease: snapshot, responsabili risolti ed eccezioni di dominio'
@@ -528,12 +558,12 @@ tasks:
       10. Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Unico percorso di avvio, con tutte le precondizioni prima di qualsiasi scrittura
-      - [ ] Snapshot completo di step e campi in due sole scritture di massa
-      - [ ] Responsabile risolto e nome del ruolo congelato su ogni step
-      - [ ] Primo step attivo, gli altri bloccati, release `in_corso`, evento di avvio registrato
-      - [ ] Numero di query indipendente dal numero di step e di campi
-      - [ ] Pint e Larastan verdi, suite verde
+      - [x] Unico percorso di avvio, con tutte le precondizioni prima di qualsiasi scrittura
+      - [x] Snapshot completo di step e campi in due sole scritture di massa
+      - [x] Responsabile risolto e nome del ruolo congelato su ogni step
+      - [x] Primo step attivo, gli altri bloccati, release `in_corso`, evento di avvio registrato
+      - [x] Numero di query indipendente dal numero di step e di campi
+      - [x] Pint e Larastan verdi, suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -543,9 +573,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-04
+    commit:
+      sha: 0520080dfc2657c59b1006d7d7d80697c9faf81b
+      short_sha: '0520080'
+      subject: 'feat(US-004): TASK-05 avvio della release con snapshot congelato'
+      committed_at: '2026-08-13T00:24:50+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Test: snapshot congelato, precondizioni rifiutate ed evento di avvio'
@@ -574,20 +610,26 @@ tasks:
       7. `php artisan test --compact --filter=Release`
 
       ## Completion Criteria
-      - [ ] Copia verificata campo per campo, non solo per conteggio
-      - [ ] Modifiche al template dopo l'avvio non alterano la release
-      - [ ] Ogni precondizione ha il proprio test, con rifiuto esplicito e nessuna scrittura parziale
-      - [ ] Unicita dell'etichetta per progetto coperta su entrambi i versanti
-      - [ ] Evento di avvio verificato; suite verde
+      - [x] Copia verificata campo per campo, non solo per conteggio
+      - [x] Modifiche al template dopo l'avvio non alterano la release
+      - [x] Ogni precondizione ha il proprio test, con rifiuto esplicito e nessuna scrittura parziale
+      - [x] Unicita dell'etichetta per progetto coperta su entrambi i versanti
+      - [x] Evento di avvio verificato; suite verde
 
       ## Git Deliverables
       - Commit: `test(US-004): TASK-06 copre snapshot congelato e precondizioni di avvio`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
+    commit:
+      sha: 22f6a2aeaf6379881567dc680ba873812c8f49be
+      short_sha: 22f6a2a
+      subject: 'test(US-004): TASK-06 copre snapshot congelato e precondizioni di avvio'
+      committed_at: '2026-08-13T00:27:02+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Test: isolamento dalle tabelle di definizione e query costanti'
@@ -614,19 +656,25 @@ tasks:
       5. `php artisan test --compact --filter=Release`
 
       ## Completion Criteria
-      - [ ] Un test fallisce se l'esecuzione tocca una tabella di definizione
-      - [ ] La release resta leggibile dopo la cancellazione degli step di definizione
-      - [ ] Query di avvio e di lettura costanti rispetto alla lunghezza della catena
-      - [ ] Suite verde
+      - [x] Un test fallisce se l'esecuzione tocca una tabella di definizione
+      - [x] La release resta leggibile dopo la cancellazione degli step di definizione
+      - [x] Query di avvio e di lettura costanti rispetto alla lunghezza della catena
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-004): TASK-07 copre isolamento dalle definizioni e costo delle query`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-06
+    commit:
+      sha: c365a68336257c646fea54c1a2ba9b8e44a436b1
+      short_sha: c365a68
+      subject: 'test(US-004): TASK-07 copre isolamento dalle definizioni e costo delle query'
+      committed_at: '2026-08-13T00:29:10+02:00'
+      url: null
   -
     id: TASK-08
     title: 'Policy delle release, rotta di avvio e autorizzazione'
@@ -655,10 +703,10 @@ tasks:
       6. Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] `ReleasePolicy` con filtro amministratore e `delete` negato a tutti
-      - [ ] Rotta di avvio protetta dal middleware di autorizzazione
-      - [ ] La navigazione non promette pagine inesistenti, e il motivo e scritto
-      - [ ] Pint e Larastan verdi, suite verde
+      - [x] `ReleasePolicy` con filtro amministratore e `delete` negato a tutti
+      - [x] Rotta di avvio protetta dal middleware di autorizzazione
+      - [x] La navigazione non promette pagine inesistenti, e il motivo e scritto
+      - [x] Pint e Larastan verdi, suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -668,9 +716,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
+    commit:
+      sha: 4821257bd61232f875426ec560f01deba15c6a5a
+      short_sha: '4821257'
+      subject: 'feat(US-004): TASK-08 autorizzazione e rotta di avvio della release'
+      committed_at: '2026-08-13T00:30:16+02:00'
+      url: null
   -
     id: TASK-09
     title: 'Schermata di avvio con conferma della catena congelata'
@@ -712,12 +766,12 @@ tasks:
       9. Pint, `larapilot:quality`, `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Un amministratore avvia una release indicando progetto ed etichetta
-      - [ ] Le precondizioni non soddisfatte sono spiegate prima del tentativo, e ogni rifiuto e un messaggio e non un errore
-      - [ ] La conferma mostra la catena congelata con responsabile e stato, resi da icona e parola
-      - [ ] Il comando compare sull'elenco progetti senza introdurre query per riga
-      - [ ] Interfaccia usabile a 375, 768 e 1280 px
-      - [ ] Pint e Larastan verdi, suite verde
+      - [x] Un amministratore avvia una release indicando progetto ed etichetta
+      - [x] Le precondizioni non soddisfatte sono spiegate prima del tentativo, e ogni rifiuto e un messaggio e non un errore
+      - [x] La conferma mostra la catena congelata con responsabile e stato, resi da icona e parola
+      - [x] Il comando compare sull'elenco progetti senza introdurre query per riga
+      - [x] Interfaccia usabile a 375, 768 e 1280 px
+      - [x] Pint e Larastan verdi, suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -727,9 +781,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-08
+    commit:
+      sha: 8bd36fa49e2449bc7705f824576b02ecfdfd9281
+      short_sha: 8bd36fa
+      subject: 'feat(US-004): TASK-09 schermata di avvio della release'
+      committed_at: '2026-08-13T00:35:53+02:00'
+      url: null
   -
     id: TASK-10
     title: "Test: autorizzazione a due livelli e flusso di avvio dall'interfaccia"
@@ -755,19 +815,25 @@ tasks:
       7. `php artisan test --compact --filter=Release`
 
       ## Completion Criteria
-      - [ ] Autorizzazione verificata su rotta **e** su azione Livewire
-      - [ ] Flusso di avvio e messaggi di rifiuto coperti
-      - [ ] Validazione dell'etichetta coperta su obbligatorieta e unicita
-      - [ ] Suite verde
+      - [x] Autorizzazione verificata su rotta **e** su azione Livewire
+      - [x] Flusso di avvio e messaggi di rifiuto coperti
+      - [x] Validazione dell'etichetta coperta su obbligatorieta e unicita
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-004): TASK-10 copre autorizzazione e flusso di avvio`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione locale aggiornata
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-09
+    commit:
+      sha: acf758618706257d05b7153a918f3d8e0afd0b4e
+      short_sha: acf7586
+      subject: 'test(US-004): TASK-10 copre autorizzazione e flusso di avvio'
+      committed_at: '2026-08-13T00:36:00+02:00'
+      url: null
   -
     id: TASK-11
     title: 'Documentazione baseline e CHANGELOG'
@@ -801,11 +867,11 @@ tasks:
       7. Pint (nessun PHP toccato, ma il gate resta), `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] README descrive le tabelle di istanza e la regola dello snapshot con esempi concreti
-      - [ ] Le scelte permanenti di questa spec sono annotate fra i vincoli
-      - [ ] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
-      - [ ] I comandi documentati sono stati eseguiti come scritti
-      - [ ] Suite verde
+      - [x] README descrive le tabelle di istanza e la regola dello snapshot con esempi concreti
+      - [x] Le scelte permanenti di questa spec sono annotate fra i vincoli
+      - [x] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
+      - [x] I comandi documentati sono stati eseguiti come scritti
+      - [x] Suite verde
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -815,7 +881,13 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: descrizione finale della PR interna verso `develop`, tenuta in locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-10
-updated_at: '2026-08-12T22:09:39+00:00'
+    commit:
+      sha: b30f5fb0e0e702dbcd39ded884daf32ffc96145e
+      short_sha: b30f5fb
+      subject: 'docs(US-004): TASK-11 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-13T00:38:05+02:00'
+      url: null
+updated_at: '2026-08-12T22:38:05+00:00'
