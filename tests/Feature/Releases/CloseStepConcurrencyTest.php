@@ -4,6 +4,8 @@ namespace Tests\Feature\Releases;
 
 use App\Actions\Releases\CloseStep;
 use App\Enums\FieldType;
+use App\Enums\ReleaseEventAction;
+use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseStepStatus;
 use App\Exceptions\StepAlreadyClosed;
 use App\Exceptions\StepIsNotOpen;
@@ -17,9 +19,10 @@ use LogicException;
 use Tests\TestCase;
 
 /**
- * I due criteri che nessuna prova manuale puo dimostrare: due richieste di chiusura
- * dello stesso step producono **un solo** avanzamento, e una transazione interrotta
- * a meta non lascia lo step chiuso.
+ * I criteri che nessuna prova manuale puo dimostrare: due richieste di chiusura
+ * dello stesso step producono **un solo** avanzamento — e due dell'ultimo step una
+ * sola conclusione — mentre una transazione interrotta a meta non lascia ne lo step
+ * chiuso ne la release conclusa.
  *
  * **Perche non si simulano due processi.** La suite gira su SQLite, dove due
  * connessioni concorrenti non sono riproducibili in modo deterministico (in memoria
@@ -157,6 +160,93 @@ class CloseStepConcurrencyTest extends TestCase
         );
     }
 
+    public function test_a_second_submission_of_the_last_step_does_not_complete_the_release_twice(): void
+    {
+        $release = $this->releaseInProgress(steps: 1);
+        $step = $release->steps->first();
+        $actor = $step->assignedUser;
+        $values = $this->validValuesFor($step);
+
+        app(CloseStep::class)->handle($step, $values, $actor);
+
+        $concluded = $release->fresh();
+
+        /*
+         * Come sopra, la seconda chiamata parte dal modello di un istante prima. Il
+         * rifiuto arriva dal controllo sullo stato della release, che precede il
+         * compare-and-swap: `StepIsNotOpen` e non `StepAlreadyClosed`. Il
+         * compare-and-swap sulla conclusione resta comunque la difesa che regge se
+         * quel controllo cambiasse forma — e la sola che vale su tutti i motori,
+         * come per la chiusura dello step.
+         */
+        try {
+            app(CloseStep::class)->handle($step, $values, $actor);
+            $this->fail('Il secondo invio ha prodotto una seconda conclusione.');
+        } catch (StepIsNotOpen $refused) {
+            $this->assertSame('releases.closing_blocked_release_completed', $refused->reasonKey);
+        }
+
+        $this->assertSame(
+            1,
+            ReleaseEvent::query()
+                ->where('release_id', $release->id)
+                ->where('action', ReleaseEventAction::ReleaseCompleted->value)
+                ->count(),
+            'La release e stata conclusa due volte nel registro.'
+        );
+
+        // Autore e istante restano quelli della prima conclusione: la seconda non
+        // ha riscritto la consegna a nome di chi e arrivato dopo.
+        $release = $release->fresh();
+
+        $this->assertSame($concluded->completed_by, $release->completed_by);
+        $this->assertEquals($concluded->completed_at, $release->completed_at);
+    }
+
+    public function test_an_interrupted_completion_leaves_neither_the_step_closed_nor_the_release_completed(): void
+    {
+        $release = $this->releaseInProgress(steps: 1);
+        $step = $release->steps->first();
+
+        /*
+         * Guardiano mirato sul solo evento di conclusione: interrompe la transazione
+         * **dopo** la chiusura dello step e dopo il passaggio della release a
+         * conclusa. Se quelle scritture non fossero una sola transazione, resterebbe
+         * una release conclusa con l'ultimo step ancora aperto — o il contrario.
+         */
+        ReleaseEvent::creating(function (ReleaseEvent $event): void {
+            if ($event->action === ReleaseEventAction::ReleaseCompleted) {
+                throw new LogicException('Guardiano del test: interruzione dopo la conclusione.');
+            }
+        });
+
+        try {
+            app(CloseStep::class)->handle($step, $this->validValuesFor($step), $step->assignedUser);
+            $this->fail('La transazione interrotta non ha propagato il fallimento.');
+        } catch (LogicException) {
+            // Atteso: il guardiano ha interrotto la scrittura del registro.
+        }
+
+        $release = $release->fresh();
+        $step = $step->fresh();
+
+        $this->assertSame(ReleaseStatus::InProgress, $release->status);
+        $this->assertNull($release->completed_by);
+        $this->assertNull($release->completed_at);
+
+        $this->assertSame(ReleaseStepStatus::Active, $step->status);
+        $this->assertNull($step->completed_at);
+
+        // Nemmeno l'evento di chiusura dello step, scritto prima: l'annullamento
+        // riguarda l'intera transazione.
+        $this->assertSame(0, ReleaseEvent::count());
+        $this->assertSame(
+            0,
+            ReleaseStepField::query()->whereNotNull('value')->count(),
+            'Una conclusione interrotta ha lasciato dei valori scritti.'
+        );
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -175,15 +265,15 @@ class CloseStepConcurrencyTest extends TestCase
     }
 
     /**
-     * Release in corso con due step: il primo attivo con due campi, il secondo
-     * bloccato.
+     * Release in corso con una catena di `steps` step: il primo attivo con due
+     * campi, gli altri bloccati.
      */
-    private function releaseInProgress(): Release
+    private function releaseInProgress(int $steps = 2): Release
     {
         $release = Release::factory()->create();
         $responsible = User::factory()->create();
 
-        foreach ([1, 2] as $position) {
+        for ($position = 1; $position <= $steps; $position++) {
             $step = ReleaseStep::factory()->for($release)->create([
                 'position' => $position,
                 'status' => $position === 1 ? ReleaseStepStatus::Active : ReleaseStepStatus::Blocked,

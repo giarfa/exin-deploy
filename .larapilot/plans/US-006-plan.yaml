@@ -366,19 +366,25 @@ tasks:
       10. Nessuna suite browser o E2E (`settings.testing: NORMAL`)
 
       ## Completion Criteria
-      - [ ] Coperti AC 3 e AC 4, amministratore incluso
-      - [ ] Lo screen test di confine di US-005 e sostituito dal percorso di conclusione
-      - [ ] Il rifiuto sull'invocazione diretta lascia traccia; la consultazione no
-      - [ ] Suite verde
+      - [x] Coperti AC 3 e AC 4, amministratore incluso
+      - [x] Lo screen test di confine di US-005 e sostituito dal percorso di conclusione
+      - [x] Il rifiuto sull'invocazione diretta lascia traccia; la consultazione no
+      - [x] Suite verde
 
       ## Git Deliverables
       - Commit: `test(US-006): TASK-04 sola lettura della release conclusa e rifiuto tracciato`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: 4411baafbefe071843b52a89689b9615bc3b7b09
+      short_sha: 4411baa
+      subject: 'test(US-006): TASK-04 sola lettura della release conclusa e rifiuto tracciato'
+      committed_at: '2026-08-13T18:37:01+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Test: doppia conclusione concorrente e transazione unica'
@@ -456,4 +462,4 @@ tasks:
       - TASK-02
       - TASK-04
       - TASK-05
-updated_at: '2026-08-13T16:35:29+00:00'
+updated_at: '2026-08-13T16:37:01+00:00'
