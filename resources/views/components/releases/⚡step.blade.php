@@ -284,9 +284,23 @@ new class extends Component
 ?>
 
 <div>
-    <flux:button :href="route('home')" variant="ghost" size="sm" icon="arrow-left" class="mb-4">
-        {{ __('releases.step_back_home') }}
-    </flux:button>
+    {{-- Due uscite e non una: "i miei step" riporta a cio che attende chi guarda, il
+         dettaglio della release mostra dove si trova questo passaggio nella catena.
+         Valgono in tutti e tre gli stati dello step — chi arriva da un collegamento
+         salvato su uno step bloccato ha bisogno del contesto piu di chiunque altro.
+
+         Impilate a piena larghezza sotto la soglia, in linea sopra: la stessa forma
+         delle azioni del form, e nessuna soglia nuova. --}}
+    <div class="mb-4 flex flex-col gap-2 max-lg:*:min-h-11 max-lg:*:w-full lg:flex-row lg:items-center">
+        <flux:button :href="route('home')" variant="ghost" size="sm" icon="arrow-left">
+            {{ __('releases.step_back_home') }}
+        </flux:button>
+
+        <flux:button :href="route('releases.show', $releaseStep->release)" variant="ghost" size="sm"
+                     icon="queue-list">
+            {{ __('releases.step_back_release') }}
+        </flux:button>
+    </div>
 
     <div class="mb-6">
         <flux:heading size="xl" level="1">{{ $releaseStep->name }}</flux:heading>

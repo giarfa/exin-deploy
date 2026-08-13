@@ -39,6 +39,7 @@ return [
     'chain_position' => 'Step :position',
     'responsible' => 'Responsabile',
     'start_another' => 'Avvia un\'altra release',
+    'started_open_detail' => 'Apri il dettaglio della release',
 
     /*
      * Gli stati della catena non hanno chiavi qui: le etichette vivono su
@@ -65,6 +66,7 @@ return [
      * pulsante.
      */
     'step_back_home' => 'Torna ai miei step',
+    'step_back_release' => 'Vedi la release completa',
     'step_context' => ':project · :release · step :position di :total',
     'step_you_are_responsible' => 'sei il responsabile come :role',
     'step_responsible_is' => 'responsabile: :name, come :role',

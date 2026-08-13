@@ -245,7 +245,19 @@ new class extends Component
 
             <div class="mt-3 space-y-2">
                 @foreach ($this->waitingReleases as $release)
-                    <flux:card wire:key="waiting-{{ $release->id }}">
+                    {{--
+                        La card **intera** e il collegamento, come nel blocco degli
+                        step: sotto 1024 px il bersaglio deve essere di almeno
+                        44x44 px, e un blocco cliccabile lo e sempre. `block` e non
+                        `flex` per non introdurre soglie orizzontali a 375 px, e
+                        nessun comando annidato dentro il collegamento.
+
+                        Questo blocco pone la domanda "chi trattiene il flusso e da
+                        quanto": il dettaglio della release e la risposta estesa —
+                        l'intera catena con lo stato di ogni step.
+                    --}}
+                    <a href="{{ route('releases.show', $release) }}" wire:key="waiting-{{ $release->id }}"
+                       class="block rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-zinc-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500 dark:focus-visible:outline-zinc-200">
                         <flux:text class="text-sm font-medium">
                             {{ $release->project->name }} · {{ $release->label }}
                         </flux:text>
@@ -258,7 +270,15 @@ new class extends Component
                                 'duration' => $release->activeStep->activationInstant()->diffForHumans(syntax: CarbonInterface::DIFF_ABSOLUTE),
                             ]) }}
                         </flux:text>
-                    </flux:card>
+
+                        {{-- `span` e non `button`: il bersaglio e la card intera, e un
+                             comando dentro un comando romperebbe la navigazione da
+                             tastiera. --}}
+                        <span class="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-800 dark:text-white">
+                            <flux:icon name="arrow-right" variant="mini" class="size-4 shrink-0" />
+                            {{ __('my-steps.waiting_open_detail') }}
+                        </span>
+                    </a>
                 @endforeach
             </div>
         </div>
