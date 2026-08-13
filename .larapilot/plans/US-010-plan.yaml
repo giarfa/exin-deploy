@@ -149,7 +149,7 @@ tasks:
     id: TASK-01
     title: 'Policy del registro, rotta e via di accesso dal dettaglio'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |-
@@ -185,10 +185,10 @@ tasks:
       7. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=Release`
 
       ## Completion Criteria
-      - [ ] Un membro non amministratore apre `/rilasci/{release}/registro`; un anonimo e rediretto
-      - [ ] `update` e `delete` negate anche a un amministratore
-      - [ ] Il registro e raggiungibile dal dettaglio della release
-      - [ ] Pint e Larastan (livello 5) passano
+      - [x] Un membro non amministratore apre `/rilasci/{release}/registro`; un anonimo e rediretto
+      - [x] `update` e `delete` negate anche a un amministratore
+      - [x] Il registro e raggiungibile dal dettaglio della release
+      - [x] Pint e Larastan (livello 5) passano
 
       ## Test Data
       - N/A — nessuna modifica di schema
@@ -197,6 +197,12 @@ tasks:
       - Commit: `feat(US-010): TASK-01 apre il registro delle transizioni e registra la rotta`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: e69abc3e8b3c71a7235130a62ecd33f9a91b5176
+      short_sha: e69abc3
+      subject: 'feat(US-010): TASK-01 apre il registro delle transizioni e registra la rotta'
+      committed_at: '2026-08-14T00:23:57+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Lettura cronologica e filtro di visibilita sul modello'
@@ -452,4 +458,4 @@ tasks:
       - Commit: `docs(US-010): TASK-07 changelog, README e regola sul registro`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:22:23+00:00'
+updated_at: '2026-08-13T22:23:57+00:00'
