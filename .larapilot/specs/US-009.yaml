@@ -5,7 +5,7 @@ epic:
   title: 'Visibilità e tracciabilità'
 priority: HIGH
 points: 3
-status: TODO
+status: 'IN PROGRESS'
 body: |
   #### US-009: Elenco e storico delle release
 
@@ -31,3 +31,9 @@ body: |
   - [ ] Indici su `release.project_id` e `release.status` creati nella stessa migrazione dello schema
   - [ ] Nessuna query N+1 (verificato)
   - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/desktop.html`: card impilate sotto 1024 px, tabella da 1024 px, nessuno scroll orizzontale a nessun breakpoint
+status_history:
+  - status: PLANNED
+    at: '2026-08-13T21:54:44+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-13T21:54:54+00:00'
+rework: false
