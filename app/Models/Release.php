@@ -28,8 +28,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * dipendenza di lettura: nessun percorso di esecuzione risale a
  * `workflowTemplate` per sapere come procedere.
  *
- * Le colonne di conclusione (`completed_by`, `completed_at`) nascono qui vuote e
- * ricevono significato in US-006, quando l'ultimo step chiuso conclude la release.
+ * Le colonne di conclusione (`completed_by`, `completed_at`) restano vuote finche la
+ * release e in corso: le scrive `App\Actions\Releases\CloseStep` chiudendo l'ultimo
+ * step della catena, nella stessa transazione. Una release conclusa e in sola
+ * lettura — nessuno step si riapre, nemmeno per un amministratore (la riapertura e
+ * FR-019, fuori perimetro).
  *
  * @property ReleaseStatus $status
  * @property CarbonInterface $started_at

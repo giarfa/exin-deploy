@@ -100,9 +100,12 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   decisione a livello di Policy lato server. Il vincolo dello step attivo vale **anche** per
   un amministratore: non si compila un passaggio il cui turno non e arrivato o che e gia
   chiuso.
-- **Ultimo step della catena**: la chiusura e rifiutata con un messaggio esplicito finche la
-  conclusione della release (FR-017) non esiste. Chiuderlo lascerebbe una release in corso
-  senza alcuno step attivo.
+- **Conclusione della release** (US-006, FR-017): la chiusura dell'ultimo step della catena
+  conclude il rilascio con autore e istante della consegna. Una release conclusa non ha
+  alcuno step attivo, non compare fra quelle in corso ed e in sola lettura per chiunque,
+  amministratori inclusi. La conclusione e registrata nel registro delle transizioni, e
+  resta consultabile a tempo indeterminato. La riapertura di uno step resta fuori
+  perimetro.
 - **Diagrammi del modello e delle transizioni** nel README: entita-relazioni con definizione
   e istanza distinte, e macchina a stati di step e release annotata con gli eventi scritti
   nel registro.

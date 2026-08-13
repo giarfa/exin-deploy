@@ -115,6 +115,87 @@ class ReleaseStepPolicyTest extends TestCase
         $this->assertFalse(Gate::forUser($step->assignedUser)->allows('fill', $step));
     }
 
+    public function test_a_completed_release_is_read_only_for_everyone_administrators_included(): void
+    {
+        /*
+         * La forma reale di una release conclusa: nessuno step attivo, tutti chiusi.
+         * Il divieto non passa dal filtro `before()` — `fill` e `close` sono in
+         * `NOT_FILTERED` proprio perche il vincolo valga anche per un
+         * amministratore — e senza questa prova una revisione futura potrebbe
+         * spostarle sotto il filtro senza accorgersi di cosa rompe.
+         */
+        $release = $this->completedRelease();
+        $step = $release->steps->first();
+        $administrator = User::factory()->admin()->create();
+
+        $this->assertFalse(Gate::forUser($step->assignedUser)->allows('fill', $step));
+        $this->assertFalse(Gate::forUser($step->assignedUser)->allows('close', $step));
+
+        $this->assertFalse(Gate::forUser($administrator)->allows('fill', $step));
+        $this->assertFalse(Gate::forUser($administrator)->allows('close', $step));
+
+        /*
+         * La consultazione resta invece consentita: lo storico si legge a tempo
+         * indeterminato (AC 6), e negarla renderebbe illeggibile proprio cio che la
+         * conclusione esiste per conservare.
+         */
+        $this->assertTrue(Gate::forUser($step->assignedUser)->allows('view', $step));
+        $this->assertTrue(Gate::forUser($administrator)->allows('view', $step));
+    }
+
+    public function test_a_step_of_a_completed_release_refuses_the_closing_invoked_directly(): void
+    {
+        $release = $this->completedRelease();
+        $step = $release->steps->first();
+
+        $this->actingAs($step->assignedUser);
+
+        Log::shouldReceive('warning')->once();
+
+        /*
+         * Il percorso che il middleware non copre: la rotta non porta un `->can()`
+         * (deroga dichiarata al vincolo permanente 12), quindi l'unico controllo su
+         * un'azione Livewire e quello dentro il componente. Il montaggio passa —
+         * `view` e consentita — e cade l'azione.
+         */
+        Livewire::test('releases.step', ['releaseStep' => $step])
+            ->call('close')
+            ->assertForbidden();
+
+        $event = ReleaseEvent::query()
+            ->where('action', ReleaseEventAction::UnauthorizedAttempt)
+            ->first();
+
+        $this->assertNotNull($event, 'Il tentativo su una release conclusa non e finito nel registro.');
+        $this->assertSame($step->id, $event->release_step_id);
+        $this->assertSame('close', $event->payload['ability']);
+
+        // Nulla e cambiato: la release resta conclusa come era.
+        $this->assertSame(ReleaseStatus::Completed, $release->fresh()->status);
+        $this->assertSame(ReleaseStepStatus::Completed, $step->fresh()->status);
+    }
+
+    public function test_reading_a_step_of_a_completed_release_leaves_no_attempt_in_the_register(): void
+    {
+        /*
+         * L'altro lato della stessa moneta: la consultazione passa da `view`, che e
+         * consentita, e non deve lasciare righe di tentativo. Senza questa prova, le
+         * righe legittime del test precedente sembrerebbero un difetto a chi legge
+         * il registro piu avanti.
+         */
+        $release = $this->completedRelease();
+        $step = $release->steps->first();
+
+        $this->actingAs($step->assignedUser);
+
+        $this->get(route('releases.step', $step))->assertOk();
+
+        $this->assertSame(
+            0,
+            ReleaseEvent::query()->where('action', ReleaseEventAction::UnauthorizedAttempt)->count()
+        );
+    }
+
     public function test_another_member_cannot_open_the_step_page(): void
     {
         $step = $this->activeStep();
@@ -282,6 +363,30 @@ class ReleaseStepPolicyTest extends TestCase
     private function activeStep(): ReleaseStep
     {
         return $this->releaseInProgress()->steps->first();
+    }
+
+    /**
+     * Release conclusa nella sua forma reale: due step chiusi e nessuno attivo.
+     */
+    private function completedRelease(): Release
+    {
+        $release = Release::factory()->completed()->create();
+
+        foreach ([1, 2] as $position) {
+            $step = ReleaseStep::factory()->for($release)->completed()->create([
+                'position' => $position,
+                'assigned_user_id' => User::factory()->create()->id,
+            ]);
+
+            ReleaseStepField::factory()->for($step)->create([
+                'position' => 1,
+                'type' => FieldType::ShortText,
+                'is_required' => true,
+                'value' => '2.4.0',
+            ]);
+        }
+
+        return $release->load('steps.fields', 'steps.assignedUser');
     }
 
     /**

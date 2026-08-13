@@ -3,6 +3,7 @@
 namespace Tests\Feature\Releases;
 
 use App\Enums\FieldType;
+use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseStepStatus;
 use App\Models\Release;
 use App\Models\ReleaseEvent;
@@ -198,7 +199,7 @@ class CloseStepScreenTest extends TestCase
         $this->assertSame(0, ReleaseEvent::count());
     }
 
-    public function test_the_last_step_of_the_chain_explains_that_it_cannot_be_closed_yet(): void
+    public function test_the_last_step_of_the_chain_hands_the_release_over_as_delivered(): void
     {
         $release = $this->releaseInProgress(steps: 1);
         $step = $release->steps->first();
@@ -207,19 +208,58 @@ class CloseStepScreenTest extends TestCase
 
         $component = Livewire::test('releases.step', ['releaseStep' => $step]);
 
+        // La schermata annuncia la consegna gia prima dell'invio: chiudere questo
+        // step non passa il flusso a nessuno, lo conclude.
         $component->assertSee(__('releases.step_hands_over_last'));
+        // E dice che la chiusura e definitiva: e la frase che tiene fede a FR-019.
+        $component->assertSee(__('releases.step_closing_is_final'));
 
         foreach ($this->validValuesFor($step) as $field => $value) {
             $component->set('values.'.$field, $value);
         }
 
-        // Il rifiuto e un messaggio, mai un 500.
         $component->call('close')
             ->assertHasNoErrors()
-            ->assertSee(__('releases.closing_last_step'));
+            ->assertSee(__('releases.step_release_completed_heading'));
 
-        $this->assertSame(ReleaseStepStatus::Active, $step->fresh()->status);
-        $this->assertSame(0, ReleaseEvent::count());
+        $this->assertSame(ReleaseStatus::Completed, $release->fresh()->status);
+        $this->assertSame(ReleaseStepStatus::Completed, $step->fresh()->status);
+
+        /*
+         * Dopo la consegna la pagina non offre piu alcun comando sullo step (AC 7):
+         * ne la chiusura ne il salvataggio, e nessun testo lascia intendere che il
+         * passaggio possa essere riaperto.
+         */
+        $component->assertDontSee(__('releases.step_close_action'));
+        $component->assertDontSee(__('releases.step_save_action'));
+    }
+
+    public function test_a_step_reached_after_the_delivery_says_the_whole_release_is_closed(): void
+    {
+        $release = $this->releaseInProgress(steps: 1);
+        $step = $release->steps->first();
+
+        $this->actingAs($step->assignedUser);
+
+        $component = Livewire::test('releases.step', ['releaseStep' => $step]);
+
+        foreach ($this->validValuesFor($step) as $field => $value) {
+            $component->set('values.'.$field, $value);
+        }
+
+        $component->call('close')->assertHasNoErrors();
+
+        // Chi torna dopo, da un collegamento salvato, non ha visto l'annuncio: la
+        // pagina deve dirgli che e chiuso il rilascio intero, non solo il suo
+        // passaggio.
+        $release = $release->fresh();
+
+        $this->get(route('releases.step', $step))
+            ->assertOk()
+            ->assertSee(__('releases.step_release_completed_notice', [
+                'release' => $release->label,
+                'date' => $release->completed_at->format('d/m/Y H:i'),
+            ]));
     }
 
     public function test_a_blocked_step_offers_no_form_and_says_who_is_awaited(): void

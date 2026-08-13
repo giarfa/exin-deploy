@@ -24,9 +24,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * scrittura che passa da un modello, non per le scritture di massa del query
  * builder, che non attraversano gli eventi Eloquent.
  *
- * Questa spec vi scrive un solo tipo di evento — l'avvio della release. Il
- * vocabolario completo vive in `App\Enums\ReleaseEventAction`; la consultazione
- * del registro appartiene a US-010.
+ * Il vocabolario degli eventi vive in `App\Enums\ReleaseEventAction`, oggi scritto
+ * per intero: avvio, chiusura di uno step, attivazione del successivo, conclusione
+ * della release e tentativo non autorizzato. La consultazione del registro
+ * appartiene a US-010.
  *
  * @property ReleaseEventAction $action
  * @property array<string, mixed>|null $payload
@@ -81,8 +82,12 @@ class ReleaseEvent extends Model
     }
 
     /**
-     * Step interessato dall'evento; `null` per avvio e conclusione, che
-     * riguardano la release nel suo insieme.
+     * Step interessato dall'evento; `null` per l'avvio, che riguarda la release nel
+     * suo insieme e precede ogni step.
+     *
+     * La conclusione invece **porta** lo step finale: e da li che la consegna e
+     * avvenuta, e leggere il registro senza quel riferimento lascerebbe la riga piu
+     * importante senza il passaggio che l'ha prodotta.
      *
      * @return BelongsTo<ReleaseStep, $this>
      */

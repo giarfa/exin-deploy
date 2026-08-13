@@ -4,8 +4,8 @@ use App\Actions\Releases\CloseStep;
 use App\Actions\Releases\RecordUnauthorizedStepAttempt;
 use App\Actions\Releases\SaveStepValues;
 use App\Enums\FieldType;
+use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseStepStatus;
-use App\Exceptions\ReleaseCompletionIsNotAvailableYet;
 use App\Exceptions\StepAlreadyClosed;
 use App\Exceptions\StepIsNotOpen;
 use App\Exceptions\StepValuesAreInvalid;
@@ -14,6 +14,7 @@ use App\Models\ReleaseStepField;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -49,13 +50,23 @@ new class extends Component
      */
     public array $values = [];
 
+    /*
+     * Esiti dell'ultima operazione. `#[Locked]` perche li decide **solo** il
+     * server: senza, una richiesta costruita a mano potrebbe far comparire
+     * l'annuncio della consegna senza che alcuna chiusura sia avvenuta, e questa
+     * schermata ha il compito di testimoniarla.
+     */
+
     /** Motivo del rifiuto dell'ultima operazione, quando non riguarda un campo. */
+    #[Locked]
     public ?string $operationError = null;
 
     /** Conferma dell'ultima bozza salvata. */
+    #[Locked]
     public bool $saved = false;
 
     /** Chiusura avvenuta in questa sessione di pagina. */
+    #[Locked]
     public bool $closed = false;
 
     public function mount(): void
@@ -183,12 +194,11 @@ new class extends Component
             $this->refuse(__($refused->reasonKey));
 
             return;
-        } catch (StepAlreadyClosed) {
-            $this->refuse(__('releases.closing_already_closed'));
-
-            return;
-        } catch (ReleaseCompletionIsNotAvailableYet) {
-            $this->refuse(__('releases.closing_last_step'));
+        } catch (StepAlreadyClosed $refused) {
+            // Dal `reasonKey` e non da una chiave scritta a mano: il doppio invio
+            // dell'ultimo step ha concluso la release, e dirgli che "il flusso e
+            // passato al responsabile successivo" sarebbe falso.
+            $this->refuse(__($refused->reasonKey));
 
             return;
         }
@@ -302,14 +312,27 @@ new class extends Component
     </div>
 
     @if ($closed)
+        {{-- Un riquadro solo, con due esiti diversi: la catena prosegue e il flusso
+             passa a qualcuno, oppure finisce e il rilascio e consegnato. Nessun
+             comando in nessuno dei due casi — la riapertura di uno step non e
+             prevista (FR-019) e la schermata non deve lasciar credere il contrario. --}}
         <flux:callout variant="success" icon="check-circle" class="mb-6" aria-live="polite">
-            {{ __('releases.step_closed_heading') }}
-
             @if ($this->nextStep)
+                {{ __('releases.step_closed_heading') }}
+
                 <div class="mt-1">
                     {{ __('releases.step_closed_handed_over', [
                         'name' => $this->nextStep->assignedUser->name,
                         'step' => $this->nextStep->name,
+                    ]) }}
+                </div>
+            @else
+                {{ __('releases.step_release_completed_heading') }}
+
+                <div class="mt-1">
+                    {{ __('releases.step_release_completed_announced', [
+                        'release' => $releaseStep->release->label,
+                        'date' => $releaseStep->release->completed_at?->format('d/m/Y H:i'),
                     ]) }}
                 </div>
             @endif
@@ -394,6 +417,20 @@ new class extends Component
                     'date' => $releaseStep->completed_at?->format('d/m/Y H:i'),
                 ]) }}
             </flux:text>
+
+            @if ($releaseStep->release->status === ReleaseStatus::Completed && ! $closed)
+                {{-- Lo stato del rilascio accanto a quello del passaggio: chi arriva
+                     da un collegamento salvato deve capire che e chiuso il rilascio
+                     intero, non soltanto il proprio step. Non a chi ha appena
+                     chiuso: il riquadro sopra glielo ha gia detto, e ripeterlo a
+                     poche righe di distanza a 375 px si legge come un errore. --}}
+                <flux:text class="text-sm">
+                    {{ __('releases.step_release_completed_notice', [
+                        'release' => $releaseStep->release->label,
+                        'date' => $releaseStep->release->completed_at?->format('d/m/Y H:i'),
+                    ]) }}
+                </flux:text>
+            @endif
 
             <flux:separator variant="subtle" />
 

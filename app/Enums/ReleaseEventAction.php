@@ -5,15 +5,16 @@ namespace App\Enums;
 /**
  * Vocabolario degli eventi registrati nel registro delle transizioni (FR-016).
  *
- * Nasce **completo** anche se questa spec ne scrive uno solo, e non e una
+ * Nasce **completo** anche se la prima spec ne scriveva uno solo, e non e una
  * previsione: questi valori finiscono in colonna e sopravvivono nello storico,
- * quindi rinominarli piu avanti — quando esisteranno gia righe scritte —
+ * quindi rinominarli piu avanti — quando esistono gia righe scritte —
  * costringerebbe a una migrazione di dati del tutto evitabile.
  *
  * Chi scrive cosa: `ReleaseStarted` e di US-004; `StepCompleted`, `StepActivated`
  * e `UnauthorizedAttempt` di US-005 (rispettivamente `CloseStep` e
- * `RecordUnauthorizedStepAttempt`); `ReleaseCompleted` di US-006. La consultazione
- * del registro appartiene a US-010.
+ * `RecordUnauthorizedStepAttempt`); `ReleaseCompleted` lo scrive lo stesso
+ * `CloseStep` sul ramo terminale della catena (US-006). La consultazione del
+ * registro appartiene a US-010.
  */
 enum ReleaseEventAction: string
 {
