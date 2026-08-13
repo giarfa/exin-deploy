@@ -276,6 +276,36 @@ class CloseStepScreenTest extends TestCase
         $response->assertDontSee(__('releases.step_close_action'));
     }
 
+    public function test_a_stored_link_that_is_not_http_is_shown_as_text_and_not_as_a_link(): void
+    {
+        /*
+         * `WellFormedLink` garantisce lo schema in scrittura, ma una riga arrivata da
+         * un import o da una correzione a mano sul database non passa da quella
+         * regola. Un `javascript:` reso come `href` sarebbe una superficie offerta a
+         * chi consulta lo storico dei rilasci.
+         */
+        $release = $this->releaseInProgress();
+        $step = $release->steps->first();
+        $link = $step->fields->firstWhere('type', FieldType::Link);
+
+        $step->update([
+            'status' => ReleaseStepStatus::Completed,
+            'completed_by' => $step->assigned_user_id,
+            'completed_at' => now(),
+        ]);
+
+        // Scrittura di massa dal query builder: aggira i modelli, come farebbe un
+        // import.
+        ReleaseStepField::query()->whereKey($link->id)->update(['value' => 'javascript:alert(1)']);
+
+        $this->actingAs($step->assignedUser);
+
+        $response = $this->get(route('releases.step', $step->fresh()))->assertOk();
+
+        $response->assertSee('javascript:alert(1)');
+        $response->assertDontSee('href="javascript:alert(1)"', escape: false);
+    }
+
     public function test_the_screen_does_not_query_per_field(): void
     {
         // Uno step del template dimostrativo ha quattordici campi: senza eager

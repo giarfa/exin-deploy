@@ -12,6 +12,7 @@ use App\Exceptions\StepValuesAreInvalid;
 use App\Models\ReleaseStep;
 use App\Models\ReleaseStepField;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -413,8 +414,23 @@ new class extends Component
                                     <flux:icon name="check-circle" variant="mini" class="size-4 shrink-0" />
                                     {{ __('releases.step_value_confirmed') }}
                                 </span>
-                            @elseif ($field->type === FieldType::Link)
-                                <flux:link :href="$field->value" external>{{ $field->value }}</flux:link>
+                            @elseif ($field->type === FieldType::Link && Str::startsWith($field->value, ['http://', 'https://']))
+                                {{--
+                                    Lo schema viene verificato **anche** qui, dove il
+                                    valore diventa un collegamento cliccabile:
+                                    `WellFormedLink` lo garantisce in scrittura, ma
+                                    una riga arrivata da un import o da una
+                                    correzione a mano sul database non passa da
+                                    quella regola, e un `javascript:` reso come href
+                                    sarebbe una superficie offerta a chi consulta lo
+                                    storico. Un valore non conforme resta leggibile
+                                    come testo.
+
+                                    `rel` esplicito: i browser recenti implicano
+                                    `noopener` su `target="_blank"`, ma dichiararlo
+                                    non dipende dalla versione di chi legge.
+                                --}}
+                                <flux:link :href="$field->value" external rel="noopener noreferrer">{{ $field->value }}</flux:link>
                             @else
                                 {{ $field->value }}
                             @endif
@@ -429,7 +445,16 @@ new class extends Component
 
             <flux:separator variant="subtle" />
 
-            <form wire:submit="close" class="space-y-6">
+            {{--
+                `novalidate` come nel mockup, e non e una rinuncia: un campo di tipo
+                link e reso con `type="url"` per avere la tastiera giusta sul
+                telefono, ma la validazione nativa del browser bloccherebbe l'invio
+                **prima** che l'evento arrivi a Livewire. Il rifiuto sarebbe un
+                fumetto di sistema che dice "inserisci un URL", al posto del
+                messaggio che dice cosa correggere. La validazione che conta e
+                comunque quella lato server.
+            --}}
+            <form wire:submit="close" class="space-y-6" novalidate>
                 @foreach ($this->fields as $field)
                     @php
                         $path = 'values.'.$field->id;

@@ -125,7 +125,10 @@ class ReleaseStepField extends Model
             return filter_var($value, FILTER_VALIDATE_BOOLEAN) ? '1' : null;
         }
 
-        if ($value === null || is_bool($value) || is_array($value)) {
+        // Un valore che non e un numero o una stringa non e un testo compilato: un
+        // booleano su un campo di testo, un array arrivato da una richiesta
+        // manomessa. Il cast lo tratterebbe come contenuto, o solleverebbe.
+        if (! is_scalar($value) || is_bool($value)) {
             return null;
         }
 
