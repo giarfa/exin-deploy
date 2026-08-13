@@ -495,10 +495,10 @@ tasks:
       7. `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] Quattro eccezioni di dominio, ciascuna con il proprio messaggio
-      - [ ] `ReleaseStepPolicy` nega `fill` e `close` su step bloccato o completato anche all'amministratore
-      - [ ] Il PHPDoc di `ReleaseCompletionIsNotAvailableYet` dichiara il confine con US-006
-      - [ ] Nessun messaggio incastonato nel codice
+      - [x] Quattro eccezioni di dominio, ciascuna con il proprio messaggio
+      - [x] `ReleaseStepPolicy` nega `fill` e `close` su step bloccato o completato anche all'amministratore
+      - [x] Il PHPDoc di `ReleaseCompletionIsNotAvailableYet` dichiara il confine con US-006
+      - [x] Nessun messaggio incastonato nel codice
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -508,9 +508,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: 16929f212579d35fb15581e51080e3176a88aff7
+      short_sha: 16929f2
+      subject: 'feat(US-005): TASK-04 eccezioni di dominio e Policy dello step'
+      committed_at: '2026-08-13T11:11:18+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Action CloseStep: transazione unica, compare-and-swap e avanzamento'
@@ -942,4 +948,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-12
-updated_at: '2026-08-13T09:09:31+00:00'
+updated_at: '2026-08-13T09:11:18+00:00'
