@@ -164,6 +164,37 @@ class Release extends Model
     }
 
     /**
+     * Release gia consegnate: lo storico dei rilasci.
+     *
+     * Simmetrico a `inProgress()` e non una condizione scritta a mano nella
+     * schermata: cosa significhi "conclusa" resta deciso in un posto solo, come per
+     * "in corso". Quando FR-020 aggiungera l'annullamento, l'elenco seguira senza
+     * essere toccato — mentre due copie della condizione divergerebbero.
+     */
+    #[Scope]
+    protected function completed(Builder $query): void
+    {
+        $query->where('status', ReleaseStatus::Completed);
+    }
+
+    /**
+     * Release di un progetto, oppure di tutti quando il filtro non e impostato.
+     *
+     * L'argomento nullo lascia la query intatta di proposito: chi filtra non deve
+     * costruire la propria interrogazione in due rami, che e il punto in cui le due
+     * versioni cominciano a divergere.
+     *
+     * Usa il prefisso dell'indice unico `(project_id, label)` creato con la tabella:
+     * un secondo indice sul solo `project_id` sarebbe ridondante.
+     */
+    #[Scope]
+    protected function forProject(Builder $query, ?string $projectId): void
+    {
+        $query->when($projectId !== null && $projectId !== '',
+            fn (Builder $filtered) => $filtered->where('project_id', $projectId));
+    }
+
+    /**
      * Release che coinvolgono una persona: quelle in cui le e stato assegnato
      * almeno uno step, **in qualunque stato**.
      *

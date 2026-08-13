@@ -161,7 +161,7 @@ tasks:
     id: TASK-01
     title: "Apre l'elenco alle persone e registra la rotta"
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |-
@@ -202,10 +202,10 @@ tasks:
       6. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=Release`
 
       ## Completion Criteria
-      - [ ] Un membro non amministratore raggiunge `/rilasci`; un utente anonimo viene rediretto al login
-      - [ ] La voce "Release" della sidebar non e piu marcata "in arrivo"
-      - [ ] `delete` resta negata a chiunque
-      - [ ] Pint e Larastan (livello 5) passano
+      - [x] Un membro non amministratore raggiunge `/rilasci`; un utente anonimo viene rediretto al login
+      - [x] La voce "Release" della sidebar non e piu marcata "in arrivo"
+      - [x] `delete` resta negata a chiunque
+      - [x] Pint e Larastan (livello 5) passano
 
       ## Test Data
       - N/A — nessuna modifica di modelli o schema
@@ -214,6 +214,12 @@ tasks:
       - Commit: `feat(US-009): TASK-01 apre l'elenco delle release e registra la rotta`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: 1f14ad4e93f6b72d8e5f2f3f8614aa43d8beed2a
+      short_sha: 1f14ad4
+      subject: "feat(US-009): TASK-01 apre l'elenco delle release e registra la rotta"
+      committed_at: '2026-08-13T23:58:07+02:00'
+      url: null
   -
     id: TASK-02
     title: "Scope di lettura per l'elenco e per lo storico"
@@ -478,4 +484,4 @@ tasks:
       - Commit: `docs(US-009): TASK-07 changelog, README e regola sull'elenco delle release`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T21:55:23+00:00'
+updated_at: '2026-08-13T21:58:07+00:00'

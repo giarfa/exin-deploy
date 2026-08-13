@@ -12,6 +12,7 @@ use App\Models\ReleaseStepField;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -155,6 +156,35 @@ class ReleaseSchemaConstraintsTest extends TestCase
         DB::table('release_steps')->where('id', $field->release_step_id)->delete();
 
         $this->assertDatabaseMissing('release_step_fields', ['id' => $field->id]);
+    }
+
+    public function test_the_list_filters_are_backed_by_indexes(): void
+    {
+        /*
+         * L'elenco filtra per stato e per progetto (US-009): senza indice ogni
+         * filtro diventa una scansione dell'intero storico, che cresce senza limite
+         * di data per criterio di accettazione.
+         *
+         * L'indice sul progetto e il **prefisso** dell'unico `(project_id, label)`
+         * creato con la tabella, e vale come tale su SQLite, MySQL e PostgreSQL: un
+         * secondo indice sul solo `project_id` sarebbe ridondante. Il test asserisce
+         * quindi la prima colonna, non l'esistenza di un indice dedicato — chi
+         * aggiungesse il duplicato lo farebbe pensando che qui manchi qualcosa.
+         *
+         * `Schema::getIndexes()` e portabile: nessuna interrogazione di
+         * `sqlite_master` (vincolo permanente 1).
+         */
+        $indexes = collect(Schema::getIndexes('releases'));
+
+        $this->assertTrue(
+            $indexes->contains(fn (array $index): bool => $index['columns'] === ['status']),
+            'Manca l\'indice su releases.status: il filtro per stato scandirebbe l\'intero storico.'
+        );
+
+        $this->assertTrue(
+            $indexes->contains(fn (array $index): bool => ($index['columns'][0] ?? null) === 'project_id'),
+            'Nessun indice comincia da releases.project_id: il filtro per progetto scandirebbe l\'intero storico.'
+        );
     }
 
     public function test_the_factory_keeps_the_release_template_aligned_with_its_project(): void
