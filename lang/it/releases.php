@@ -47,4 +47,15 @@ return [
      */
 
     'duplicate_label' => 'Esiste gia una release con etichetta :label su questo progetto.',
+
+    /*
+     * Chiusura di uno step (US-005). I rifiuti sono distinti perche si risolvono in
+     * modi diversi: il primo non si risolve, il secondo si aspetta, il terzo si
+     * legge. Le chiavi arrivano dalle eccezioni di dominio, che le portano con se.
+     */
+    'closing_blocked_release_completed' => 'La release e conclusa: non ci sono piu step da chiudere.',
+    'closing_blocked_step_blocked' => 'Questo step non e ancora aperto: si attende la chiusura di quelli che lo precedono.',
+    'closing_blocked_step_completed' => 'Questo step e gia stato chiuso: i valori forniti sono in sola lettura.',
+    'closing_already_closed' => 'Lo step e stato chiuso da un altro invio: l\'avanzamento e avvenuto una sola volta, e il flusso e gia passato al responsabile successivo.',
+    'closing_last_step' => 'Questo e l\'ultimo step della catena e la conclusione del rilascio non e ancora disponibile: lo step resta aperto e in carico a te.',
 ];
