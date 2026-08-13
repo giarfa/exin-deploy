@@ -358,7 +358,7 @@ specs:
       title: 'Visibilità e tracciabilità'
     priority: HIGH
     points: 5
-    status: 'IN PROGRESS'
+    status: REVIEW
     body: |
       #### US-008: Dettaglio della release con catena e informazioni fornite
 
@@ -389,6 +389,7 @@ specs:
     status_history:
       - { status: PLANNED, at: '2026-08-13T20:59:05+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-13T21:04:43+00:00' }
+      - { status: REVIEW, at: '2026-08-13T21:25:36+00:00' }
     rework: false
   -
     code: US-009
