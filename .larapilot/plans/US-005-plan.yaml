@@ -604,10 +604,10 @@ tasks:
       6. `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] I valori vengono salvati senza chiudere lo step ne attivare il successivo
-      - [ ] Nessuna riga scritta nel registro delle transizioni
-      - [ ] Un campo obbligatorio vuoto non impedisce il salvataggio; un link malformato si
-      - [ ] Le regole di forma sono riusate da `closingRules()`, non riscritte
+      - [x] I valori vengono salvati senza chiudere lo step ne attivare il successivo
+      - [x] Nessuna riga scritta nel registro delle transizioni
+      - [x] Un campo obbligatorio vuoto non impedisce il salvataggio; un link malformato si
+      - [x] Le regole di forma sono riusate da `closingRules()`, non riscritte
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -617,9 +617,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
+    commit:
+      sha: 8578a35e60252f379dab69a9cda508c2c9212403
+      short_sha: 8578a35
+      subject: 'feat(US-005): TASK-06 salvataggio dei valori senza chiusura'
+      committed_at: '2026-08-13T11:14:25+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Registrazione del tentativo non autorizzato: registro e log applicativo'
@@ -954,4 +960,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-12
-updated_at: '2026-08-13T09:13:28+00:00'
+updated_at: '2026-08-13T09:14:25+00:00'
