@@ -283,19 +283,25 @@ tasks:
       6. Se un'asserzione sulla risposta fallisce in modo incomprensibile ("Call to a member function all() on array"), leggi `.ai/rules/tests.md`: e l'arricchimento del messaggio di Laravel, non il difetto.
 
       ## Completion Criteria
-      - [ ] Test verdi in locale
-      - [ ] Ogni criterio di accettazione di US-007 ha almeno un'asserzione che lo dimostra
-      - [ ] Il caso dell'amministratore e coperto esplicitamente
-      - [ ] Nessuna suite browser o di viewport introdotta
+      - [x] Test verdi in locale
+      - [x] Ogni criterio di accettazione di US-007 ha almeno un'asserzione che lo dimostra
+      - [x] Il caso dell'amministratore e coperto esplicitamente
+      - [x] Nessuna suite browser o di viewport introdotta
 
       ## Git Deliverables
       - Commit: `test(US-007): TASK-03 copertura della schermata i miei step`
       - Push: **da non eseguire** (`git_mode: GITFLOW`)
       - PR: aggiorna le note locali della PR
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: 223caef3d5532f5149282c5cc0e1eaf7c9062377
+      short_sha: 223caef
+      subject: 'test(US-007): TASK-03 copertura della schermata i miei step'
+      committed_at: '2026-08-13T19:38:10+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Budget di query: nessun N+1 su step in attesa e release coinvolte'
@@ -314,19 +320,25 @@ tasks:
       5. `php artisan test --filter=MyStepsQueryBudgetTest`
 
       ## Completion Criteria
-      - [ ] Il costo non cresce con il numero di step in attesa
-      - [ ] Il costo non cresce con il numero di release coinvolte
-      - [ ] L'istante di attivazione non costa una query per riga
-      - [ ] Il messaggio di fallimento dice **quale** eager loading manca, non solo che i numeri differiscono
+      - [x] Il costo non cresce con il numero di step in attesa
+      - [x] Il costo non cresce con il numero di release coinvolte
+      - [x] L'istante di attivazione non costa una query per riga
+      - [x] Il messaggio di fallimento dice **quale** eager loading manca, non solo che i numeri differiscono
 
       ## Git Deliverables
       - Commit: `test(US-007): TASK-04 budget di query della vista operativa`
       - Push: **da non eseguire** (`git_mode: GITFLOW`)
       - PR: aggiorna le note locali della PR
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: 533b04fcf1348aeeaca933d8e874f10e46d95acd
+      short_sha: 533b04f
+      subject: 'test(US-007): TASK-04 budget di query della vista operativa'
+      committed_at: '2026-08-13T19:39:20+02:00'
+      url: null
   -
     id: TASK-05
     title: 'CHANGELOG e documentazione della schermata di ingresso'
@@ -362,4 +374,4 @@ tasks:
       - TASK-02
       - TASK-03
       - TASK-04
-updated_at: '2026-08-13T17:34:59+00:00'
+updated_at: '2026-08-13T17:39:21+00:00'
