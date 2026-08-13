@@ -336,10 +336,10 @@ tasks:
       6. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
 
       ## Completion Criteria
-      - [ ] `WellFormedLink` rifiuta schema assente, schema non http/https, spazi e host mancante
-      - [ ] Il messaggio nomina i difetti trovati, non un generico "non valido"
-      - [ ] Nessun testo incastonato nella classe: tutto in `lang/it/validation.php`
-      - [ ] Il PHPDoc dichiara che la raggiungibilita non viene verificata, e perche
+      - [x] `WellFormedLink` rifiuta schema assente, schema non http/https, spazi e host mancante
+      - [x] Il messaggio nomina i difetti trovati, non un generico "non valido"
+      - [x] Nessun testo incastonato nella classe: tutto in `lang/it/validation.php`
+      - [x] Il PHPDoc dichiara che la raggiungibilita non viene verificata, e perche
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -349,9 +349,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione locale
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: 368ae4f30b49be97efc2382e5559b75173018c6b
+      short_sha: 368ae4f
+      subject: 'feat(US-005): TASK-01 regola di validazione dei campi link'
+      committed_at: '2026-08-13T11:03:31+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Regole di chiusura e normalizzazione del valore sullo snapshot'
@@ -924,4 +930,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-12
-updated_at: '2026-08-13T09:01:11+00:00'
+updated_at: '2026-08-13T09:03:31+00:00'

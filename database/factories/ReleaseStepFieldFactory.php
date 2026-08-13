@@ -155,6 +155,42 @@ class ReleaseStepFieldFactory extends Factory
     }
 
     /**
+     * Campo gia compilato, con un valore **coerente col proprio tipo**.
+     *
+     * Non e una comodita: un campo di tipo link con valore `"lorem ipsum"`
+     * descriverebbe uno stato che la chiusura non puo produrre — la validazione lo
+     * rifiuterebbe — e un test scritto su quello dimostrerebbe qualcosa che non
+     * esiste. Stessa disciplina con cui `ReleaseStepFactory::completed()` allinea
+     * `completed_by` al responsabile.
+     *
+     * Il valore e risolto in una closure e non subito: cosi resta corretto anche
+     * quando `filled()` viene applicato prima dello stato che decide il tipo
+     * (`->filled()->link()`), perche le closure di attributo sono valutate a stati
+     * gia fusi.
+     */
+    public function filled(?string $value = null): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'value' => function (array $attributes) use ($value): string {
+                if ($value !== null) {
+                    return $value;
+                }
+
+                $type = $attributes['type'] instanceof FieldType
+                    ? $attributes['type']
+                    : FieldType::from((string) $attributes['type']);
+
+                return match ($type) {
+                    FieldType::ShortText => '2.4.0',
+                    FieldType::LongText => '312 test eseguiti, 310 verdi. Due fallimenti non bloccanti sull\'esportazione PDF, gia tracciati.',
+                    FieldType::Link => 'https://ci.gruppoexcellence.com/pipeline/4471',
+                    FieldType::Confirmation => '1',
+                };
+            },
+        ]);
+    }
+
+    /**
      * Campo facoltativo: la sua assenza non impedira di chiudere lo step.
      */
     public function optional(): static
