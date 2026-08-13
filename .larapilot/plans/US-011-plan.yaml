@@ -1,0 +1,274 @@
+code: US-011
+plan_body: |-
+  ## Soluzione tecnica
+
+  `DatabaseSeeder` semina gia team, ruoli, template, progetti e mappature. Manca lo scenario di
+  **esecuzione**: una release a meta catena e una conclusa, con i valori forniti e il registro
+  delle transizioni popolato. Nessuna nuova factory e nessuna migrazione: le factory dei singoli
+  modelli restano di competenza delle rispettive spec, qui si compone lo scenario.
+
+  **Lo scenario passa dalle Action reali** — `StartRelease` e `CloseStep` — e non da scritture
+  esplicite. E una **deroga dichiarata** alla convenzione che il seeder stesso enuncia ("descrive
+  lo stato finale voluto invece di simulare il percorso dell'interfaccia"), e la ragione e che
+  qui le due cose non coincidono:
+
+  - la configurazione e uno **stato**: quale template e predefinito, chi copre quale ruolo. Si
+    dichiara, e dichiararlo e piu chiaro che ricostruirlo;
+  - un rilascio e un **processo**: il suo stato *e* la sequenza di transizioni che lo ha
+    prodotto. Scriverlo a mano significherebbe replicare nel seeder lo snapshot, la risoluzione
+    dei responsabili, l'invariante dello step attivo unico, i valori congelati e i payload di
+    cinque tipi di evento — cioe reimplementare il dominio in un secondo posto, destinato a
+    divergere al primo cambiamento. Il criterio "registro popolato" e proprio quello che una
+    scrittura a mano falsificherebbe meglio: righe di forma giusta e contenuto inventato.
+
+  Il seeder resta quindi dichiarativo sui **dati** (chi rilascia cosa, con quali valori) e
+  delegante sul **comportamento**.
+
+  **Scenario prodotto:**
+
+  | Release | Progetto | Stato |
+  | --- | --- | --- |
+  | `v2.4.0` | Portale Clienti | in corso: primo step chiuso con valori realistici, secondo attivo |
+  | `v2.3.0` | Portale Clienti | conclusa: tutti e cinque gli step chiusi, registro completo |
+  | `2026.08.1` | Gestionale Magazzino | in corso: appena avviata, primo step attivo |
+
+  La terza non e un di piu: e l'unica forma in cui lo step attivo e il **primo** della catena,
+  dove `ReleaseStep::activationInstant()` ripiega su `release.started_at`. E il ramo che le
+  schermate operative percorrono su ogni rilascio appena avviato, e un ambiente dimostrativo che
+  non lo contenesse lo lascerebbe non verificabile a mano.
+
+  **Istanti** — le release non nascono tutte "adesso": il seeder le sposta indietro nel tempo
+  (`started_at`, `completed_at` degli step) cosi che le schermate mostrino durate plausibili —
+  "aperto da 2 giorni" invece di "aperto da 0 secondi", e uno storico con date distinte da
+  ordinare. Le colonne di conclusione non sono assegnabili in massa e vanno scritte con
+  `forceFill` (vedi `.ai/rules/tests.md`), oppure lasciate all'Action che le possiede.
+
+  **Valori dei campi** — coerenti col tipo e col dominio: un link e un indirizzo `https://`, una
+  conferma e spuntata, i testi sono frasi di rilascio vere. Nessun `lorem ipsum`, che il criterio
+  esclude esplicitamente.
+
+  ## Decisioni
+
+  **Le release del seeder non usano il template disattivato.** "Rilascio urgente" resta senza
+  release: e li per dimostrare il filtro dell'elenco template e la sostituibilita del processo,
+  e avviarci sopra una release ne farebbe un caso che l'applicazione non permette di creare
+  (`StartRelease` rifiuta un template disattivato).
+
+  **Un solo membro disattivato, e senza ruoli sui progetti.** Paolo Venturi resta fuori dalle
+  mappature: assegnargli un ruolo renderebbe i progetti non avviabili e il primo comando che
+  chiunque prova in ambiente dimostrativo — "avvia una release" — risponderebbe con un rifiuto.
+
+  **Nessun tentativo non autorizzato seminato.** Il registro dimostrativo contiene le quattro
+  transizioni di processo ma non un tentativo rifiutato: seminare la traccia di qualcuno che ha
+  provato a fare qualcosa che non poteva, con il nome di una persona reale del team
+  dimostrativo, e una riga che in un ambiente condiviso si presta a essere letta male. Chi vuole
+  vederla la produce in trenta secondi aprendo uno step altrui.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` (nessun push automatico)
+  - Precondizione: US-009 e US-010 sono in `REVIEW` e non ancora integrate — TASK-00 rami dalla
+    punta di US-010, perche lo scenario dimostrativo popola il registro che quella spec rende
+    consultabile e va verificato sulle schermate che entrambe hanno introdotto
+  - Branch: `feature/US-011-ambiente-dimostrativo` dalla punta di US-010
+  - Un solo commit per task, Conventional Commits con codice spec e task
+  - PR verso `develop` preparata localmente; nessun push finche l'utente non lo chiede
+
+  ## Strategia dei dati di prova
+
+  - **Nessuna nuova factory**: il criterio lo dice esplicitamente. Gli stati esistenti bastano,
+    e lo scenario passa dalle Action.
+  - `php artisan migrate:fresh --seed` deve completare senza errori ed essere **ripetibile**.
+  - Attenzione a `WithoutModelEvents` gia attivo sul seeder: verificare che le Action producano
+    comunque chiavi UUID e righe di registro, e rimuoverlo se lo impedisce — documentando il
+    perche.
+
+  ## Strategia di test
+
+  - Bar: `NORMAL` — Pest/PHPUnit feature.
+  - `DatabaseSeederTest` — esegue il seeder e verifica lo scenario: numeri e livelli dei membri,
+    progetti con mappatura completa, template con cinque step e quattro tipi di campo, una
+    release a meta catena con il secondo step attivo e valori sul primo, una conclusa con
+    registro popolato, una appena avviata.
+  - Verifiche di coerenza che valgono piu dei conteggi: **nessun record orfano** (nessuno step
+    senza responsabile, nessun campo obbligatorio vuoto su uno step chiuso), **nessun lorem
+    ipsum** in alcun campo di testo seminato, e l'invariante di dominio — al massimo uno step
+    attivo per release, zero sulle concluse.
+  - Il seeder e eseguito **una volta sola** per classe di test dove possibile: e l'operazione
+    piu lenta della suite.
+
+  ## Verifica manuale (handoff)
+
+  1. `php artisan migrate:fresh --seed`, accedi come `f.giarola@gruppoexcellence.com`.
+  2. "I miei step" deve mostrare qualcosa in carico e il blocco delle release in attesa
+     popolato; l'elenco deve avere due sezioni non vuote; il dettaglio di `v2.3.0` deve mostrare
+     la catena tutta chiusa e il suo registro le quattro transizioni.
+  3. Ripeti `migrate:fresh --seed`: deve completare identico, senza errori di unicita.
+tasks:
+  -
+    id: TASK-00
+    title: "Ramo di lavoro per l'ambiente dimostrativo"
+    type: Impl
+    status: TODO
+    dependencies: {}
+    body: |-
+      ## Description
+      Prepara il ramo di lavoro. Lo scenario dimostrativo popola il registro che US-010 rende
+      consultabile e va verificato sulle schermate che US-009 e US-010 hanno introdotto: il ramo
+      nasce quindi dalla punta di US-010, non da `develop`.
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+
+      ## Steps
+      1. `git checkout -b feature/US-011-ambiente-dimostrativo feature/US-010-registro-transizioni`
+      2. Prepara titolo e corpo della PR interna verso `develop` (solo in locale)
+      3. Commit di ancoraggio del ramo
+
+      ## Completion Criteria
+      - [ ] Il ramo esiste in locale e contiene US-009 e US-010
+      - [ ] Descrizione della PR verso `develop` preparata in locale
+
+      ## Test Data
+      - N/A — nessuna modifica di modelli o schema
+
+      ## Git Deliverables
+      - Commit: `chore(US-011): TASK-00 ramo di lavoro per l'ambiente dimostrativo`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: preparata in locale, aperta da remoto solo su richiesta
+  -
+    id: TASK-01
+    title: 'Scenario di esecuzione nel seeder'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+    body: |-
+      ## Description
+      Compone nel `DatabaseSeeder` lo scenario di esecuzione: tre release che coprono le forme che
+      le schermate devono saper mostrare — una a meta catena, una conclusa, una appena avviata.
+
+      Passa dalle **Action reali** e non da scritture esplicite. E una deroga dichiarata alla
+      convenzione del seeder, e va scritta come tale nel codice: la configurazione e uno stato che si
+      dichiara, un rilascio e un processo il cui stato *e* la sequenza di transizioni che lo ha
+      prodotto. Ricostruirlo a mano significherebbe replicare snapshot, risoluzione dei responsabili,
+      invariante dello step attivo e payload di cinque tipi di evento in un secondo posto.
+
+      ## Files Involved
+      - database/seeders/DatabaseSeeder.php
+
+      ## Steps
+      1. Metodo `seedReleases()`, chiamato per ultimo in `run()`.
+      2. Valori per campo **coerenti col tipo e col dominio**: un link e un indirizzo `https://`
+         plausibile, una conferma e spuntata, i testi sono frasi di rilascio vere. Il criterio
+         esclude esplicitamente il lorem ipsum. Indicizzali per **etichetta** del campo e non per
+         posizione: le posizioni sono un dettaglio del template e cambiano, le etichette sono cio
+         che il seeder sta rispondendo.
+      3. Sposta indietro gli istanti (`started_at`, e i `completed_at` degli step chiusi) cosi che
+         le schermate mostrino durate plausibili invece di "aperto da 0 secondi". Le colonne di
+         conclusione non sono assegnabili in massa: `forceFill` (vedi `.ai/rules/tests.md`).
+      4. La terza release — appena avviata, ferma sul **primo** step — non e un di piu: e l'unica
+         forma in cui `activationInstant()` ripiega su `release.started_at`, cioe il ramo che ogni
+         rilascio nuovo percorre. Un ambiente dimostrativo che non lo contenesse lo lascerebbe non
+         verificabile a mano.
+      5. Nessuna release sul template disattivato: `StartRelease` lo rifiuta, e un ambiente
+         dimostrativo che contenga uno stato irriproducibile dall'applicazione mente.
+      6. Verifica `WithoutModelEvents`: se impedisce alle Action di produrre chiavi UUID o righe di
+         registro, va rimosso o circoscritto — documentando il perche nel codice.
+      7. `php artisan migrate:fresh --seed`, due volte di seguito.
+      8. `php artisan larapilot:quality --fix`
+
+      ## Completion Criteria
+      - [ ] `migrate:fresh --seed` completa senza errori, ed e ripetibile
+      - [ ] Una release a meta catena, una conclusa, una appena avviata
+      - [ ] Registro delle transizioni popolato dalle Action, non scritto a mano
+      - [ ] Nessun lorem ipsum, nessun record orfano
+      - [ ] Pint e Larastan (livello 5) passano
+
+      ## Test Data
+      - [ ] Nessuna nuova factory: il criterio riserva le factory dei singoli modelli alle rispettive
+            spec, e qui si compone soltanto lo scenario
+      - [ ] `migrate:fresh --seed` verificato prima di `task-done`
+
+      ## Git Deliverables
+      - Commit: `feat(US-011): TASK-01 scenario di esecuzione nell'ambiente dimostrativo`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+  -
+    id: TASK-02
+    title: 'Copertura dello scenario dimostrativo'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-01
+    body: |-
+      ## Description
+      Il seeder e l'unica parte del progetto che nessun test tocca oggi, ed e quella che ogni nuovo
+      sviluppatore esegue per prima: se si rompe, si rompe nel momento peggiore.
+
+      ## Files Involved
+      - tests/Feature/DatabaseSeederTest.php (nuovo)
+
+      ## Steps
+      1. Esegui il seeder una volta per classe dove possibile: e l'operazione piu lenta della suite.
+      2. Casi sui numeri dichiarati dal criterio: un amministratore e almeno quattro membri con ruoli
+         distinti; due progetti attivi con mappatura completa per il template associato; il template
+         "Rilascio standard" con cinque step e i **quattro** tipi di campo rappresentati.
+      3. Casi sullo scenario di esecuzione: una release in corso con il primo step chiuso e valori
+         presenti e il secondo attivo; una conclusa con tutti gli step chiusi e il registro
+         popolato; l'invariante di dominio — al massimo uno step attivo per release, **zero** sulle
+         concluse.
+      4. Verifiche che valgono piu dei conteggi, perche non si rompono con lo scenario ma con la
+         sua qualita: **nessun record orfano** (nessuno step senza responsabile, nessun campo
+         obbligatorio vuoto su uno step chiuso) e **nessun lorem ipsum** in alcun campo di testo
+         seminato — il criterio lo chiede a parole, e a parole si verifica.
+      5. `php artisan test --filter=DatabaseSeeder`
+
+      ## Completion Criteria
+      - [ ] Ogni criterio di accettazione ha un test
+      - [ ] I test passano
+
+      ## Git Deliverables
+      - Commit: `test(US-011): TASK-02 copertura dello scenario dimostrativo`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+  -
+    id: TASK-03
+    title: 'Changelog, README e regola sul seeder'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-02
+    body: |-
+      ## Description
+      Documentazione di baseline: cosa trova chi esegue il seeder, e perche lo scenario di esecuzione
+      e costruito diversamente dal resto.
+
+      ## Files Involved
+      - CHANGELOG.md
+      - README.md
+      - .ai/rules (tramite `record-rule`)
+
+      ## Steps
+      1. `CHANGELOG.md` Unreleased: ambiente dimostrativo completo (US-011, FR-018), con l'elenco di
+         cio che si trova dopo il seed.
+      2. `README.md`: la sezione di avvio locale dichiara oggi che l'ambiente nasce **senza release**
+         e che per provarne una bisogna avviarla a mano — non e piu vero e va riscritto, altrimenti
+         chi legge cerca un problema che non esiste. Descrivi le tre release e cosa ciascuna serve a
+         dimostrare.
+      3. `record-rule` sul seeder: la distinzione fra configurazione dichiarata e processo delegato
+         alle Action, con la ragione. E la scelta che la prossima revisione leggerebbe come
+         incoerenza — meta seeder scrive stati, meta chiama Action.
+
+      ## Completion Criteria
+      - [ ] Changelog e README aggiornati, senza affermazioni superate
+      - [ ] Regola registrata sul seeder
+
+      ## Test Data
+      - N/A — nessuna modifica di schema
+
+      ## Git Deliverables
+      - Commit: `docs(US-011): TASK-03 changelog, README e regola sull'ambiente dimostrativo`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+updated_at: '2026-08-13T22:41:22+00:00'

@@ -445,7 +445,7 @@ specs:
       title: 'Visibilità e tracciabilità'
     priority: HIGH
     points: 5
-    status: 'IN PROGRESS'
+    status: REVIEW
     body: |
       #### US-010: Registro consultabile delle transizioni
 
@@ -475,6 +475,7 @@ specs:
     status_history:
       - { status: PLANNED, at: '2026-08-13T22:22:14+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-13T22:22:23+00:00' }
+      - { status: REVIEW, at: '2026-08-13T22:39:28+00:00' }
     rework: false
   -
     code: US-011
@@ -484,7 +485,7 @@ specs:
       title: 'Fondamenta e accesso'
     priority: HIGH
     points: 2
-    status: TODO
+    status: 'IN PROGRESS'
     body: |
       #### US-011: Ambiente dimostrativo coerente
 
@@ -510,3 +511,7 @@ specs:
       - [ ] Una release conclusa con tutti gli step completati e il registro delle transizioni popolato
       - [ ] I dati sono in italiano e plausibili per il dominio: nessun lorem ipsum, nessun record orfano
       - [ ] Le factory dei singoli modelli restano di competenza delle rispettive spec: qui si compone lo scenario in `DatabaseSeeder`
+    status_history:
+      - { status: PLANNED, at: '2026-08-13T22:41:22+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-13T22:41:22+00:00' }
+    rework: false
