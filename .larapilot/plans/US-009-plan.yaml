@@ -224,7 +224,7 @@ tasks:
     id: TASK-02
     title: "Scope di lettura per l'elenco e per lo storico"
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
     body: |-
@@ -254,9 +254,9 @@ tasks:
       4. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=ReleaseSchemaConstraints`
 
       ## Completion Criteria
-      - [ ] `Release::completed()` e `forProject()` disponibili e documentati
-      - [ ] Il test di schema verifica entrambi gli indici richiesti dal criterio di accettazione
-      - [ ] Pint e Larastan (livello 5) passano
+      - [x] `Release::completed()` e `forProject()` disponibili e documentati
+      - [x] Il test di schema verifica entrambi gli indici richiesti dal criterio di accettazione
+      - [x] Pint e Larastan (livello 5) passano
 
       ## Test Data
       - N/A — nessuna modifica di schema. `ReleaseFactory::completed()` copre gia lo stato concluso.
@@ -265,6 +265,12 @@ tasks:
       - Commit: `feat(US-009): TASK-02 scope di lettura dell'elenco e verifica degli indici`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: 3534d8267139b5770d03985c55f624266b4a263b
+      short_sha: 3534d82
+      subject: "feat(US-009): TASK-02 scope di lettura dell'elenco e verifica degli indici"
+      committed_at: '2026-08-13T23:59:24+02:00'
+      url: null
   -
     id: TASK-03
     title: "Schermata dell'elenco con filtri per stato e progetto"
@@ -484,4 +490,4 @@ tasks:
       - Commit: `docs(US-009): TASK-07 changelog, README e regola sull'elenco delle release`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T21:58:07+00:00'
+updated_at: '2026-08-13T21:59:24+00:00'
