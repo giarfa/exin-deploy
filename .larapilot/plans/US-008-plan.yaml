@@ -1,0 +1,488 @@
+code: US-008
+plan_body: |-
+  ## Soluzione tecnica
+
+  Il dettaglio della release e una schermata di **sola lettura** su dati che esistono gia: US-004 congela lo snapshot, US-005/US-006 lo fanno avanzare, questa spec lo rende leggibile. **Nessuna migrazione, nessun modello nuovo, nessuna colonna nuova** — il costo della spec e tutto in lettura, autorizzazione e resa.
+
+  ### Rotta e autorizzazione
+
+  - Rotta `GET /rilasci/{release}` -> `Route::livewire('/rilasci/{release}', 'releases.show')->can('view', 'release')->name('releases.show')`, dentro il gruppo `auth` di `routes/web.php`.
+  - Doppia protezione come tutte le rotte che hanno qualcosa da autorizzare: middleware `->can()` **piu** `Gate::authorize('view', $this->release)` nel `mount()` del componente. Non e la deroga di `/step/{releaseStep}`: qui non c'e alcun tentativo da registrare nel registro delle transizioni, quindi il middleware puo rifiutare per primo (vedi `.ai/rules/routes.md`).
+  - `ReleasePolicy::view()` passa da `false` a `true`: **ogni membro autenticato** consulta il dettaglio in sola lettura, anche senza essere responsabile di alcuno step. E il criterio esplicito della spec e la ragione per cui la Policy oggi porta il commento "appartiene a US-008". `viewAny()` resta `false`: l'elenco e la sua Policy sono US-009.
+  - Il comando "Apri e compila" sullo step attivo compare sotto `@can('fill', $step)`. Nasconderlo non e autorizzazione: `ReleaseStepPolicy::fill()` decide lato server e la schermata di chiusura la riapplica al montaggio e su ogni azione.
+
+  ### Componente
+
+  `resources/views/components/releases/⚡show.blade.php` — componente Livewire 4 monofile, come tutti gli altri di questo progetto. `public Release $release` risolta dal binding di rotta; nessuna azione Livewire, nessuna scrittura.
+
+  Una sola lettura di dominio, interamente in eager loading:
+
+  ```php
+  $this->release->load([
+      'project',
+      'workflowTemplate',
+      'startedBy',
+      'steps' => fn ($steps) => $steps
+          ->withActivationInstant()
+          ->with(['fields', 'assignedUser', 'completedBy']),
+  ]);
+  ```
+
+  Vincoli noti da rispettare, tutti gia documentati nel codice:
+
+  1. `withActivationInstant()` **ridefinisce la select** (`select('{tabella}.*')`): va applicato prima di qualunque `addSelect`/`withCount`, altrimenti le colonne aggiunte spariscono senza avviso.
+  2. `ReleaseStep::activationInstant()` ripiega su `release->started_at` sul primo della catena e **solleva** se l'alias manca. La relazione inversa va popolata a mano dopo il caricamento (`$this->release->steps->each(fn (ReleaseStep $step) => $step->setRelation('release', $this->release))`), altrimenti il primo step attivo pagherebbe una query per risalire alla release.
+  3. Si legge **soltanto** lo snapshot (`releases`, `release_steps`, `release_step_fields`): nessuna lettura di `step_definitions` o `field_definitions` (`.ai/rules/app.md`).
+  4. Il ruolo si mostra da `role_name` congelato, mai da `role()->name`.
+
+  ### Resa della catena
+
+  Lista ordinata (`<ol>`) dei tre stati dello step, nell'ordine congelato dallo snapshot:
+
+  - **Completato** — ruolo e nome del responsabile, autore e istante di chiusura (`completed_by` / `completed_at`, con ripiego sul responsabile assegnato come gia fa `⚡step.blade.php`), e i valori forniti.
+  - **Attivo** — ruolo e nome del responsabile, da quanto e aperto (`activationInstant()->diffForHumans()`), numero di informazioni richieste, e il comando di apertura **solo** se la Policy lo consente.
+  - **Bloccato** — ruolo e nome del responsabile e cosa lo sblocca. **Nessun campo compilabile e nessun valore**: e criterio di accettazione, non una scelta di stile.
+
+  Ogni stato e reso con **icona e parola**, mai dal solo colore: e il contratto di accessibilita gia adottato da "i miei step" e dalla catena di avvio.
+
+  ### Riuso: i valori forniti in un posto solo
+
+  Il blocco `<dl>` che rende i valori di uno step chiuso — "non fornito" per il `null`, esito affermativo per la conferma, collegamento cliccabile per il link con verifica dello schema `http(s)` — esiste gia dentro `⚡step.blade.php` e serve identico qui. Va **estratto** in `resources/views/components/releases/step-values.blade.php` e usato da entrambe le schermate, come gia fatto per `step-instructions.blade.php`.
+
+  Due copie della verifica dello schema del link sono due posti in cui dimenticare di correggerla: la riga arrivata da un import o da una correzione a mano sul database non passa da `WellFormedLink`, e un `javascript:` reso come `href` sarebbe una superficie offerta proprio a chi consulta lo storico.
+
+  ### Vie di accesso
+
+  La voce di navigazione "Release" resta **in arrivo**: quella voce promette l'elenco (US-009), non il dettaglio. Senza punti di accesso il dettaglio sarebbe una pagina irraggiungibile, quindi la spec ne apre tre, tutti su schermate esistenti:
+
+  - `my-steps/⚡index.blade.php` — le card del blocco "release in attesa" diventano collegamenti al dettaglio. E la risposta esatta alla domanda che quel blocco pone ("dove siamo e chi stiamo aspettando").
+  - `releases/⚡step.blade.php` — collegamento al dettaglio della release accanto al ritorno a "i miei step".
+  - `releases/⚡start.blade.php` — dalla conferma di avvio, il ponte verso la catena appena congelata (il commento nel file dichiara gia questa transizione come temporanea in attesa di US-008).
+
+  ### Layout (mockup `dettaglio-release.html`)
+
+  - Colonna singola sotto 1024 px; due colonne da 1024 px (`lg:grid-cols-3`, catena su 2 e riquadro dati su 1) — la stessa soglia `lg:` gia usata dalla shell applicativa, nessuna soglia nuova.
+  - Riquadro "Dati della release": progetto, etichetta, stato, template di origine, avviata da, avviata il, step completati su totale, piu la nota "il template e congelato all'avvio".
+  - Nessuno scorrimento orizzontale a 375 px: liste di definizione e non tabelle, come nelle schermate gia consegnate.
+  - Un solo `h1` (progetto + etichetta), le due sezioni come `h2`, i nomi degli step come `h3`.
+
+  ## Decisioni
+
+  **Il nome del template e provenienza, non definizione.** Il riquadro mostra `release->workflowTemplate->name`, cioe il nome **attuale** del template. Non contraddice la regola dello snapshot: la catena, l'ordine e i campi arrivano tutti da `release_steps`/`release_step_fields`, e il template e citato solo per dire da dove la release e nata. La nota accanto ("modifiche successive non alterano questa release") toglie l'ambiguita a chi legge. Alternativa scartata: congelare `template_name` su `releases` — una colonna in piu per un dato che nessun percorso di esecuzione interroga.
+
+  **Briciole di navigazione senza l'elenco.** Il mockup mostra "Release / Portale Clienti / v2.4.0", ma `releases.index` non esiste (US-009) e `projects.index` e riservata agli amministratori: entrambe le voci sarebbero un vicolo cieco o un 403 per un membro. Le briciole di questa spec sono quindi **"I miei step" (collegamento) / nome del progetto (testo) / etichetta della release (corrente)**. US-009 sostituira la prima voce con l'elenco delle release e riportera il mockup alla lettera.
+
+  **Da quanto lo step attivo e aperto.** Si riusa `withActivationInstant()` cosi com'e, con il ripiego su `release->started_at` sul primo della catena. Nessuna colonna `activated_at`: la decisione e gia registrata nel piano di US-007 e questa spec non porta la ragione (ordinare o filtrare in database) che la giustificherebbe.
+
+  ## Git e branching
+
+  - Modalita: **GITFLOW** (`settings.git_mode`) — nessun push automatico, PR interna preparata in locale.
+  - **Precondizione**: US-008 e bloccata da US-004 (gia su `develop`), ma tocca `my-steps/⚡index.blade.php`, che vive su `feature/US-007-vista-i-miei-step` e **non e ancora integrato in `develop`**. US-007 e approvata: TASK-00 verifica l'integrazione e, se manca, la esegue prima di ramificare.
+  - Ramo: `feature/US-008-dettaglio-release` da `develop`.
+  - Un commit atomico per task, Conventional Commits `tipo(US-008): TASK-NN sintesi`. Nessun push, nessuna PR remota se non richiesti esplicitamente in sessione.
+  - Merge su `develop` solo dopo approvazione umana in `larapilot-review`.
+  - `CHANGELOG.md` sezione Unreleased aggiornata nell'ultimo task: la schermata e comportamento visibile all'utente.
+
+  ## Strategia dei dati di prova
+
+  Nessuna modifica di schema, quindi **nessuna factory nuova e nessuna nuova migrazione**. Le factory esistenti coprono gia lo scenario:
+
+  - `ReleaseStepFactory` — stati `blocked()`, `active()`, `completed()` (quest'ultimo scrive `completed_by` e `completed_at`).
+  - `ReleaseStepFieldFactory` — stati `shortText()`, `longText()`, `link()`, `confirmation()`, `filled()`, `optional()`: i quattro tipi e il caso "non fornito" sono tutti esprimibili.
+  - `ReleaseFactory` — stato `completed()` per la release conclusa in sola lettura.
+
+  Scenario di riferimento dei test: una release in corso di 5 step — il primo completato con i quattro tipi di campo (uno lasciato vuoto), il secondo attivo, i restanti bloccati — piu una release conclusa.
+
+  **`DatabaseSeeder` non viene toccato**: lo scenario di esecuzione (release a meta catena e release conclusa) e di competenza di US-011, che lo compone. Anticiparlo qui creerebbe due sorgenti dello stesso dataset.
+
+  Trappola nota (`.ai/rules/tests.md`): `completed_at` e `completed_by` non sono mass-assignable. Nei test si usano gli stati di factory `completed()` oppure `forceFill([...])->save()`; un `update([...])` le lascia cadere **in silenzio** e il test passa per la ragione sbagliata.
+
+  ## Strategia di test
+
+  - Livello: **NORMAL** (`settings.testing`) — feature, unit, policy. **Nessun** Playwright, Dusk, Pest browser, matrice di viewport o E2E.
+  - `tests/Feature/Releases/ReleaseDetailScreenTest.php` — un test per criterio di accettazione: intestazione con etichetta/progetto/stato/template/autore/istante di avvio; sequenza completa nell'ordine congelato; ruolo e nome del responsabile su ogni step; valori, autore e istante sugli step chiusi; assenza di campi compilabili sugli step bloccati; comando di apertura visibile al responsabile e all'amministratore e assente agli altri; link resi come collegamenti e conferme come esito affermativo; lettura consentita a un membro estraneo alla release; ospite reindirizzato all'accesso; release conclusa in sola lettura.
+  - `tests/Feature/Releases/ReleaseDetailQueryBudgetTest.php` — l'invariante gia adottata dalle altre schermate: **stesso costo** con 3 e con 12 step, e con 1 e con 5 campi per step. Nessun numero assoluto, che ogni ottimizzazione legittima cambierebbe.
+  - `tests/Feature/Releases/ReleasePolicyTest.php` — aggiornato: `view` concessa a ogni membro autenticato, `viewAny` ancora negata (US-009), `delete` sempre negata.
+  - Regressione: `CloseStepScreenTest` deve restare verde dopo l'estrazione del componente dei valori — e la prova che l'estrazione non ha cambiato comportamento.
+  - Handoff manuale per la revisione: aprire il dettaglio a 375 px e a 1280 px e verificare colonna singola / due colonne, assenza di scorrimento orizzontale, e stati leggibili in tema chiaro e scuro.
+  - Gate di qualita prima della consegna: `php artisan larapilot:quality` (Pint + Larastan livello 5) e `php artisan test --compact`.
+tasks:
+  -
+    id: TASK-00
+    title: 'Ramo di lavoro e integrazione di US-007 in develop'
+    body: |-
+      ## Descrizione
+
+      Predisporre Gitflow per la spec: verificare che US-007 (approvata) sia integrata in `develop` e creare il ramo di lavoro. **Precondizione reale, non ceremonia**: questa spec modifica `resources/views/components/my-steps/⚡index.blade.php`, che oggi esiste solo su `feature/US-007-vista-i-miei-step`. Ramificando da un `develop` senza US-007 il task delle vie di accesso non avrebbe il file da modificare.
+
+      Sotto `git_mode: GITFLOW` non si esegue alcun push: la PR interna verso `develop` si prepara in locale.
+
+      ## File coinvolti
+
+      - (solo git — nessun file applicativo)
+
+      ## Passi
+
+      1. `git ls-tree -r --name-only develop | grep my-steps` — se non torna nulla, US-007 non e integrata.
+      2. Se manca: `git checkout develop && git merge --no-ff feature/US-007-vista-i-miei-step` (Sarah guida la risoluzione di eventuali conflitti; nessun push).
+      3. `php artisan test --compact` su `develop` dopo il merge: l'integrazione e verde prima di ramificare, non dopo.
+      4. `git checkout -b feature/US-008-dettaglio-release`
+      5. Redigere titolo e corpo della PR interna verso `develop` (`US-008: Dettaglio della release con catena e informazioni fornite`), tenuti in locale.
+      6. Commit di ancoraggio del ramo (commit vuoto ammesso).
+
+      ## Criteri di completamento
+
+      - [ ] US-007 risulta integrata in `develop` (il file `my-steps/⚡index.blade.php` e presente su `develop`)
+      - [ ] La suite e verde su `develop` dopo l'integrazione
+      - [ ] Il ramo `feature/US-008-dettaglio-release` esiste in locale
+      - [ ] Titolo e corpo della PR verso `develop` sono redatti
+
+      ## Dati di prova
+
+      - N/A — nessuna modifica di schema o di modelli in questo task
+
+      ## Consegne Git
+
+      - Commit: `chore(US-008): TASK-00 ramo di lavoro per il dettaglio della release` (commit vuoto ammesso)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale; apertura remota solo su richiesta esplicita
+    type: Impl
+    status: TODO
+    dependencies: {}
+  -
+    id: TASK-01
+    title: 'Apertura della lettura della release a ogni membro e rotta di dettaglio'
+    body: |-
+      ## Descrizione
+
+      Aprire `ReleasePolicy::view()` a ogni membro autenticato e registrare la rotta del dettaglio. E il criterio "ogni membro autenticato puo consultare il dettaglio in sola lettura, anche senza essere responsabile di alcuno step": la Policy oggi nega a tutti i non amministratori e porta gia il commento che rimanda a questa spec.
+
+      `viewAny()` **resta negata**: l'elenco delle release e la sua Policy appartengono a US-009. Aprirla qui darebbe un'autorizzazione senza una schermata che la usi.
+
+      ## File coinvolti
+
+      - app/Policies/ReleasePolicy.php
+      - routes/web.php
+      - tests/Feature/Releases/ReleasePolicyTest.php
+
+      ## Passi
+
+      1. `ReleasePolicy::view()` torna `true`; aggiornare il PHPDoc — la lettura del dettaglio e aperta a chiunque sia autenticato, perche sapere dove e fermo un rilascio non e un privilegio: e la funzione stessa dello strumento. Il commento deve dire cosa **resta** chiuso (`viewAny` -> US-009, `delete` -> mai).
+      2. Registrare nel gruppo `auth` di `routes/web.php`, accanto alle altre rotte di release:
+         `Route::livewire('/rilasci/{release}', 'releases.show')->can('view', 'release')->name('releases.show');`
+      3. Commentare la rotta come le altre: perche qui il `->can()` c'e (nessun tentativo da registrare, a differenza di `/step/{releaseStep}` — vedi `.ai/rules/routes.md`) e perche il segmento e `/rilasci/` al plurale, coerente con `/progetti/`.
+      4. Aggiornare `ReleasePolicyTest`: `view` concessa a un membro qualunque, estraneo alla release; concessa all'amministratore; negata all'ospite (a livello di rotta); `viewAny` ancora negata a un membro; `delete` negata anche all'amministratore.
+      5. `php artisan test --compact --filter=ReleasePolicyTest`
+
+      ## Criteri di completamento
+
+      - [ ] `ReleasePolicy::view()` concede a ogni utente autenticato, con PHPDoc aggiornato che dice cosa resta chiuso
+      - [ ] `viewAny()` e `delete()` invariate
+      - [ ] La rotta `releases.show` risponde su `/rilasci/{release}` con doppia protezione dichiarata nel commento
+      - [ ] `ReleasePolicyTest` copre membro estraneo, amministratore e i due dinieghi residui
+      - [ ] `php artisan route:list --path=rilasci` mostra la rotta con il middleware `can:view,release`
+
+      ## Dati di prova
+
+      - N/A — nessuna modifica di schema, modelli o relazioni
+
+      ## Consegne Git
+
+      - Commit: `feat(US-008): TASK-01 apre la lettura della release e registra la rotta di dettaglio`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+  -
+    id: TASK-02
+    title: 'Estrarre i valori forniti in un componente condiviso'
+    body: |-
+      ## Descrizione
+
+      Estrarre da `⚡step.blade.php` il blocco che rende le informazioni fornite di uno step chiuso e portarlo in un componente Blade condiviso, come gia fatto per `step-instructions.blade.php`. Il dettaglio della release ha bisogno **della stessa resa** su ogni step completato della catena.
+
+      Non e un abbellimento: dentro quel blocco vive la verifica dello schema `http(s)` prima di rendere un valore come collegamento cliccabile. Duplicarla significa avere due posti in cui dimenticare di correggerla, e la riga arrivata da un import o da una correzione a mano sul database non passa da `WellFormedLink`.
+
+      **Refactoring a comportamento invariato**: nessuna modifica alla resa attuale della schermata di chiusura.
+
+      ## File coinvolti
+
+      - resources/views/components/releases/step-values.blade.php (nuovo)
+      - resources/views/components/releases/⚡step.blade.php
+
+      ## Passi
+
+      1. Creare `step-values.blade.php` con `@props(['fields'])`, contenente la lista di definizione: "non fornito" per il valore `null`, esito affermativo con icona per la conferma, collegamento per il link con schema verificato, testo altrimenti.
+      2. Trasferire nel nuovo file i commenti che spiegano le due scelte non ovvie (verifica dello schema anche in lettura, `rel="noopener noreferrer"` esplicito, lista di definizione invece di tabella a 375 px): il ragionamento deve viaggiare con il codice che lo giustifica.
+      3. Sostituire il blocco in `⚡step.blade.php` con `<x-releases.step-values :fields="$this->fields" />`, rimuovendo l'import di `Str` se non piu usato altrove nel file.
+      4. `php artisan test --compact --filter=CloseStepScreenTest`
+      5. `vendor/bin/pint --dirty --format agent`
+
+      ## Criteri di completamento
+
+      - [ ] `x-releases.step-values` rende i quattro tipi di campo e il caso "non fornito"
+      - [ ] I link con schema diverso da `http`/`https` restano testo, non diventano `href`
+      - [ ] `⚡step.blade.php` usa il componente e non contiene piu una seconda copia della logica
+      - [ ] `CloseStepScreenTest` verde senza modifiche: la resa della schermata di chiusura e invariata
+
+      ## Dati di prova
+
+      - N/A — nessuna modifica di schema o di modelli in questo task
+
+      ## Consegne Git
+
+      - Commit: `refactor(US-008): TASK-02 estrae i valori forniti in un componente condiviso`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-01
+  -
+    id: TASK-03
+    title: 'Schermata di dettaglio della release con catena e dati del rilascio'
+    body: |-
+      ## Descrizione
+
+      Costruire `releases.show`: la catena completa nell'ordine congelato con lo stato di ogni step, il ruolo e il nome del responsabile, i valori forniti sugli step chiusi, e il riquadro con i dati della release. Una sola lettura di dominio, interamente in eager loading.
+
+      E la risposta strutturale alla domanda "dove siamo e chi stiamo aspettando" (FR-014), e per questo la pagina non chiede nulla a chi la apre: non ha azioni, non ha form, non scrive.
+
+      ## File coinvolti
+
+      - resources/views/components/releases/⚡show.blade.php (nuovo)
+      - lang/it/releases.php
+
+      ## Passi
+
+      1. Creare il componente monofile Livewire 4 con `public Release $release` risolta dal binding di rotta e `Gate::authorize('view', $this->release)` nel `mount()` (secondo livello dopo il middleware, come nelle altre schermate).
+      2. Caricare in una sola volta: `project`, `workflowTemplate`, `startedBy`, e `steps` con `withActivationInstant()` piu `fields`, `assignedUser`, `completedBy`.
+      3. Popolare la relazione inversa sugli step (`setRelation('release', $this->release)`): senza, `activationInstant()` sul primo step della catena risalirebbe alla release con una query propria.
+      4. Rendere l'intestazione: `h1` con progetto ed etichetta, sottotitolo con lo stato attuale ("step 2 di 5, in attesa di ..." oppure la conclusione) in una regione `aria-live="polite"`, come in "i miei step".
+      5. Rendere la catena come `<ol>` ordinata, tre stati distinti:
+         - **completato**: ruolo e responsabile, autore e istante di chiusura, `<x-releases.step-values :fields="$step->fields" />`
+         - **attivo**: ruolo e responsabile, da quanto e aperto (`activationInstant()->diffForHumans(syntax: CarbonInterface::DIFF_ABSOLUTE)`), numero di informazioni richieste, comando `route('releases.step', $step)` racchiuso in `@can('fill', $step)`, con la nota che il comando e riservato al responsabile o a un amministratore
+         - **bloccato**: ruolo e responsabile, cosa lo sblocca (chiusura dello step precedente, oppure "ultimo step: la sua chiusura conclude il rilascio"). **Nessun campo, nessun valore.**
+      6. Ogni stato reso con **icona e parola**, mai dal solo colore; i nomi degli step come `h3`, le due sezioni come `h2`, un solo `h1`.
+      7. Rendere il riquadro laterale "Dati della release": progetto, etichetta, stato, template di origine, avviata da, avviata il, step completati su totale, piu la nota che il template e congelato all'avvio.
+      8. Layout mobile-first secondo `.larapilot/mockups/superficie-operativa/dettaglio-release.html`: colonna singola sotto 1024 px, due colonne da `lg:` (catena su due terzi, riquadro su uno). Nessuna soglia nuova oltre la `lg:` gia usata dalla shell.
+      9. Briciole di navigazione in cima: "I miei step" (collegamento a `route('home')`) / nome del progetto (testo) / etichetta (corrente). Commentare la deviazione dal mockup e il fatto che US-009 sostituira la prima voce con l'elenco.
+      10. Aggiungere le chiavi in `lang/it/releases.php` sotto un blocco commentato "Dettaglio della release (US-008)". Copia in italiano, tono coerente con le schermate esistenti: nessun testo inglese, nessun segnaposto.
+      11. Verificare a mano a 375 px e a 1280 px, in tema chiaro e scuro: nessuno scorrimento orizzontale, comando primario raggiungibile, stati leggibili.
+      12. `php artisan test --compact --filter=Releases` e `vendor/bin/pint --dirty --format agent`
+
+      ## Criteri di completamento
+
+      - [ ] La vista mostra etichetta, progetto, stato, template di origine, autore e istante di avvio
+      - [ ] La sequenza degli step segue l'ordine congelato dello snapshot, con lo stato di ciascuno
+      - [ ] Ogni step mostra ruolo (`role_name` congelato) e nome del responsabile risolto
+      - [ ] Gli step completati mostrano valori, autore e istante di chiusura
+      - [ ] Gli step bloccati non mostrano alcun campo compilabile
+      - [ ] Il comando di apertura appare solo dove `@can('fill', $step)` lo consente
+      - [ ] I campi link sono collegamenti, le conferme un esito affermativo (via `x-releases.step-values`)
+      - [ ] Nessuna lettura di `step_definitions` o `field_definitions` in tutto il componente
+      - [ ] Layout a colonna singola sotto 1024 px e a due colonne da 1024 px, senza scorrimento orizzontale a 375 px
+      - [ ] Tutte le stringhe passano da `lang/it/releases.php`
+
+      ## Dati di prova
+
+      - N/A — nessuna modifica di schema o di modelli; le factory e gli stati esistenti (`blocked()`, `active()`, `completed()`, `filled()`, `optional()`, i quattro tipi di campo) coprono gia lo scenario. `DatabaseSeeder` resta di competenza di US-011.
+
+      ## Consegne Git
+
+      - Commit: `feat(US-008): TASK-03 schermata di dettaglio della release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-02
+  -
+    id: TASK-04
+    title: 'Vie di accesso al dettaglio dalle schermate esistenti'
+    body: |-
+      ## Descrizione
+
+      Collegare il dettaglio alle schermate gia consegnate. La voce di navigazione "Release" resta **in arrivo**: quella voce promette l'elenco (US-009), non il dettaglio, e cambiarne la destinazione ora prometterebbe una pagina diversa da quella che apre.
+
+      Senza questo task il dettaglio esisterebbe come indirizzo raggiungibile solo a mano. Il collegamento piu importante e il primo: il blocco "release in attesa" di "i miei step" pone la domanda "chi trattiene il flusso e da quanto", e il dettaglio e la risposta estesa.
+
+      ## File coinvolti
+
+      - resources/views/components/my-steps/⚡index.blade.php
+      - resources/views/components/releases/⚡step.blade.php
+      - resources/views/components/releases/⚡start.blade.php
+      - lang/it/releases.php
+      - lang/it/my-steps.php
+
+      ## Passi
+
+      1. In `my-steps/⚡index.blade.php`: le card del blocco "release in attesa" diventano collegamenti a `route('releases.show', $release)`. Rispettare il contratto gia adottato per le card degli step — bersaglio di almeno 44x44 px, `block` e non `flex`, nessun comando annidato dentro il collegamento.
+      2. In `releases/⚡step.blade.php`: aggiungere il collegamento al dettaglio della release accanto al ritorno a "i miei step", disponibile in tutti e tre gli stati dello step (attivo, completato, bloccato).
+      3. In `releases/⚡start.blade.php`: dalla conferma di avvio, collegamento al dettaglio della release appena avviata. Aggiornare il commento del "ponte" che oggi dichiara il dettaglio come non ancora esistente.
+      4. Aggiungere le chiavi di testo necessarie; nessuna stringa a codice nelle viste.
+      5. Verificare a 375 px che i nuovi collegamenti non introducano scorrimento orizzontale ne bersagli sotto i 44 px.
+      6. `php artisan test --compact --filter="MyStepsScreenTest|CloseStepScreenTest|StartReleaseScreenTest"`
+
+      ## Criteri di completamento
+
+      - [ ] Dal blocco "release in attesa" si raggiunge il dettaglio della release
+      - [ ] Dalla schermata di uno step si raggiunge il dettaglio della release, in tutti e tre gli stati
+      - [ ] Dalla conferma di avvio si raggiunge il dettaglio della release appena avviata
+      - [ ] La voce di navigazione "Release" resta marcata in arrivo (e US-009)
+      - [ ] Nessun collegamento annidato dentro un altro collegamento; bersagli tattili di almeno 44x44 px
+      - [ ] Le suite delle tre schermate toccate restano verdi
+
+      ## Dati di prova
+
+      - N/A — nessuna modifica di schema o di modelli in questo task
+
+      ## Consegne Git
+
+      - Commit: `feat(US-008): TASK-04 vie di accesso al dettaglio della release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-03
+  -
+    id: TASK-05
+    title: 'Copertura della schermata di dettaglio'
+    body: |-
+      ## Descrizione
+
+      Coprire con test di funzionalita ogni criterio di accettazione della schermata: contenuto dell'intestazione, ordine e stati della catena, valori degli step chiusi, assenza di campi sugli step bloccati, visibilita del comando di apertura, resa di link e conferme, lettura aperta a ogni membro autenticato.
+
+      Livello `NORMAL`: feature, unit e policy. **Nessun** Playwright, Dusk, Pest browser o matrice di viewport.
+
+      ## File coinvolti
+
+      - tests/Feature/Releases/ReleaseDetailScreenTest.php (nuovo)
+
+      ## Passi
+
+      1. Comporre lo scenario dalle factory esistenti: release in corso di 5 step — primo completato con i quattro tipi di campo (uno lasciato non fornito), secondo attivo, restanti bloccati — piu una release conclusa.
+      2. **Trappola nota** (`.ai/rules/tests.md`): `completed_at` e `completed_by` non sono mass-assignable. Usare lo stato `completed()` oppure `forceFill([...])->save()`; un `update([...])` le lascia cadere in silenzio e il test passerebbe per la ragione sbagliata.
+      3. Casi da coprire:
+         - intestazione con etichetta, progetto, stato, template di origine, autore e istante di avvio
+         - i cinque step compaiono nell'ordine congelato, ognuno con il proprio stato
+         - ruolo congelato e nome del responsabile su ogni step, anche dopo la rinomina del ruolo nel catalogo (prova che si legge `role_name`)
+         - lo step completato mostra i valori forniti, l'autore e l'istante di chiusura; il campo non compilato compare come "non fornito"
+         - lo step bloccato non mostra alcun campo compilabile ne valore
+         - il comando di apertura compare al responsabile dello step attivo e a un amministratore, e **non** compare a un membro estraneo
+         - un campo link con `http(s)` e reso come collegamento; un valore con schema diverso resta testo
+         - un campo conferma compilato e reso come esito affermativo
+         - un membro autenticato senza alcuno step assegnato apre il dettaglio in sola lettura
+         - un ospite viene reindirizzato all'accesso
+         - una release conclusa mostra la catena tutta completata e nessun comando di apertura
+      4. `php artisan test --compact --filter=ReleaseDetailScreenTest`
+
+      ## Criteri di completamento
+
+      - [ ] Un test per ciascun criterio di accettazione della spec
+      - [ ] Coperti il percorso felice, il diniego (membro estraneo, ospite) e i casi limite (campo non fornito, link non conforme, release conclusa)
+      - [ ] I nomi dei test descrivono il comportamento atteso, non il metodo invocato
+      - [ ] Suite verde
+
+      ## Dati di prova
+
+      - Riuso delle factory e degli stati esistenti; nessuna definizione duplicata dentro i test
+
+      ## Consegne Git
+
+      - Commit: `test(US-008): TASK-05 copertura della schermata di dettaglio`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-03
+  -
+    id: TASK-06
+    title: 'Budget di query del dettaglio della release'
+    body: |-
+      ## Descrizione
+
+      Fissare l'invariante di costo della schermata: il PRD indica l'N+1 come rischio strutturale delle catene annidate, e questa e la vista che ne carica di piu — per ogni step la release, il responsabile, l'autore della chiusura e tutti i campi.
+
+      Come nelle altre prove di budget del progetto, il test **non fissa un numero assoluto** (lo cambierebbe ogni ottimizzazione legittima) ma l'invariante che conta: lo stesso costo su una catena corta e su una lunga.
+
+      ## File coinvolti
+
+      - tests/Feature/Releases/ReleaseDetailQueryBudgetTest.php (nuovo)
+
+      ## Passi
+
+      1. Misurare con `DB::listen` come in `MyStepsQueryBudgetTest`: stesso costo su una release di 3 step e su una di 12.
+      2. Secondo caso: stesso costo con 1 campo per step e con 5 campi per step.
+      3. Terzo caso: leggere gli istanti di attivazione sugli step gia caricati **non** deve produrre alcuna query — ne l'alias della sottoquery ne la relazione inversa verso la release.
+      4. Alternare le forme nello scenario di prova: una release appena avviata (step attivo in prima posizione, senza precedente da cui leggere l'istante) e una a meta catena. E il ramo di ripiego su `release->started_at`, il piu facile da lasciare scoperto.
+      5. `php artisan test --compact --filter=ReleaseDetailQueryBudgetTest`
+
+      ## Criteri di completamento
+
+      - [ ] Il costo non cresce con il numero di step
+      - [ ] Il costo non cresce con il numero di campi per step
+      - [ ] La lettura degli istanti di attivazione costa zero query
+      - [ ] I messaggi di fallimento dicono **cosa manca** (quale eager loading), non solo che i numeri differiscono
+
+      ## Dati di prova
+
+      - Riuso delle factory esistenti; nessuno stato nuovo
+
+      ## Consegne Git
+
+      - Commit: `test(US-008): TASK-06 budget di query del dettaglio della release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-03
+  -
+    id: TASK-07
+    title: 'Changelog e nota sulla lettura aperta della release'
+    body: |-
+      ## Descrizione
+
+      Documentare la consegna: voce nel `CHANGELOG.md` sotto Unreleased, con il fatto rilevante per chi usa lo strumento — il dettaglio di una release e consultabile da **ogni** membro autenticato, anche estraneo alla catena.
+
+      Registrare inoltre come regola condivisa la decisione non ovvia di questa spec, cosi che la prossima revisione non la legga come una svista.
+
+      ## File coinvolti
+
+      - CHANGELOG.md
+      - .ai/rules/ (nuova regola tramite il comando `record-rule`)
+
+      ## Passi
+
+      1. Aggiungere in `CHANGELOG.md` -> Unreleased -> Added la voce del dettaglio della release (US-008, FR-014), nello stile delle voci esistenti: cosa cambia per chi usa, non l'elenco dei file toccati. Citare la lettura aperta a ogni membro e il fatto che la catena mostrata e lo snapshot congelato.
+      2. Registrare con `record-rule` (glob `app/Policies/ReleasePolicy.php`) la decisione: `view` e concessa a ogni membro autenticato mentre `viewAny` resta negata; le due non si allineano per sbaglio — sapere dove e fermo un rilascio non e un privilegio, ma l'elenco con i suoi filtri appartiene a US-009 e la sua Policy si decide li.
+      3. Verificare che non restino riferimenti nel codice al dettaglio come "non ancora esistente" (commenti di `⚡start.blade.php`, `⚡step.blade.php`, Policy).
+
+      ## Criteri di completamento
+
+      - [ ] `CHANGELOG.md` aggiornato nella sezione Unreleased
+      - [ ] La regola sulla Policy e registrata in `.ai/rules`
+      - [ ] Nessun commento nel codice descrive ancora il dettaglio della release come non esistente
+      - [ ] `php artisan larapilot:quality` senza rilievi e `php artisan test --compact` verde
+
+      ## Dati di prova
+
+      - N/A — nessuna modifica di schema o di modelli in questo task
+
+      ## Consegne Git
+
+      - Commit: `docs(US-008): TASK-07 changelog e regola sulla lettura aperta della release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-04
+      - TASK-05
+      - TASK-06
+updated_at: '2026-08-13T20:59:05+00:00'

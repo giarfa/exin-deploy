@@ -5,7 +5,7 @@ epic:
   title: 'Visibilità e tracciabilità'
 priority: HIGH
 points: 5
-status: TODO
+status: 'IN PROGRESS'
 body: |
   #### US-008: Dettaglio della release con catena e informazioni fornite
 
@@ -33,3 +33,9 @@ body: |
   - [ ] Ogni membro autenticato può consultare il dettaglio in sola lettura, anche senza essere responsabile di alcuno step
   - [ ] Nessuna query N+1 su catena, campi e responsabili (verificato)
   - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/dettaglio-release.html`: colonna singola su mobile, due colonne da 1024 px
+status_history:
+  - status: PLANNED
+    at: '2026-08-13T20:59:05+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-13T21:04:43+00:00'
+rework: false
