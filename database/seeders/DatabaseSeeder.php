@@ -2,26 +2,45 @@
 
 namespace Database\Seeders;
 
+use App\Actions\Releases\CloseStep;
+use App\Actions\Releases\StartRelease;
 use App\Enums\FieldType;
+use App\Enums\ReleaseStatus;
+use App\Enums\ReleaseStepStatus;
 use App\Enums\UserLevel;
 use App\Models\DefaultRoleAssignment;
 use App\Models\FieldDefinition;
 use App\Models\Project;
 use App\Models\ProjectRoleAssignment;
+use App\Models\Release;
+use App\Models\ReleaseStep;
+use App\Models\ReleaseStepField;
 use App\Models\Role;
 use App\Models\StepDefinition;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Dataset dimostrativo del team e della configurazione di processo.
+ * Dataset dimostrativo: il team, la configurazione di processo e tre rilasci che
+ * coprono le forme che le schermate devono saper mostrare.
  *
- * Qui vivono membri, ruoli funzionali, template di workflow, progetti e mappature
- * ruolo -> persona: lo scenario di **esecuzione** (release a meta catena e
- * release conclusa) appartiene a US-011.
+ * **Due modi di seminare, e non e un'incoerenza.** La configurazione — membri,
+ * ruoli, template, progetti, mappature — e uno **stato**: si dichiara con dati
+ * espliciti, che e piu chiaro che ricostruirlo passando dall'interfaccia. I
+ * rilasci no: un rilascio e un **processo**, e il suo stato *e* la sequenza di
+ * transizioni che lo ha prodotto. Per questo `seedReleases()` chiama le Action
+ * reali (`StartRelease`, `CloseStep`) invece di scrivere righe.
+ *
+ * Scriverle a mano significherebbe replicare qui lo snapshot, la risoluzione dei
+ * responsabili, l'invariante dello step attivo unico, i valori congelati e i
+ * payload di cinque tipi di evento: il dominio in un secondo posto, destinato a
+ * divergere al primo cambiamento. E il registro delle transizioni e proprio cio
+ * che una scrittura a mano falsificherebbe meglio — righe di forma giusta e
+ * contenuto inventato.
  *
  * La mappatura dimostrativa copre tutti i ruoli previsti dal template
  * predefinito: lo stato iniziale e quello sano. Per vedere la segnalazione dei
@@ -228,6 +247,37 @@ class DatabaseSeeder extends Seeder
     ];
 
     /**
+     * Valori forniti alla chiusura degli step, indicizzati per **etichetta** del
+     * campo.
+     *
+     * Per etichetta e non per posizione: la posizione e un dettaglio del template e
+     * cambia riordinandolo, l'etichetta e la domanda a cui il valore risponde. Un
+     * campo che il template aggiungesse in mezzo non spostherebbe le risposte
+     * altrove.
+     *
+     * Nessun lorem ipsum: sono frasi di rilascio vere, indirizzi plausibili e
+     * conferme spuntate, come chiede il criterio di accettazione.
+     *
+     * @var array<string, string>
+     */
+    private const STEP_VALUES = [
+        'Versione rilasciata' => 'v2.4.0',
+        'Link alla pipeline' => 'https://ci.gruppoexcellence.com/portale-clienti/build/1842',
+        'Note di preparazione' => 'Migrazione della tabella documenti inclusa: va eseguita prima del riavvio dei worker.',
+        'Esito della verifica' => 'Provati caricamento documenti, ricerca e apertura richieste su Chrome e Safari. Nessuna regressione sulle aree toccate.',
+        'Link al report di test' => 'https://qa.gruppoexcellence.com/report/portale-clienti-2426',
+        'Regressioni verificate' => '1',
+        'Rischi rilevati' => 'Nessuno: le dipendenze aggiornate riguardano solo il livello di presentazione e non toccano autenticazione o dati personali.',
+        'Verifica delle dipendenze eseguita' => '1',
+        'Ambiente di destinazione' => 'produzione-01',
+        'Backup eseguito' => '1',
+        'Link al piano di rientro' => 'https://wiki.gruppoexcellence.com/rilasci/piano-di-rientro',
+        'Consegna completata' => '1',
+        'Link al changelog pubblicato' => 'https://portale.gruppoexcellence.com/novita',
+        'Note di consegna' => 'Servizio verificato dopo la consegna: tempi di risposta nella norma, nessun errore nei log della prima ora.',
+    ];
+
+    /**
      * Seed the application's database.
      */
     public function run(): void
@@ -238,6 +288,10 @@ class DatabaseSeeder extends Seeder
         $this->seedWorkflowTemplates();
         $this->seedProjects();
         $this->seedAssignments();
+        // Per ultimo: un rilascio ha bisogno del progetto, del processo e dei
+        // responsabili gia in piedi — sono le precondizioni che `StartRelease`
+        // verifica, e seminarlo prima produrrebbe un rifiuto invece di una release.
+        $this->seedReleases();
     }
 
     /**
@@ -365,5 +419,134 @@ class DatabaseSeeder extends Seeder
                 ]);
             }
         }
+    }
+
+    /**
+     * Lo scenario di esecuzione: tre rilasci, ognuno in una forma diversa.
+     *
+     * | Release | Progetto | Cosa dimostra |
+     * | --- | --- | --- |
+     * | `v2.3.0` | Portale Clienti | rilascio concluso: catena tutta chiusa, registro completo |
+     * | `v2.4.0` | Portale Clienti | rilascio a meta catena: primo step chiuso, secondo attivo |
+     * | `2026.08.1` | Gestionale Magazzino | rilascio appena avviato, fermo sul **primo** step |
+     *
+     * La terza non e un di piu: e l'unica forma in cui lo step attivo e il primo
+     * della catena, dove `ReleaseStep::activationInstant()` non ha un precedente da
+     * cui leggere l'istante e ripiega su `release.started_at`. E il ramo che ogni
+     * rilascio nuovo percorre, e un ambiente dimostrativo che non lo contenesse lo
+     * lascerebbe non verificabile a mano.
+     *
+     * **Nessuna release sul template disattivato.** "Rilascio urgente" resta senza:
+     * `StartRelease` rifiuta un processo disattivato, e un ambiente dimostrativo che
+     * contenesse uno stato irriproducibile dall'applicazione direbbe una bugia.
+     *
+     * **Nessun tentativo non autorizzato seminato.** Il registro dimostrativo porta
+     * le transizioni di processo ma non la traccia di qualcuno che ha provato a fare
+     * cio che non poteva, con il nome di una persona del team di esempio: in un
+     * ambiente condiviso e una riga che si presta a essere letta male. Chi vuole
+     * vederla la produce aprendo lo step di un altro.
+     */
+    private function seedReleases(): void
+    {
+        $customerPortal = Project::where('slug', 'portale-clienti')->firstOrFail();
+        $warehouse = Project::where('slug', 'gestionale-magazzino')->firstOrFail();
+        $owner = User::where('email', 'f.giarola@gruppoexcellence.com')->firstOrFail();
+
+        /*
+         * Gli istanti sono spostati indietro nel tempo, e non e un dettaglio
+         * estetico: appena seminate, tutte le schermate direbbero "aperto da 0
+         * secondi" e lo storico avrebbe una sola data, cioe non mostrerebbe ne le
+         * durate ne l'ordinamento che le due viste esistono per dare.
+         */
+        $delivered = $this->releaseThroughTheChain($customerPortal, 'v2.3.0', $owner, closeSteps: 5, startedAt: now()->subDays(9));
+        $this->rewindRelease($delivered, now()->subDays(9), now()->subDays(8));
+
+        $inProgress = $this->releaseThroughTheChain($customerPortal, 'v2.4.0', $owner, closeSteps: 1, startedAt: now()->subDays(2));
+        $this->rewindRelease($inProgress, now()->subDays(2));
+
+        $justStarted = $this->releaseThroughTheChain($warehouse, '2026.08.1', $owner, closeSteps: 0, startedAt: now()->subHours(5));
+        $this->rewindRelease($justStarted, now()->subHours(5));
+    }
+
+    /**
+     * Avvia una release e ne chiude i primi `closeSteps` passaggi, ognuno per mano
+     * del proprio responsabile.
+     *
+     * Per mano del responsabile e non dell'amministratore: `CloseStep` accetterebbe
+     * entrambi, ma il registro dimostrativo racconterebbe un rilascio in cui una
+     * sola persona ha fatto tutto — cioe l'opposto del processo che lo strumento
+     * esiste per orchestrare.
+     */
+    private function releaseThroughTheChain(
+        Project $project,
+        string $label,
+        User $starter,
+        int $closeSteps,
+        CarbonInterface $startedAt,
+    ): Release {
+        $release = app(StartRelease::class)->handle($project, $label, $starter);
+
+        $release->forceFill(['started_at' => $startedAt])->save();
+
+        for ($closed = 0; $closed < $closeSteps; $closed++) {
+            $step = $release->steps()
+                ->with('fields')
+                ->where('status', ReleaseStepStatus::Active)
+                ->firstOrFail();
+
+            app(CloseStep::class)->handle($step, $this->valuesFor($step), $step->assignedUser);
+        }
+
+        return $release->refresh();
+    }
+
+    /**
+     * Distribuisce le chiusure fra l'avvio e la consegna.
+     *
+     * Le Action scrivono `now()` — e giusto che lo facciano — quindi in un ambiente
+     * appena seminato tutti gli istanti coinciderebbero e le schermate mostrerebbero
+     * una catena chiusa in zero secondi. Qui le date vengono riscritte **dopo**, e
+     * con `forceFill` perche `completed_at` non e assegnabile in massa: la scrive
+     * solo `CloseStep`, e un `update` la lascerebbe cadere in silenzio (vedi
+     * `.ai/rules/tests.md`).
+     */
+    private function rewindRelease(Release $release, CarbonInterface $from, ?CarbonInterface $until = null): void
+    {
+        $closed = $release->steps()->where('status', ReleaseStepStatus::Completed)->orderBy('position')->get();
+
+        if ($closed->isEmpty()) {
+            return;
+        }
+
+        $until ??= now();
+        $span = $from->diffInMinutes($until);
+
+        foreach ($closed as $index => $step) {
+            $step->forceFill([
+                'completed_at' => $from->copy()->addMinutes((int) ($span * ($index + 1) / $closed->count())),
+            ])->save();
+        }
+
+        if ($release->status === ReleaseStatus::Completed) {
+            $release->forceFill(['completed_at' => $closed->last()->fresh()->completed_at])->save();
+        }
+    }
+
+    /**
+     * Valori da fornire per chiudere uno step, presi per etichetta del campo.
+     *
+     * Il ripiego non e pigrizia: un campo aggiunto al template senza un valore qui
+     * deve **impedire** la chiusura come farebbe nell'applicazione, non riceverne
+     * uno inventato — a meno che sia facoltativo, e allora resta vuoto.
+     *
+     * @return array<string, string|null>
+     */
+    private function valuesFor(ReleaseStep $step): array
+    {
+        return $step->fields
+            ->mapWithKeys(fn (ReleaseStepField $field): array => [
+                $field->id => self::STEP_VALUES[$field->label] ?? null,
+            ])
+            ->all();
     }
 }

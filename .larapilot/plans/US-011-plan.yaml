@@ -109,7 +109,7 @@ tasks:
     id: TASK-00
     title: "Ramo di lavoro per l'ambiente dimostrativo"
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
     body: |-
       ## Description
@@ -126,8 +126,8 @@ tasks:
       3. Commit di ancoraggio del ramo
 
       ## Completion Criteria
-      - [ ] Il ramo esiste in locale e contiene US-009 e US-010
-      - [ ] Descrizione della PR verso `develop` preparata in locale
+      - [x] Il ramo esiste in locale e contiene US-009 e US-010
+      - [x] Descrizione della PR verso `develop` preparata in locale
 
       ## Test Data
       - N/A — nessuna modifica di modelli o schema
@@ -136,6 +136,12 @@ tasks:
       - Commit: `chore(US-011): TASK-00 ramo di lavoro per l'ambiente dimostrativo`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: preparata in locale, aperta da remoto solo su richiesta
+    commit:
+      sha: 46e9ccde37f3427c3d45d61ec7298f21043a89b3
+      short_sha: 46e9ccd
+      subject: "chore(US-011): TASK-00 ramo di lavoro per l'ambiente dimostrativo"
+      committed_at: '2026-08-14T00:41:31+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Scenario di esecuzione nel seeder'
@@ -271,4 +277,4 @@ tasks:
       - Commit: `docs(US-011): TASK-03 changelog, README e regola sull'ambiente dimostrativo`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:41:22+00:00'
+updated_at: '2026-08-13T22:41:31+00:00'
