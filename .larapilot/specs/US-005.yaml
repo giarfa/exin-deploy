@@ -5,7 +5,7 @@ epic:
   title: 'Esecuzione del rilascio'
 priority: CRITICAL
 points: 8
-status: TODO
+status: PLANNED
 body: |
   #### US-005: Chiusura di uno step con validazione e avanzamento sequenziale
 
@@ -40,3 +40,7 @@ body: |
   - [ ] Un tentativo non autorizzato è rifiutato con 403, registrato nel log applicativo e nel registro delle transizioni
   - [ ] Interfaccia conforme al mockup `.larapilot/mockups/superficie-operativa/chiusura-step.html`: errori collegati al campo con `aria-describedby`, riepilogo errori con `role="alert"`, obbligatorietà annunciata a parole
   - [ ] Nota architetturale estesa con diagramma Mermaid della macchina a stati e diagramma ER che distingue tabelle di definizione e di istanza
+status_history:
+  - status: PLANNED
+    at: '2026-08-13T08:56:21+00:00'
+rework: false
