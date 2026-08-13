@@ -15,10 +15,19 @@ use Illuminate\Support\Facades\Route;
  */
 Route::middleware('auth')->group(function (): void {
     /*
-     * Home autenticata. Segnaposto: la schermata di ingresso definitiva e la
-     * vista operativa "i miei step" (US-007), che ne sostituira il contenuto.
+     * Schermata di ingresso: gli step che attendono chi entra, su tutti i
+     * progetti. **Non e una dashboard di grafici**, ed e una scelta di prodotto:
+     * senza notifiche (FR-025 fuori perimetro) questa pagina e il posto in cui si
+     * scopre che qualcosa e fermo su di te.
+     *
+     * Il nome `home` resta quello di prima: logo della sidebar, voce di
+     * navigazione e redirect di Fortify vi puntano gia, e cambiarlo li avrebbe
+     * rotti tutti per rinominare una costante.
+     *
+     * Nessun `->can()`: non c'e nulla da autorizzare oltre l'autenticazione — la
+     * pagina mostra solo cio che e assegnato a chi la guarda.
      */
-    Route::view('/', 'home')->name('home');
+    Route::livewire('/', 'my-steps.index')->name('home');
 
     /*
      * Sicurezza dell'account. La conferma della password e richiesta perche

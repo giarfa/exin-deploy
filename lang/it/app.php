@@ -26,13 +26,6 @@ return [
     'theme_system' => 'Sistema',
 
     /*
-     * Home autenticata: e un segnaposto. La schermata di ingresso definitiva e
-     * la vista operativa "i miei step" (US-007), che sostituira questo contenuto.
-     */
-    'home_heading' => 'Benvenuto',
-    'home_placeholder' => 'La schermata di ingresso definitiva sara "I miei step": elencherà gli step di rilascio che attendono te, su tutti i progetti.',
-
-    /*
      * Impostazioni di sicurezza dell'account.
      */
     'security_heading' => 'Sicurezza dell\'account',

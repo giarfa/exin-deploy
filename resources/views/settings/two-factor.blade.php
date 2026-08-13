@@ -85,6 +85,8 @@
             @endif
         </flux:card>
 
-        <flux:link href="{{ route('home') }}" class="text-sm">{{ __('app.home_heading') }}</flux:link>
+        {{-- Il ritorno nomina la pagina di destinazione e non un saluto: la home
+             non e piu un segnaposto di benvenuto ma "i miei step". --}}
+        <flux:link href="{{ route('home') }}" class="text-sm">{{ __('app.nav_my_steps') }}</flux:link>
     </div>
 </x-layouts.app>

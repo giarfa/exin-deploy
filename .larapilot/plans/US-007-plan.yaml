@@ -128,8 +128,8 @@ tasks:
       4. Commit di ancoraggio del ramo (vuoto ammesso)
 
       ## Completion Criteria
-      - [ ] Il ramo `feature/US-007-vista-i-miei-step` esiste in locale e parte da `develop`
-      - [ ] Titolo e corpo della PR verso `develop` sono redatti (apertura remota non richiesta)
+      - [x] Il ramo `feature/US-007-vista-i-miei-step` esiste in locale e parte da `develop`
+      - [x] Titolo e corpo della PR verso `develop` sono redatti (apertura remota non richiesta)
 
       ## Test Data
       - N/A — nessuna modifica di schema o di modello
@@ -139,8 +139,14 @@ tasks:
       - Push: **da non eseguire** (`git_mode: GITFLOW`)
       - PR: preparata in locale, remoto solo su richiesta dell'utente
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: 22956bc220b7c917c2eba576ac840976e5243484
+      short_sha: 22956bc
+      subject: 'chore(US-007): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-13T19:23:40+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Seam di lettura sui modelli: step attivo della release e istante di attivazione'
@@ -166,26 +172,32 @@ tasks:
       9. `php artisan test --filter=ReleaseStepTest` e `--filter=ReleaseTest`
 
       ## Completion Criteria
-      - [ ] `Release::activeStep()` e eager-loadable e restituisce `null` su release conclusa
-      - [ ] `Release::involving()` e `ReleaseStep::awaitingUser()` filtrano per assegnazione, non per Policy
-      - [ ] `withActivationInstant()` non esegue query per riga e non usa SQL specifico di SQLite
-      - [ ] `activationInstant()` corretto sia sullo step iniziale sia sui successivi
-      - [ ] Nessuna lettura di `StepDefinition` o `FieldDefinition` in questi percorsi
-      - [ ] Test di unita verdi
+      - [x] `Release::activeStep()` e eager-loadable e restituisce `null` su release conclusa
+      - [x] `Release::involving()` e `ReleaseStep::awaitingUser()` filtrano per assegnazione, non per Policy
+      - [x] `withActivationInstant()` non esegue query per riga e non usa SQL specifico di SQLite
+      - [x] `activationInstant()` corretto sia sullo step iniziale sia sui successivi
+      - [x] Nessuna lettura di `StepDefinition` o `FieldDefinition` in questi percorsi
+      - [x] Test di unita verdi
 
       ## Test Data
       - Nessuna modifica di schema o di modello dati: le factory esistenti (`ReleaseFactory`, `ReleaseStepFactory` con stati `active()`, `blocked()`, `completed()`) coprono i casi
-      - [ ] Se un caso richiede uno stato di factory non presente (per esempio una catena a posizioni coerenti), aggiungilo in **questo stesso** commit
-      - [ ] Nessuna modifica al seeder: lo scenario dimostrativo di esecuzione e perimetro di US-011
+      - [x] Se un caso richiede uno stato di factory non presente (per esempio una catena a posizioni coerenti), aggiungilo in **questo stesso** commit
+      - [x] Nessuna modifica al seeder: lo scenario dimostrativo di esecuzione e perimetro di US-011
 
       ## Git Deliverables
       - Commit: `feat(US-007): TASK-01 seam di lettura per la vista operativa`
       - Push: **da non eseguire** (`git_mode: GITFLOW`)
       - PR: aggiorna le note locali della PR
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: 8d41aa33233cb300d66f2871693147c1afd520e3
+      short_sha: 8d41aa3
+      subject: 'feat(US-007): TASK-01 seam di lettura per la vista operativa'
+      committed_at: '2026-08-13T19:29:09+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Pagina «I miei step» come schermata di ingresso'
@@ -344,4 +356,4 @@ tasks:
       - TASK-02
       - TASK-03
       - TASK-04
-updated_at: '2026-08-13T17:08:06+00:00'
+updated_at: '2026-08-13T17:29:12+00:00'
