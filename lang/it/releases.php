@@ -176,7 +176,6 @@ return [
     // nulla o se sia il filtro a nasconderlo.
     'index_empty_filtered' => 'Nessun risultato per il progetto :project. Togli il filtro per vedere gli altri progetti.',
 
-    'detail_breadcrumb_my_steps' => 'I miei step',
     'detail_summary_in_progress' => 'Rilascio in corso — step :position di :total, in attesa di :name.',
     // Una release in corso ha sempre uno step attivo per invariante: questa riga
     // esiste perche una pagina che tacesse davanti a un dato incoerente lascerebbe
