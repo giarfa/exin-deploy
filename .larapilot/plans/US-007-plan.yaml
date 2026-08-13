@@ -229,15 +229,15 @@ tasks:
       12. `php artisan test --filter=Release` per verificare che nulla di gia consegnato si sia rotto con il cambio di rotta
 
       ## Completion Criteria
-      - [ ] Dopo l'accesso la schermata di ingresso e "i miei step", non una dashboard
-      - [ ] L'elenco contiene solo gli step attivi assegnati all'utente autenticato, su tutti i progetti
-      - [ ] Ogni voce mostra progetto, etichetta, nome, posizione su totale e ruolo
-      - [ ] Blocco delle release in attesa con chi trattiene il flusso e da quanto
-      - [ ] Stato vuoto esplicito che spiega quando comparira uno step
-      - [ ] Contatore in `aria-live="polite"`; stati con icona e parola; un solo `h1`
-      - [ ] Usabile a 375 px con target touch ≥ 44x44 px e nessuno scroll orizzontale
-      - [ ] `home.blade.php` e i testi segnaposto rimossi; nessun `route('home')` rotto
-      - [ ] Nessun testo incastonato nelle viste
+      - [x] Dopo l'accesso la schermata di ingresso e "i miei step", non una dashboard
+      - [x] L'elenco contiene solo gli step attivi assegnati all'utente autenticato, su tutti i progetti
+      - [x] Ogni voce mostra progetto, etichetta, nome, posizione su totale e ruolo
+      - [x] Blocco delle release in attesa con chi trattiene il flusso e da quanto
+      - [x] Stato vuoto esplicito che spiega quando comparira uno step
+      - [x] Contatore in `aria-live="polite"`; stati con icona e parola; un solo `h1`
+      - [x] Usabile a 375 px con target touch ≥ 44x44 px e nessuno scroll orizzontale
+      - [x] `home.blade.php` e i testi segnaposto rimossi; nessun `route('home')` rotto
+      - [x] Nessun testo incastonato nelle viste
 
       ## Test Data
       - N/A — nessuna modifica di modello, schema, factory o seeder in questo task
@@ -247,9 +247,15 @@ tasks:
       - Push: **da non eseguire** (`git_mode: GITFLOW`)
       - PR: aggiorna le note locali della PR
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: 6429d743fd89e519abcd1ab275e1ed0f74ef0365
+      short_sha: 6429d74
+      subject: 'feat(US-007): TASK-02 vista i miei step come schermata di ingresso'
+      committed_at: '2026-08-13T19:34:56+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Test della schermata: cosa compare, cosa no, e cosa viene annunciato'
@@ -356,4 +362,4 @@ tasks:
       - TASK-02
       - TASK-03
       - TASK-04
-updated_at: '2026-08-13T17:29:12+00:00'
+updated_at: '2026-08-13T17:34:59+00:00'
