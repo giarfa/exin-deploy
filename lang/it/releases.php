@@ -111,4 +111,43 @@ return [
     'step_value_confirmed' => 'Confermato',
 
     'step_open_action' => 'Apri e compila',
+
+    /*
+     * Dettaglio della release (US-008). Schermata di **sola lettura**: non chiede
+     * nulla a chi la apre e non ha azioni proprie — risponde a "dove siamo e chi
+     * stiamo aspettando" senza interrompere nessuno.
+     *
+     * Le etichette degli stati non hanno chiavi qui: vivono su
+     * `App\Enums\ReleaseStepStatus::label()` e `ReleaseStatus::label()`, dove sta il
+     * vocabolario. Il titolo delle informazioni fornite riusa
+     * `step_values_heading`: e lo stesso blocco, reso dallo stesso componente.
+     */
+    'detail_breadcrumb_my_steps' => 'I miei step',
+    'detail_summary_in_progress' => 'Rilascio in corso — step :position di :total, in attesa di :name.',
+    // Una release in corso ha sempre uno step attivo per invariante: questa riga
+    // esiste perche una pagina che tacesse davanti a un dato incoerente lascerebbe
+    // senza sapere cosa sta guardando.
+    'detail_summary_without_active_step' => 'Rilascio in corso — nessuno step risulta attivo.',
+    'detail_summary_completed' => 'Rilascio consegnato il :date.',
+
+    'detail_chain_heading' => 'Catena degli step',
+    'detail_step_owner' => ':role — :name',
+    'detail_step_closed_at' => 'Chiuso da :name il :date',
+    'detail_step_active_since' => 'Attivo da :duration',
+    'detail_step_required_fields' => '{0} nessuna informazione richiesta|{1} una informazione richiesta|[2,*] :count informazioni richieste',
+    'detail_step_open_reserved' => 'Il comando e visibile solo al responsabile dello step o a un amministratore.',
+    'detail_step_unlocks_after' => 'Si sblocca alla chiusura dello step :position.',
+    'detail_step_unlocks_last' => 'Ultimo step: la sua chiusura conclude il rilascio.',
+
+    'detail_meta_heading' => 'Dati della release',
+    'detail_meta_project' => 'Progetto',
+    'detail_meta_label' => 'Etichetta',
+    'detail_meta_status' => 'Stato',
+    'detail_meta_template' => 'Template di origine',
+    'detail_meta_started_by' => 'Avviata da',
+    'detail_meta_started_at' => 'Avviata il',
+    'detail_meta_completed_at' => 'Conclusa il',
+    'detail_meta_completed_steps' => 'Step completati',
+    'detail_meta_completed_steps_value' => ':completed di :total',
+    'detail_template_frozen' => 'Il template e congelato all\'avvio: modifiche successive a :template non alterano questa release.',
 ];
