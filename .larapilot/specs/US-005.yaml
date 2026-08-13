@@ -5,7 +5,7 @@ epic:
   title: 'Esecuzione del rilascio'
 priority: CRITICAL
 points: 8
-status: 'IN PROGRESS'
+status: REVIEW
 body: |
   #### US-005: Chiusura di uno step con validazione e avanzamento sequenziale
 
@@ -45,4 +45,6 @@ status_history:
     at: '2026-08-13T08:56:21+00:00'
   - status: 'IN PROGRESS'
     at: '2026-08-13T09:00:44+00:00'
+  - status: REVIEW
+    at: '2026-08-13T09:45:21+00:00'
 rework: false
