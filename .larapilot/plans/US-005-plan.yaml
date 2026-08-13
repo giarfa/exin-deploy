@@ -288,10 +288,10 @@ tasks:
       7. Redigere titolo e corpo della PR interna verso `develop` e **tenerli in locale**: nessun push
 
       ## Completion Criteria
-      - [ ] `develop` contiene i commit di US-004 e la suite e verde su `develop`
-      - [ ] Il branch `feature/US-005-chiusura-step-avanzamento` esiste in locale e parte da `develop`
-      - [ ] Nessuna modifica non committata trascinata dal branch precedente
-      - [ ] Descrizione della PR interna redatta e tenuta in locale
+      - [x] `develop` contiene i commit di US-004 e la suite e verde su `develop`
+      - [x] Il branch `feature/US-005-chiusura-step-avanzamento` esiste in locale e parte da `develop`
+      - [x] Nessuna modifica non committata trascinata dal branch precedente
+      - [x] Descrizione della PR interna redatta e tenuta in locale
 
       ## Test Data
       - N/A — nessuna modifica a schema, modelli o dati
@@ -301,8 +301,14 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale verso `develop`, apertura remota solo su richiesta esplicita
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: f7351928eeb4e6d8085003fc5e3dfd55472b704c
+      short_sha: f735192
+      subject: 'chore(US-005): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-13T11:00:52+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Regola di validazione WellFormedLink con motivo esplicito'
@@ -918,4 +924,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-12
-updated_at: '2026-08-13T08:56:21+00:00'
+updated_at: '2026-08-13T09:01:11+00:00'

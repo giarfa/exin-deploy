@@ -43,6 +43,23 @@ return [
     ],
 
     /*
+     * Regola App\Rules\WellFormedLink: un campo di tipo link deve contenere un
+     * indirizzo scritto per intero, e il rifiuto nomina i difetti trovati invece
+     * di dire soltanto "non valido". I frammenti sotto vengono composti in un solo
+     * messaggio, nell'ordine in cui si correggono.
+     */
+    'well_formed_link' => [
+        'message' => 'Indirizzo non valido: :defects.',
+        'not_a_string' => 'Il campo :attribute deve essere un indirizzo scritto per intero.',
+        'and' => 'e',
+        'missing_scheme' => 'manca lo schema (https://)',
+        'unsupported_scheme' => 'lo schema :scheme non e ammesso, usa http:// oppure https://',
+        'contains_whitespace' => 'contiene uno spazio',
+        'missing_host' => 'manca il nome del sito',
+        'malformed_host' => 'il nome del sito :host non e valido',
+    ],
+
+    /*
      * Requisiti della regola Password::defaults() registrata in AppServiceProvider.
      */
     'password' => [
