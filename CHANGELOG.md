@@ -147,6 +147,20 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
 - **Le briciole del dettaglio tornano conformi al mockup**: la prima voce e ora l'elenco
   delle release e non piu "i miei step", ripiego dichiarato di US-008 quando l'elenco non
   esisteva ancora.
+- **Registro delle transizioni consultabile** (US-010, FR-016): dal dettaglio di una release
+  si apre la cronologia completa di cio che e successo — avvio, chiusura di ogni step,
+  passaggio del flusso al responsabile successivo, conclusione — con l'attore e l'istante di
+  ciascuna voce. L'ordine e crescente, dall'inizio del rilascio in poi: e un racconto di come
+  e andata, non una lista di cose da fare.
+- **I tentativi non autorizzati sono riservati agli amministratori** (US-010): la riga nomina
+  una persona e cosa ha provato a fare, ed e materiale di sicurezza e non di processo. Chi
+  non e amministratore non la vede e non ne vede traccia — nessun conteggio di voci nascoste.
+- **L'immutabilita del registro e ora verificata sull'intera applicazione** (US-010): oltre al
+  rifiuto del modello, i test pretendono che nessuna rotta delle superfici di rilascio accetti
+  un metodo di scrittura, che nessuna rotta risolva una voce dall'indirizzo, che nessun
+  comando Artisan la tocchi e che la schermata non esponga metodi pubblici oltre a quelli di
+  lettura — in Livewire un metodo pubblico e un'azione invocabile dal browser. `update` e
+  `delete` sono negate anche a un amministratore da `ReleaseEventPolicy`.
 
 - **Diagrammi del modello e delle transizioni** nel README: entita-relazioni con definizione
   e istanza distinte, e macchina a stati di step e release annotata con gli eventi scritti

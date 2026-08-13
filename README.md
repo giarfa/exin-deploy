@@ -336,6 +336,7 @@ rilascio e avvenuto.
 | `/progetti/{progetto}/rilascio` | **Avvio di una release** | amministratore |
 | `/rilasci` | **Elenco e storico delle release** — in corso e concluse, con filtri | ogni membro |
 | `/rilasci/{release}` | **Dettaglio della release** — catena, responsabili, valori | ogni membro |
+| `/rilasci/{release}/registro` | **Registro delle transizioni** — cronologia in sola aggiunta | ogni membro (tentativi: amministratore) |
 | `/step/{step}` | **Compilazione e chiusura di uno step** | responsabile dello step o amministratore |
 | `/template` · `/template/{t}/step` · `/template/{t}/step/{s}/campi` | Processo di rilascio | amministratore |
 | `/responsabili-predefiniti` | Mappatura predefinita di team | amministratore |
@@ -499,6 +500,48 @@ Il comando "Avvia una release" del mockup **non** e stato portato in cima all'el
 si decide su un progetto (`/progetti/{progetto}/rilascio`) e un comando senza progetto non
 porterebbe da nessuna parte.
 
+#### Il registro delle transizioni
+
+`/rilasci/{release}/registro` risponde a "cosa e successo e per mano di chi" (FR-016), dove il
+dettaglio risponde a "dove siamo". Rotta propria e non una sezione del dettaglio: sono due
+domande diverse, e questa e l'unica superficie con righe a **visibilita differenziata** —
+dentro una schermata che mostra tutto a tutti, quella differenza sarebbe invisibile a chi
+legge il codice.
+
+**Ordine crescente**, al contrario di ogni altra schermata. Le altre rispondono a "cosa devo
+fare ora" e mettono in cima il piu recente; una cronologia si legge dall'inizio — l'avvio in
+testa, la consegna in fondo. Lo spareggio e sull'identificativo e non solo sull'istante:
+`CloseStep` scrive chiusura e attivazione nella **stessa transazione**, quindi con lo stesso
+istante al secondo, e senza lo spareggio la cronologia direbbe che il flusso e passato al
+responsabile successivo prima che lo step precedente si chiudesse. Gli UUIDv7 sono monotoni,
+quindi l'ordine di scrittura e recuperabile dalla chiave.
+
+**I tentativi non autorizzati sono dei soli amministratori.** La riga nomina una persona e
+cosa ha provato a fare: e materiale di sicurezza, non di processo, e mostrarlo a tutti
+trasformerebbe il registro in una lavagna delle colpe. Chi non e amministratore non ne vede
+**alcuna traccia** — nessun conteggio di voci nascoste, che sarebbe il peggiore dei due mondi.
+La stessa decisione e scritta in due linguaggi, `ReleaseEventPolicy::view()` per il singolo
+evento e `ReleaseEvent::visibleTo()` per la query: filtrare a valle costerebbe la lettura di
+righe che chi guarda non puo vedere. `ReleaseEventPolicyTest` le confronta riga per riga, cosi
+che aprirne una senza l'altra faccia fallire la suite invece di aprire una fuga.
+
+**Il payload si legge con `??`, mai come se fosse garantito.** E nullable e le sue chiavi
+variano per azione; una riga scritta da una versione precedente non ha le chiavi aggiunte
+dopo, e il registro e in sola aggiunta — nessuno potra tornare a completarla.
+
+Nessuna paginazione: le voci sono proporzionali alla lunghezza della catena, dell'ordine della
+decina per rilascio. Il costo di lettura non dipende dal loro numero
+(`ReleaseLogQueryBudgetTest`), e il punto piu esposto e la relazione **nullable** verso lo
+step — l'avvio non ne ha — che caricata pigramente non si nota su un insieme di sole chiusure.
+
+**Sugli istanti** (`ReleaseLogInstantTest`): sono memorizzati in UTC, resi nel fuso
+dell'applicazione — che e UTC — e identici su registro e dettaglio, verificato confrontando le
+due schermate sullo stesso valore. C'e una trappola fissata da un test: Eloquent serializza una
+data **formattandola**, e il formato non porta l'offset, quindi una `Carbon` in un fuso diverso
+finirebbe in tabella come orario di parete di quel fuso. L'applicazione non ci cade perche
+scrive sempre `now()`; il giorno in cui un istante arrivasse da un input o da un import servira
+una normalizzazione esplicita, su una tabella dove le righe sbagliate non si correggono.
+
 ### Configurazione del processo
 
 Le entita di definizione presenti oggi:
@@ -623,9 +666,16 @@ riga, con icona e parola.
     `DB::table('release_events')->delete()`), che per costruzione non attraversano gli
     eventi Eloquent, ne per la cascata quando sparisce la release a cui l'evento si
     riferisce. Chiudere anche quelle richiederebbe un trigger di database, incompatibile
-    con il vincolo 1. La difesa contro la cancellazione e altrove: `ReleasePolicy::delete()`
-    la nega a chiunque, amministratori inclusi, e nessun percorso applicativo cancella
-    eventi. Chi introdurra il primo deve passare da quell'eccezione, non aggirarla.
+    con il vincolo 1. La difesa contro la cancellazione e altrove, su **tre** livelli:
+    `ReleaseEventPolicy` nega `update` e `delete` a chiunque — amministratori inclusi, perche
+    le due stanno fra le ability non filtrate da `before()` — `ReleasePolicy::delete()` nega
+    la cancellazione della release che li conterrebbe, e nessun percorso applicativo cancella
+    eventi. Che quest'ultima non sia solo un'affermazione lo verifica
+    `ReleaseEventAppendOnlyTest`: nessuna rotta delle superfici di rilascio accetta un metodo
+    di scrittura, nessuna rotta risolve una voce dall'indirizzo, nessun comando Artisan la
+    nomina, e la schermata del registro non espone metodi pubblici oltre a quelli di lettura —
+    in Livewire un metodo pubblico e un'azione invocabile dal browser. Chi introdurra il primo
+    percorso di scrittura deve passare da quei test, non aggirarli.
 11. **`releases.completed_by` e `completed_at` sono nate vuote.** Create da US-004 e
     riempite da US-006, quando la chiusura dell'ultimo step conclude la release:
     aggiungerle dopo sarebbe stata una seconda migrazione sulla stessa tabella per una

@@ -413,7 +413,7 @@ tasks:
     id: TASK-06
     title: 'Budget di query del registro'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
     body: |-
@@ -435,13 +435,19 @@ tasks:
       4. `php artisan test --filter=ReleaseLogQueryBudget`
 
       ## Completion Criteria
-      - [ ] Il costo non dipende dal numero di voci del registro
-      - [ ] Il test passa
+      - [x] Il costo non dipende dal numero di voci del registro
+      - [x] Il test passa
 
       ## Git Deliverables
       - Commit: `test(US-010): TASK-06 budget di query del registro`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: cfe23f17d0b79ca17a6e3c849c6d4414d255c899
+      short_sha: cfe23f1
+      subject: 'test(US-010): TASK-06 budget di query del registro'
+      committed_at: '2026-08-14T00:34:52+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Changelog, README e regole di progetto'
@@ -482,4 +488,4 @@ tasks:
       - Commit: `docs(US-010): TASK-07 changelog, README e regola sul registro`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:33:22+00:00'
+updated_at: '2026-08-13T22:34:53+00:00'
