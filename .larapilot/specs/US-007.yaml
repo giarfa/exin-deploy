@@ -5,7 +5,7 @@ epic:
   title: 'Visibilità e tracciabilità'
 priority: HIGH
 points: 5
-status: TODO
+status: 'IN PROGRESS'
 body: |
   #### US-007: Vista operativa: i miei step
 
@@ -33,3 +33,9 @@ body: |
   - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/index.html`: mobile first a 375 px, target touch almeno 44x44 px, sidebar a drawer sotto 1024 px
   - [ ] Gli stati sono resi con icona e parola, mai dal solo colore
   - [ ] Il contatore degli step in attesa è annunciato agli screen reader con `aria-live="polite"`
+status_history:
+  - status: PLANNED
+    at: '2026-08-13T17:08:06+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-13T17:23:14+00:00'
+rework: false

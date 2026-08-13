@@ -1,0 +1,347 @@
+code: US-007
+plan_body: |-
+  ## Soluzione tecnica
+
+  US-007 e una spec di sola lettura: nessuna migrazione, nessuna scrittura, nessuna Action nuova. La schermata di ingresso diventa una pagina Livewire che esegue **due query** sullo snapshot congelato (`release_steps`, `releases`) e non tocca mai le tabelle di definizione (`step_definitions`, `field_definitions`) — vincolo permanente del progetto, vedi `.ai/rules/app.md`.
+
+  **Rotta.** `Route::view('/', 'home')` diventa `Route::livewire('/', 'my-steps.index')`, mantenendo il nome `home`: ogni `route('home')` gia scritto (logo di sidebar, voce di navigazione, redirect di Fortify) continua a funzionare senza modifiche. Il gruppo `auth` resta. `resources/views/home.blade.php` viene rimosso, e con esso i testi segnaposto `app.home_heading` / `app.home_placeholder`.
+
+  **Componente.** `resources/views/components/my-steps/⚡index.blade.php`, come tutte le altre pagine del progetto (componente Livewire monofile con prefisso ⚡). Due proprieta `#[Computed]`: gli step che attendono l'utente e le release in corso su cui e coinvolto senza avere il turno.
+
+  ### Blocco 1 — gli step che attendono l'utente
+
+  ```php
+  ReleaseStep::query()
+      ->where('assigned_user_id', $user->id)
+      ->where('status', ReleaseStepStatus::Active)
+      ->whereHas('release', fn (Builder $query) => $query->inProgress())
+      ->withActivationInstant()
+      ->with(['release' => fn ($query) => $query->with('project')->withCount('steps')])
+  ```
+
+  Il filtro e **sull'assegnazione**, non sulla Policy: `ReleaseStepPolicy::before()` concede a un amministratore la lettura di qualsiasi step, ma questa vista si chiama "i miei step" e un amministratore non deve vedere gli step altrui (criterio di accettazione esplicito). L'indice `(assigned_user_id, status)` esiste gia dalla migrazione di US-004 ed e stato creato proprio per questa query.
+
+  `withCount('steps')` sulla release fornisce il denominatore di "Step 2 di 5"; il ruolo si legge da `role_name`, congelato, mai da `role()->name` (vincolo permanente 7 del README).
+
+  Ordinamento: **dal piu vecchio al piu recente** per istante di attivazione — chi aspetta da piu tempo sta in cima, che e l'unica priorita utile a chi entra. Spareggio deterministico su nome progetto ed etichetta.
+
+  ### Blocco 2 — release in corso su cui l'utente e coinvolto
+
+  Mitigazione del rischio accettato n.1 del PRD (assenza di notifiche, FR-025 fuori perimetro): rende visibile **chi** trattiene il flusso e **da quanto**, senza reintrodurre la feature.
+
+  ```php
+  Release::query()
+      ->inProgress()
+      ->whereHas('steps', fn ($query) => $query->where('assigned_user_id', $user->id))
+      ->whereDoesntHave('steps', fn ($query) => $query
+          ->where('assigned_user_id', $user->id)
+          ->where('status', ReleaseStepStatus::Active))
+      ->with(['project', 'activeStep' => fn ($query) => $query->withActivationInstant()->with('assignedUser')])
+  ```
+
+  "Coinvolto" significa avere almeno uno step assegnato nella release, in qualunque stato. La seconda condizione esclude le release gia presenti nel blocco 1: se il turno e tuo, la release non e in attesa di qualcun altro.
+
+  Serve una relazione nuova su `Release`: `activeStep(): HasOne` — `hasOne(ReleaseStep::class)->where('status', ReleaseStepStatus::Active)`. E eager-loadable (a differenza di un metodo che filtra in PHP) e sara riusata da US-008 e US-009. Su una release conclusa e `null`: la vista non la incontra mai qui, ma il rendering deve reggerlo comunque.
+
+  ### Decisione — da quanto uno step e aperto
+
+  Il mockup chiede "aperto da 4 ore" e "in attesa di Davide Rossi da 2 giorni". Non esiste una colonna `release_steps.activated_at`.
+
+  **Scelta: derivare l'istante, non aggiungere la colonna.**
+
+  - per lo step in posizione 1 l'istante di attivazione e `release.started_at` (lo crea `StartRelease` gia attivo);
+  - per ogni altro step e il `completed_at` dello step precedente, che `CloseStep` scrive **nella stessa transazione** in cui attiva il successivo — quindi i due istanti coincidono per costruzione, non per approssimazione.
+
+  Si legge con uno scope `#[Scope] withActivationInstant()` su `ReleaseStep` che aggiunge una sottoquery correlata (alias `previous_step_completed_at`, castato a `datetime`), piu un metodo `activationInstant()` che applica il ripiego su `release.started_at`. Costo costante, nessun N+1, solo Eloquent portabile (vincolo permanente 1).
+
+  **Alternativa scartata:** colonna `activated_at` scritta da `StartRelease` e `CloseStep`. Sarebbe piu diretta in lettura, ma imporrebbe di riaprire due Action gia consegnate e verificate contro il doppio invio concorrente (US-004, US-005), piu un backfill sulle release esistenti, per un dato che i dati gia contengono. Se un domani servisse ordinare o filtrare **in database** su quell'istante — per esempio le metriche di processo, FR-024 — la colonna diventerebbe giustificata: allora si aggiunge, con backfill nella stessa migrazione.
+
+  ### Prestazioni e N+1
+
+  Invariante da dimostrare, non da dichiarare: **stesso numero di query** con uno step in attesa e con dieci, con una release coinvolta e con dieci. Concretamente due query per il blocco 1 (step + release con progetto e conteggio) e due per il blocco 2 (release con progetto + step attivo con responsabile), piu quelle di sessione. Nessuna lettura di relazione dentro un `foreach` nella vista: cio che la Blade mostra deve essere gia caricato.
+
+  Indici: nessuno da creare. `(assigned_user_id, status)` su `release_steps` e `status` su `releases` esistono; `(project_id, label)` copre il prefisso `project_id`.
+
+  ### Interfaccia, accessibilita e copy
+
+  Contratto: `.larapilot/mockups/superficie-operativa/index.html` + `README.md` del mockup. Nessuna soglia responsive nuova — la sidebar permanente a 1024 px con drawer sotto e gia nel layout `x-layouts.app` (vincolo permanente 4).
+
+  - Mobile first a 375 px: card a piena larghezza, una sola azione primaria per card ("Apri e compila"), testo base 16 px, nessuno scroll orizzontale.
+  - Target touch ≥ 44x44 px sotto 1024 px: la card e cliccabile per intero, non solo il bottone.
+  - Stati resi con **icona + parola** (`flux:badge` con `icon`), mai dal solo colore.
+  - Contatore degli step in attesa in `aria-live="polite"`, perche cambia dopo un aggiornamento Livewire senza ricarica.
+  - Un solo `h1` per pagina; le due sezioni sono `h2`. Skip link gia nel layout.
+  - Contrasto verificato in tema chiaro **e** scuro.
+  - Stato vuoto esplicito che dice *quando* comparira uno step, non solo che non ce n'e (copy del mockup: "Quando un collega chiude il proprio step e tocca a te, lo trovi qui").
+  - Solo componenti **Flux gratuiti** (vincolo permanente 2).
+  - Tutto il testo in `lang/it/`, mai incastonato nelle viste (prescrizione del PRD).
+  - Durate relative ("da 2 giorni", "aperto da 4 ore") via `Carbon::diffForHumans()` con locale italiano.
+
+  Il comando "Apri e compila" punta a `route('releases.step', $step)`, gia esistente da US-005: l'autorizzazione lato server resta quella di `ReleaseStepPolicy` — nascondere un comando non e autorizzazione.
+
+  ## Git & Branching
+
+  - Modalita: **GITFLOW** (da `settings.git_mode`) — **nessun push automatico**
+  - Ramo: `feature/US-007-vista-i-miei-step` da `develop`
+  - TASK-00: bootstrap del ramo; descrizione della PR verso `develop` preparata **in locale**, remoto non aperto salvo richiesta esplicita
+  - Un commit atomico per task, Conventional Commits: `type(US-007): TASK-NN sintesi`
+  - `CHANGELOG.md` sezione Unreleased aggiornato: la schermata di ingresso cambia, ed e comportamento visibile
+  - Merge su `develop` solo dopo approvazione umana in `/larapilot-review`
+
+  ## Test Data Strategy
+
+  - **Nessuna modifica di schema o di modello dati**: nessuna migrazione, nessuna colonna, nessun nuovo Eloquent model. Le factory esistenti bastano — `ReleaseFactory` (con stato `completed()`), `ReleaseStepFactory` (stati `active()`, `blocked()`, `completed()`), `ProjectFactory::withTemplate()`.
+  - Se TASK-01 introducesse uno stato di factory mancante (per esempio una catena a piu step con posizioni coerenti), va aggiunto **nello stesso commit** del codice che lo richiede.
+  - **Seeder: nessuna modifica in questa spec.** Lo scenario dimostrativo di esecuzione — release a meta catena e release conclusa — e perimetro di **US-011** (FR-018) ed e li che deve restare: duplicarlo qui produrrebbe due sorgenti divergenti dello stesso scenario. Conseguenza operativa da conoscere: finche US-011 non e consegnata, `migrate:fresh --seed` produce un ambiente **senza release**, quindi la schermata mostra lo stato vuoto. Per la verifica manuale si avvia una release dall'interfaccia (US-004, `/progetti/{project}/rilascio`).
+  - Volumi usati nei test: almeno 2 step attivi su 2 progetti diversi per l'utente, 1 step attivo di un altro utente, 1 step bloccato e 1 completato dell'utente, 1 release conclusa con uno step gia suo, 2 release in corso in attesa di altri.
+
+  ## Test Strategy
+
+  - Bar: **NORMAL** (da `settings.testing`). Nessun Playwright, nessun Dusk, nessun Pest browser, nessuna matrice di viewport automatica.
+  - Test di modello (`tests/Unit/Models/`) sui seam di lettura: relazione `activeStep`, scope `withActivationInstant()` con e senza step precedente, ripiego su `started_at`.
+  - Test di funzionalita (`tests/Feature/MySteps/`) sulla schermata: elenco filtrato per responsabile, esclusione degli step di altri **anche per un amministratore**, esclusione di bloccati/completati/release concluse, dati mostrati per voce (progetto, etichetta, nome, posizione su totale, ruolo), stato vuoto, blocco delle release in attesa con chi trattiene e da quanto, contratto di accessibilita (`aria-live`, stato come icona + parola, un solo `h1`).
+  - Test di budget query (`tests/Feature/MySteps/MyStepsQueryBudgetTest.php`) nello stile gia adottato da `CloseStepQueryBudgetTest` e `StartReleaseQueryBudgetTest`: **nessun numero assoluto**, ma l'invariante "stesso costo con 1 e con N", perche un numero fisso lo cambierebbe ogni ottimizzazione legittima.
+  - Qualita: `vendor/bin/pint --dirty` e `php artisan larapilot:quality` prima della consegna (richiede `composer install`, vedi `.ai/rules/general.md`).
+  - **Consegna manuale ad Anne** (ammessa a ogni bar, necessaria qui): verifica a 375 / 768 / 1024 / 1280 px in tema chiaro e scuro, apertura e chiusura del drawer con tastiera, annuncio del contatore con screen reader, rotazione in landscape su telefono. Non automatizzabile sotto `NORMAL` e da annotare nelle note di revisione.
+
+  ## Rischi e note
+
+  1. **Le durate relative sono la sola leva contro il rischio n.1 del PRD.** Se "da quanto" risultasse impreciso o assente, il blocco 2 perde la sua ragione d'essere: e il criterio da verificare per primo in revisione.
+  2. **Ambiente vuoto fino a US-011.** Chi prova la schermata dopo un `migrate:fresh --seed` vede lo stato vuoto e potrebbe leggerlo come un difetto. Va detto nella consegna, non scoperto in revisione.
+  3. **La sottoquery di attivazione e correlata.** Se un domani serve ordinare o filtrare in database su quell'istante su volumi grandi, la colonna `activated_at` diventa la scelta giusta: la decisione e registrata sopra proprio per non doverla ri-derivare.
+  4. **US-008 e US-009 riusano questi seam.** `Release::activeStep()` e `withActivationInstant()` nascono qui ma servono anche al dettaglio e all'elenco: vanno documentati come tali, non come dettaglio interno di questa schermata.
+tasks:
+  -
+    id: TASK-00
+    title: 'Bootstrap del ramo di lavoro e descrizione della PR'
+    body: |-
+      ## Description
+      Prepara Gitflow per US-007: crea il ramo di funzionalita da `develop` e redige la descrizione della PR interna verso `develop`. **Nessun push**: `settings.git_mode` e `GITFLOW`, il remoto si tocca solo su richiesta esplicita in sessione.
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+
+      ## Steps
+      1. `git checkout develop` (il ramo esiste in locale)
+      2. `git checkout -b feature/US-007-vista-i-miei-step`
+      3. Redigi titolo e corpo della PR verso `develop` — titolo `US-007: Vista operativa: i miei step`, corpo con collegamento al piano ed elenco dei task previsti. Tienili in locale.
+      4. Commit di ancoraggio del ramo (vuoto ammesso)
+
+      ## Completion Criteria
+      - [ ] Il ramo `feature/US-007-vista-i-miei-step` esiste in locale e parte da `develop`
+      - [ ] Titolo e corpo della PR verso `develop` sono redatti (apertura remota non richiesta)
+
+      ## Test Data
+      - N/A — nessuna modifica di schema o di modello
+
+      ## Git Deliverables
+      - Commit: `chore(US-007): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+      - Push: **da non eseguire** (`git_mode: GITFLOW`)
+      - PR: preparata in locale, remoto solo su richiesta dell'utente
+    type: Impl
+    status: TODO
+    dependencies: {}
+  -
+    id: TASK-01
+    title: 'Seam di lettura sui modelli: step attivo della release e istante di attivazione'
+    body: |-
+      ## Description
+      Introduce i due seam di lettura che la vista operativa richiede e che US-008 e US-009 riuseranno: la relazione verso lo **step attivo** di una release e la derivazione dell'**istante di attivazione** di uno step. Nessuna migrazione, nessuna colonna nuova: la decisione e motivata nel corpo del piano ("Decisione — da quanto uno step e aperto").
+
+      ## Files Involved
+      - app/Models/Release.php
+      - app/Models/ReleaseStep.php
+      - tests/Unit/Models/ReleaseTest.php
+      - tests/Unit/Models/ReleaseStepTest.php
+
+      ## Steps
+      1. `Release::activeStep(): HasOne` — `hasOne(ReleaseStep::class)->where('status', ReleaseStepStatus::Active)`. Deve essere eager-loadable (`with('activeStep')`), quindi una relazione e non un metodo che filtra in PHP. Documenta nel PHPDoc l'invariante che la rende sensata: al massimo uno step attivo per release, zero quando la release e conclusa — quindi `null` su una release conclusa e un esito legittimo, non un errore.
+      2. `Release` — scope `#[Scope] involving(Builder $query, User $user)`: release che hanno almeno uno step assegnato a quella persona, in qualunque stato. Serve al blocco delle release in attesa.
+      3. `ReleaseStep` — scope `#[Scope] awaitingUser(Builder $query, User $user)`: step in stato `Active`, assegnati a quella persona, su release in corso. Il filtro e sull'assegnazione e **non** sulla Policy: un amministratore non deve vedere qui gli step altrui.
+      4. `ReleaseStep` — scope `#[Scope] withActivationInstant(Builder $query)`: `select('release_steps.*')` piu `addSelect` di una sottoquery correlata che legge il `completed_at` dello step precedente della stessa release (`whereColumn('release_id', ...)`, `whereColumn('position', '<', ...)`, `orderByDesc('position')`, `limit(1)`), con alias `previous_step_completed_at`. Attenzione: senza il `select('release_steps.*')` esplicito la sola `addSelect` produrrebbe una query con quella unica colonna.
+      5. Aggiungi `'previous_step_completed_at' => 'datetime'` ai cast di `ReleaseStep`, cosi che l'alias torni come istante e non come stringa.
+      6. `ReleaseStep::activationInstant(): CarbonInterface` — restituisce `previous_step_completed_at` quando c'e, altrimenti `release->started_at`. Documenta perche i due istanti coincidono: `CloseStep` chiude lo step precedente e attiva il successivo nella **stessa transazione**, quindi non e un'approssimazione. Il metodo richiede la release caricata: dichiaralo nel PHPDoc come fa `ReleaseStep::closingRules()` per i campi.
+      7. Solo Eloquent e costrutti portabili: nessuna funzione specifica di SQLite (vincolo permanente 1 del README).
+      8. Test di unita nello stesso commit: relazione `activeStep` presente/assente, scope `awaitingUser` che esclude bloccati, completati, step altrui e release concluse, scope `involving`, `activationInstant()` sullo step in posizione 1 (ripiego su `started_at`) e su uno successivo (istante del precedente).
+      9. `php artisan test --filter=ReleaseStepTest` e `--filter=ReleaseTest`
+
+      ## Completion Criteria
+      - [ ] `Release::activeStep()` e eager-loadable e restituisce `null` su release conclusa
+      - [ ] `Release::involving()` e `ReleaseStep::awaitingUser()` filtrano per assegnazione, non per Policy
+      - [ ] `withActivationInstant()` non esegue query per riga e non usa SQL specifico di SQLite
+      - [ ] `activationInstant()` corretto sia sullo step iniziale sia sui successivi
+      - [ ] Nessuna lettura di `StepDefinition` o `FieldDefinition` in questi percorsi
+      - [ ] Test di unita verdi
+
+      ## Test Data
+      - Nessuna modifica di schema o di modello dati: le factory esistenti (`ReleaseFactory`, `ReleaseStepFactory` con stati `active()`, `blocked()`, `completed()`) coprono i casi
+      - [ ] Se un caso richiede uno stato di factory non presente (per esempio una catena a posizioni coerenti), aggiungilo in **questo stesso** commit
+      - [ ] Nessuna modifica al seeder: lo scenario dimostrativo di esecuzione e perimetro di US-011
+
+      ## Git Deliverables
+      - Commit: `feat(US-007): TASK-01 seam di lettura per la vista operativa`
+      - Push: **da non eseguire** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+  -
+    id: TASK-02
+    title: 'Pagina «I miei step» come schermata di ingresso'
+    body: |-
+      ## Description
+      Sostituisce la home segnaposto con la vista operativa: gli step attivi di cui l'utente autenticato e responsabile su tutti i progetti, piu il blocco delle release in corso in attesa di altri. Contratto visivo e di accessibilita: `.larapilot/mockups/superficie-operativa/index.html` e il `README.md` del mockup.
+
+      ## Files Involved
+      - resources/views/components/my-steps/⚡index.blade.php (nuovo)
+      - routes/web.php
+      - resources/views/home.blade.php (da rimuovere)
+      - lang/it/my-steps.php (nuovo)
+      - lang/it/app.php (rimozione di `home_heading` e `home_placeholder`)
+
+      ## Steps
+      1. Crea il componente Livewire monofile `resources/views/components/my-steps/⚡index.blade.php`, come le altre pagine del progetto. Due proprieta `#[Computed]`:
+         - **`mySteps`** — `ReleaseStep::query()->awaitingUser($user)->withActivationInstant()->with(['release' => fn ($query) => $query->with('project')->withCount('steps')])`, ordinati **dal piu vecchio istante di attivazione**, con spareggio deterministico su nome progetto ed etichetta.
+         - **`waitingReleases`** — `Release::query()->inProgress()->involving($user)` escludendo le release il cui step attivo e dell'utente (`whereDoesntHave`), con `with(['project', 'activeStep' => fn ($query) => $query->withActivationInstant()->with('assignedUser')])`.
+      2. Sostituisci la rotta: `Route::livewire('/', 'my-steps.index')->name('home')` dentro il gruppo `auth`. **Il nome `home` resta invariato** — logo di sidebar, voce di navigazione e redirect di Fortify vi puntano gia. Aggiorna il commento della rotta: non e piu un segnaposto.
+      3. Elimina `resources/views/home.blade.php` e le chiavi `home_heading` / `home_placeholder` da `lang/it/app.php`, insieme al commento che le dichiarava provvisorie.
+      4. Ogni voce dell'elenco mostra: **progetto**, **etichetta della release**, **nome dello step**, **posizione** ("Step 2 di 5", da `position` e `steps_count`), **ruolo** letto da `role_name` congelato — mai da `role()->name` — e da quanto e aperto (`activationInstant()` con `diffForHumans()`).
+      5. Comando primario per voce verso `route('releases.step', $step)`. L'autorizzazione resta quella di `ReleaseStepPolicy` lato server: nascondere un comando non e autorizzazione.
+      6. Blocco secondario "Release in corso su cui sei coinvolto": progetto, etichetta, **chi** trattiene il flusso (responsabile dello step attivo), **su quale step** e **da quanto**. E la mitigazione del rischio accettato n.1 del PRD (assenza di notifiche), non un abbellimento.
+      7. Stato vuoto esplicito quando nessuno step attende l'utente: dice **quando** ne comparira uno, con il copy del mockup.
+      8. Implementazione **mobile first** per il mockup: card a piena larghezza a 375 px, una sola azione primaria per card, area cliccabile ≥ 44x44 px sotto 1024 px, nessuno scroll orizzontale a nessun breakpoint. Nessuna soglia responsive nuova: il drawer a 1024 px e gia in `x-layouts.app` (vincolo permanente 4). Verifica a vista a 375, 768, 1024 e 1280 px.
+      9. Accessibilita non negoziabile: contatore degli step in `aria-live="polite"`; stato reso con **icona + parola** (`flux:badge` con `icon`), mai dal solo colore; un solo `h1` con le due sezioni come `h2`; contrasto verificato in tema chiaro **e** scuro. Solo componenti Flux gratuiti (vincolo permanente 2).
+      10. Tutto il testo in `lang/it/my-steps.php`, mai nelle viste. Tono diretto e operativo, seconda persona singolare, come da sezione Copy del README del mockup: "Tocca a te", "Apri e compila", non "Azione richiesta" o "Salva".
+      11. `vendor/bin/pint --dirty --format agent`
+      12. `php artisan test --filter=Release` per verificare che nulla di gia consegnato si sia rotto con il cambio di rotta
+
+      ## Completion Criteria
+      - [ ] Dopo l'accesso la schermata di ingresso e "i miei step", non una dashboard
+      - [ ] L'elenco contiene solo gli step attivi assegnati all'utente autenticato, su tutti i progetti
+      - [ ] Ogni voce mostra progetto, etichetta, nome, posizione su totale e ruolo
+      - [ ] Blocco delle release in attesa con chi trattiene il flusso e da quanto
+      - [ ] Stato vuoto esplicito che spiega quando comparira uno step
+      - [ ] Contatore in `aria-live="polite"`; stati con icona e parola; un solo `h1`
+      - [ ] Usabile a 375 px con target touch ≥ 44x44 px e nessuno scroll orizzontale
+      - [ ] `home.blade.php` e i testi segnaposto rimossi; nessun `route('home')` rotto
+      - [ ] Nessun testo incastonato nelle viste
+
+      ## Test Data
+      - N/A — nessuna modifica di modello, schema, factory o seeder in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-007): TASK-02 vista i miei step come schermata di ingresso`
+      - Push: **da non eseguire** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-01
+  -
+    id: TASK-03
+    title: 'Test della schermata: cosa compare, cosa no, e cosa viene annunciato'
+    body: |-
+      ## Description
+      Copertura di funzionalita della vista operativa al bar `NORMAL`: chi vede cosa, lo stato vuoto, il blocco delle release in attesa e il contratto di accessibilita dichiarato dal mockup. Il criterio piu facile da sbagliare — e quindi da coprire per primo — e che **anche un amministratore** non vede qui gli step altrui.
+
+      ## Files Involved
+      - tests/Feature/MySteps/MyStepsScreenTest.php (nuovo)
+
+      ## Steps
+      1. Usa le factory esistenti in `database/factories/` — non ridefinire dati di test in loco.
+      2. Casi da coprire:
+         - il responsabile vede i propri step attivi su piu progetti, con progetto, etichetta, nome dello step, "Step N di M" e ruolo;
+         - uno step attivo assegnato a un'altra persona **non** compare, e non compare **nemmeno per un amministratore**;
+         - uno step bloccato, uno completato e uno step di una release conclusa non compaiono;
+         - stato vuoto quando nessuno step attende l'utente, con il testo che spiega quando ne comparira uno;
+         - blocco delle release in corso su cui l'utente e coinvolto: nome di chi trattiene il flusso, step su cui e fermo, da quanto tempo;
+         - una release il cui step attivo e dell'utente compare nel primo blocco e **non** nel secondo;
+         - il comando di apertura porta a `route('releases.step', $step)`;
+         - il ruolo mostrato e quello **congelato** (`role_name`): rinominare il `Role` dopo l'avvio non cambia cio che la schermata mostra.
+      3. Contratto di accessibilita, che e criterio di accettazione e non rifinitura: presenza di `aria-live="polite"` sul contatore, stato reso con icona **e** parola, un solo `h1`.
+      4. Nessun Playwright, Dusk, Pest browser o suite di viewport: `settings.testing` e `NORMAL`.
+      5. `php artisan test --filter=MyStepsScreenTest`
+      6. Se un'asserzione sulla risposta fallisce in modo incomprensibile ("Call to a member function all() on array"), leggi `.ai/rules/tests.md`: e l'arricchimento del messaggio di Laravel, non il difetto.
+
+      ## Completion Criteria
+      - [ ] Test verdi in locale
+      - [ ] Ogni criterio di accettazione di US-007 ha almeno un'asserzione che lo dimostra
+      - [ ] Il caso dell'amministratore e coperto esplicitamente
+      - [ ] Nessuna suite browser o di viewport introdotta
+
+      ## Git Deliverables
+      - Commit: `test(US-007): TASK-03 copertura della schermata i miei step`
+      - Push: **da non eseguire** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-02
+  -
+    id: TASK-04
+    title: 'Budget di query: nessun N+1 su step in attesa e release coinvolte'
+    body: |-
+      ## Description
+      Il PRD indica l'N+1 come rischio strutturale delle catene annidate e nomina "i miei step" fra i candidati naturali. Il criterio di accettazione chiede che sia **verificato**, non dichiarato. Stesso stile gia adottato da `CloseStepQueryBudgetTest` e `StartReleaseQueryBudgetTest`.
+
+      ## Files Involved
+      - tests/Feature/MySteps/MyStepsQueryBudgetTest.php (nuovo)
+
+      ## Steps
+      1. **Nessun numero assoluto di query**: un numero fisso andrebbe riscritto a ogni ottimizzazione legittima. Fissa l'invariante che conta: **stesso costo** con uno step in attesa e con dieci, su piu progetti e release diversi.
+      2. Secondo caso: stesso costo con una release coinvolta e con dieci nel blocco secondario, responsabili e progetti inclusi.
+      3. Terzo caso: l'istante di attivazione non costa una query per step — leggere `activationInstant()` su una collezione gia caricata dallo scope non deve produrre query.
+      4. Conta con `DB::listen`, raccogliendo davvero gli attributi mostrati dalla schermata (nome, ruolo congelato, progetto, etichetta, posizione, responsabile, istante): e la lettura a poter far scattare un caricamento pigro, cioe la query che il test misura.
+      5. `php artisan test --filter=MyStepsQueryBudgetTest`
+
+      ## Completion Criteria
+      - [ ] Il costo non cresce con il numero di step in attesa
+      - [ ] Il costo non cresce con il numero di release coinvolte
+      - [ ] L'istante di attivazione non costa una query per riga
+      - [ ] Il messaggio di fallimento dice **quale** eager loading manca, non solo che i numeri differiscono
+
+      ## Git Deliverables
+      - Commit: `test(US-007): TASK-04 budget di query della vista operativa`
+      - Push: **da non eseguire** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-02
+  -
+    id: TASK-05
+    title: 'CHANGELOG e documentazione della schermata di ingresso'
+    body: |-
+      ## Description
+      Allinea la documentazione al comportamento consegnato: la schermata di ingresso cambia, ed e visibile a chiunque usi lo strumento. Documentazione **baseline** (`effort: STANDARD`, nessuna documentazione estesa approvata per questa spec); nessun OpenAPI da aggiornare, il PRD dichiara superficie API assente.
+
+      ## Files Involved
+      - CHANGELOG.md
+      - README.md (sezione `### Schermate`)
+
+      ## Steps
+      1. `CHANGELOG.md`, sezione `## [Unreleased]` → `### Added`: voce per US-007 / FR-013 — la vista operativa "i miei step" come schermata di ingresso, con il blocco delle release in attesa dichiarato per cio che e, cioe la mitigazione dell'assenza di notifiche. Stesso registro e stessa lingua delle voci gia presenti.
+      2. `README.md`, sezione `### Schermate`: descrivi la nuova home, le due query che la compongono e **la derivazione dell'istante di attivazione** — che e la decisione tecnica non ovvia di questa spec, e va trovata da chi legge il codice senza doverla ricostruire.
+      3. Annota che `Release::activeStep()` e `ReleaseStep::withActivationInstant()` nascono qui ma sono seam condivisi: US-008 (dettaglio) e US-009 (elenco) li riusano.
+      4. Nessun nuovo vincolo permanente da aggiungere all'elenco del README: questa spec non ne introduce.
+
+      ## Completion Criteria
+      - [ ] Voce Unreleased nel CHANGELOG coerente con le precedenti
+      - [ ] La sezione Schermate del README descrive la nuova home
+      - [ ] La derivazione dell'istante di attivazione e documentata dove chi legge il codice la cerchera
+
+      ## Test Data
+      - N/A — nessuna modifica di schema o di modello
+
+      ## Git Deliverables
+      - Commit: `docs(US-007): TASK-05 changelog e documentazione della vista operativa`
+      - Push: **da non eseguire** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-02
+      - TASK-03
+      - TASK-04
+updated_at: '2026-08-13T17:08:06+00:00'
