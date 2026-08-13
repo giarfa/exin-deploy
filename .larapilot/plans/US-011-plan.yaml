@@ -146,7 +146,7 @@ tasks:
     id: TASK-01
     title: 'Scenario di esecuzione nel seeder'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |-
@@ -185,21 +185,27 @@ tasks:
       8. `php artisan larapilot:quality --fix`
 
       ## Completion Criteria
-      - [ ] `migrate:fresh --seed` completa senza errori, ed e ripetibile
-      - [ ] Una release a meta catena, una conclusa, una appena avviata
-      - [ ] Registro delle transizioni popolato dalle Action, non scritto a mano
-      - [ ] Nessun lorem ipsum, nessun record orfano
-      - [ ] Pint e Larastan (livello 5) passano
+      - [x] `migrate:fresh --seed` completa senza errori, ed e ripetibile
+      - [x] Una release a meta catena, una conclusa, una appena avviata
+      - [x] Registro delle transizioni popolato dalle Action, non scritto a mano
+      - [x] Nessun lorem ipsum, nessun record orfano
+      - [x] Pint e Larastan (livello 5) passano
 
       ## Test Data
-      - [ ] Nessuna nuova factory: il criterio riserva le factory dei singoli modelli alle rispettive
+      - [x] Nessuna nuova factory: il criterio riserva le factory dei singoli modelli alle rispettive
             spec, e qui si compone soltanto lo scenario
-      - [ ] `migrate:fresh --seed` verificato prima di `task-done`
+      - [x] `migrate:fresh --seed` verificato prima di `task-done`
 
       ## Git Deliverables
       - Commit: `feat(US-011): TASK-01 scenario di esecuzione nell'ambiente dimostrativo`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: 0b80b807203978480c4a2719151a68cfa76f0455
+      short_sha: 0b80b80
+      subject: "feat(US-011): TASK-01 scenario di esecuzione nell'ambiente dimostrativo"
+      committed_at: '2026-08-14T00:44:01+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Copertura dello scenario dimostrativo'
@@ -277,4 +283,4 @@ tasks:
       - Commit: `docs(US-011): TASK-03 changelog, README e regola sull'ambiente dimostrativo`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:41:31+00:00'
+updated_at: '2026-08-13T22:44:01+00:00'
