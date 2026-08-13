@@ -110,6 +110,22 @@ Route::middleware('auth')->group(function (): void {
         ->name('releases.start');
 
     /*
+     * Dettaglio di una release: la catena congelata con lo stato di ogni step, i
+     * responsabili e le informazioni fornite. Schermata di **sola lettura**.
+     *
+     * Il `->can()` **c'e**, a differenza di `/step/{releaseStep}`: qui non esiste
+     * alcun tentativo da registrare nel registro delle transizioni, quindi il
+     * middleware puo rifiutare per primo e la protezione resta a due livelli come
+     * su tutte le altre rotte (vedi `.ai/rules/routes.md` per la deroga).
+     *
+     * `/rilasci/` al plurale come `/progetti/` e `/membri/`: l'indirizzo nomina la
+     * collezione, il parametro la riga.
+     */
+    Route::livewire('/rilasci/{release}', 'releases.show')
+        ->can('view', 'release')
+        ->name('releases.show');
+
+    /*
      * Compilazione e chiusura di uno step di una release avviata.
      *
      * **Un solo parametro**, e non `/rilasci/{release}/step/{releaseStep}`: lo step
