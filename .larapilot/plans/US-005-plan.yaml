@@ -752,20 +752,26 @@ tasks:
          `--filter=CloseStepQueryBudget`
 
       ## Completion Criteria
-      - [ ] Il doppio invio produce un solo avanzamento e due eventi in totale
-      - [ ] Un fallimento a meta transazione non lascia lo step chiuso
-      - [ ] La chiusura non interroga nessuna tabella di definizione
-      - [ ] Il costo in query non dipende dal numero di campi dello step
-      - [ ] Test verdi in locale
+      - [x] Il doppio invio produce un solo avanzamento e due eventi in totale
+      - [x] Un fallimento a meta transazione non lascia lo step chiuso
+      - [x] La chiusura non interroga nessuna tabella di definizione
+      - [x] Il costo in query non dipende dal numero di campi dello step
+      - [x] Test verdi in locale
 
       ## Git Deliverables
       - Commit: `test(US-005): TASK-09 copre concorrenza, transazione e isolamento dello snapshot`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-08
+    commit:
+      sha: a50f5e9cf29eea51354e6cd0b279033352baf3e8
+      short_sha: a50f5e9
+      subject: 'test(US-005): TASK-09 copre concorrenza, transazione e isolamento dello snapshot'
+      committed_at: '2026-08-13T11:21:26+02:00'
+      url: null
   -
     id: TASK-10
     title: 'Rotta e schermata di chiusura dello step'
@@ -972,4 +978,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-12
-updated_at: '2026-08-13T09:17:18+00:00'
+updated_at: '2026-08-13T09:21:26+00:00'
