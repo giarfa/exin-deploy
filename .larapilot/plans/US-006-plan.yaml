@@ -221,27 +221,33 @@ tasks:
       12. `php artisan test --compact tests/Feature/Releases/` — a questo punto i due test di confine di US-005 **falliscono**, ed e atteso: li sostituisce TASK-02
 
       ## Completion Criteria
-      - [ ] La chiusura dell'ultimo step porta la release a `conclusa` con `completed_by` e `completed_at` valorizzati
-      - [ ] La conclusione avviene in compare-and-swap condizionato a `in_corso`, con il motivo commentato nel codice
-      - [ ] Il registro riceve `step_completato` **e** `release_conclusa`; sul ramo terminale nessun `step_attivato`
-      - [ ] `ReleaseCompletionIsNotAvailableYet` non esiste piu e non e piu referenziata dal dominio
-      - [ ] `StepAlreadyClosed` porta `reasonKey` e distingue chiusura dello step da conclusione della release
-      - [ ] Lo step **e** la release restituiti sono riallineati in memoria
-      - [ ] Pint e Larastan livello 5 verdi
+      - [x] La chiusura dell'ultimo step porta la release a `conclusa` con `completed_by` e `completed_at` valorizzati
+      - [x] La conclusione avviene in compare-and-swap condizionato a `in_corso`, con il motivo commentato nel codice
+      - [x] Il registro riceve `step_completato` **e** `release_conclusa`; sul ramo terminale nessun `step_attivato`
+      - [x] `ReleaseCompletionIsNotAvailableYet` non esiste piu e non e piu referenziata dal dominio
+      - [x] `StepAlreadyClosed` porta `reasonKey` e distingue chiusura dello step da conclusione della release
+      - [x] Lo step **e** la release restituiti sono riallineati in memoria
+      - [x] Pint e Larastan livello 5 verdi
 
       ## Test Data
-      - [ ] Nessuna nuova entita: nessuna factory da creare, nessuna migrazione
-      - [ ] `ReleaseFactory::completed()` verificata coerente con cio che l'Action scrive (stato, autore, istante) e PHPDoc allineato al presente
-      - [ ] `php artisan migrate:fresh --seed` completa senza errori
+      - [x] Nessuna nuova entita: nessuna factory da creare, nessuna migrazione
+      - [x] `ReleaseFactory::completed()` verificata coerente con cio che l'Action scrive (stato, autore, istante) e PHPDoc allineato al presente
+      - [x] `php artisan migrate:fresh --seed` completa senza errori
 
       ## Git Deliverables
       - Commit: `feat(US-006): TASK-01 conclusione della release alla chiusura dell'ultimo step`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: 5717757ef14727ed9fb0ac6d921e55e7818703aa
+      short_sha: '5717757'
+      subject: "feat(US-006): TASK-01 conclusione della release alla chiusura dell'ultimo step"
+      committed_at: '2026-08-13T18:31:04+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Test: conclusione, invariante degli step attivi e registro'
@@ -438,4 +444,4 @@ tasks:
       - TASK-02
       - TASK-04
       - TASK-05
-updated_at: '2026-08-13T16:27:15+00:00'
+updated_at: '2026-08-13T16:31:04+00:00'

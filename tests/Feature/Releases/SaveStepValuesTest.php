@@ -4,6 +4,7 @@ namespace Tests\Feature\Releases;
 
 use App\Actions\Releases\SaveStepValues;
 use App\Enums\FieldType;
+use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseStepStatus;
 use App\Exceptions\StepIsNotOpen;
 use App\Exceptions\StepValuesAreInvalid;
@@ -165,6 +166,33 @@ class SaveStepValuesTest extends TestCase
         } catch (StepIsNotOpen $refused) {
             $this->assertSame('releases.closing_blocked_step_completed', $refused->reasonKey);
         }
+    }
+
+    public function test_a_step_of_a_completed_release_cannot_be_filled(): void
+    {
+        // Speculare al rifiuto della chiusura: su una release conclusa non passa
+        // nemmeno una bozza, altrimenti la sola lettura varrebbe per un solo
+        // pulsante e non per il rilascio.
+        $release = $this->releaseInProgress();
+        $step = $release->steps->first();
+
+        $release->update([
+            'status' => ReleaseStatus::Completed,
+            'completed_at' => now(),
+        ]);
+
+        try {
+            app(SaveStepValues::class)->handle($step->fresh(), $this->partialValuesFor($step), $step->assignedUser);
+            $this->fail('Uno step di una release conclusa ha accettato una bozza.');
+        } catch (StepIsNotOpen $refused) {
+            $this->assertSame('releases.closing_blocked_release_completed', $refused->reasonKey);
+        }
+
+        $this->assertSame(
+            0,
+            $step->fields()->whereNotNull('value')->count(),
+            'Una bozza e stata scritta su una release conclusa.'
+        );
     }
 
     /**

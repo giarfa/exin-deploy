@@ -81,8 +81,12 @@ class ReleaseEvent extends Model
     }
 
     /**
-     * Step interessato dall'evento; `null` per avvio e conclusione, che
-     * riguardano la release nel suo insieme.
+     * Step interessato dall'evento; `null` per l'avvio, che riguarda la release nel
+     * suo insieme e precede ogni step.
+     *
+     * La conclusione invece **porta** lo step finale: e da li che la consegna e
+     * avvenuta, e leggere il registro senza quel riferimento lascerebbe la riga piu
+     * importante senza il passaggio che l'ha prodotta.
      *
      * @return BelongsTo<ReleaseStep, $this>
      */

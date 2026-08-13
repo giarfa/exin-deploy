@@ -208,11 +208,13 @@ class CloseStepTest extends TestCase
 
     public function test_closing_the_last_step_completes_the_release(): void
     {
-        $release = $this->releaseInProgress(steps: 1);
-        $step = $release->steps->first();
-        $actor = $step->assignedUser;
+        $this->freezeTime();
 
-        $closed = app(CloseStep::class)->handle($step, $this->validValuesFor($step), $actor);
+        $release = $this->releaseInProgress();
+        $last = $release->steps->last();
+        $actor = $last->assignedUser;
+
+        $closed = $this->closeWholeChain($release);
 
         // Lo stesso confine che US-005 verificava al contrario: la chiusura
         // dell'ultimo step non lascia piu la catena ferma, la consegna.
@@ -222,8 +224,116 @@ class CloseStepTest extends TestCase
 
         $this->assertSame(ReleaseStatus::Completed, $release->status);
         $this->assertSame($actor->id, $release->completed_by);
-        $this->assertNotNull($release->completed_at);
+        $this->assertSame(now()->toDateTimeString(), $release->completed_at->toDateTimeString());
+
+        // La release restituita dall'Action e riallineata quanto lo step: chi la
+        // legge subito dopo la chiusura non vede un rilascio ancora "in corso".
+        $this->assertSame(ReleaseStatus::Completed, $closed->release->status);
+        $this->assertSame($actor->id, $closed->release->completed_by);
+
+        $this->assertSame(ReleaseStepStatus::Completed, $last->fresh()->status);
+    }
+
+    public function test_a_single_step_chain_completes_on_the_first_closure(): void
+    {
+        // Una catena di un solo step non ha un successore da attivare: il primo
+        // invio e gia la consegna.
+        $release = $this->releaseInProgress(steps: 1);
+        $step = $release->steps->first();
+
+        app(CloseStep::class)->handle($step, $this->validValuesFor($step), $step->assignedUser);
+
+        $this->assertSame(ReleaseStatus::Completed, $release->fresh()->status);
         $this->assertSame(ReleaseStepStatus::Completed, $step->fresh()->status);
+    }
+
+    public function test_a_completed_release_has_no_active_step(): void
+    {
+        // E il caso "zero" dell'invariante portante del PRD — al massimo uno step
+        // attivo per release, nessuno quando e conclusa — e come l'altro non si
+        // dimostra guardando il codice: va percorsa la catena fino in fondo.
+        $release = $this->releaseInProgress();
+
+        $this->closeWholeChain($release);
+
+        $this->assertSame(ReleaseStatus::Completed, $release->fresh()->status);
+
+        $this->assertSame(
+            0,
+            $release->steps()->where('status', ReleaseStepStatus::Active->value)->count(),
+            'Una release conclusa ha ancora uno step attivo.'
+        );
+
+        $this->assertSame(
+            3,
+            $release->steps()->where('status', ReleaseStepStatus::Completed->value)->count(),
+            'La conclusione non ha lasciato tutti gli step completati.'
+        );
+    }
+
+    public function test_the_completion_is_recorded_in_the_register(): void
+    {
+        $this->freezeTime();
+
+        $release = $this->releaseInProgress(steps: 1);
+        $step = $release->steps->first();
+        $actor = $step->assignedUser;
+
+        app(CloseStep::class)->handle($step, $this->validValuesFor($step), $actor);
+
+        $events = ReleaseEvent::query()->where('release_id', $release->id)->get();
+
+        /*
+         * Due righe e non tre: sul ramo terminale non c'e nessuno step da attivare,
+         * e un `step_attivato` scritto qui direbbe che il flusso e passato a
+         * qualcuno che non esiste.
+         */
+        $this->assertCount(2, $events);
+        $this->assertNull($events->firstWhere('action', ReleaseEventAction::StepActivated));
+
+        $concluded = $events->firstWhere('action', ReleaseEventAction::ReleaseCompleted);
+
+        $this->assertNotNull($concluded);
+        $this->assertSame($actor->id, $concluded->user_id);
+        $this->assertSame(now()->toDateTimeString(), $concluded->created_at->toDateTimeString());
+        // Lo step finale e il riferimento: e da li che la consegna e avvenuta.
+        $this->assertSame($step->id, $concluded->release_step_id);
+        $this->assertSame($release->label, $concluded->payload['label']);
+        $this->assertSame($step->name, $concluded->payload['step']);
+        $this->assertSame($step->position, $concluded->payload['position']);
+
+        /*
+         * Le due righe portano lo stesso istante — la risoluzione e il secondo, e la
+         * transazione dura molto meno — quindi l'ordine verificato qui e quello di
+         * **inserimento**: prima la chiusura del passaggio, poi la conclusione del
+         * rilascio, che e esattamente cio che il codice garantisce.
+         */
+        $this->assertSame(
+            [ReleaseEventAction::StepCompleted, ReleaseEventAction::ReleaseCompleted],
+            $events->pluck('action')->all()
+        );
+    }
+
+    public function test_a_completed_release_leaves_those_in_progress_but_stays_readable(): void
+    {
+        $release = $this->releaseInProgress();
+
+        $this->closeWholeChain($release);
+
+        $this->assertNotContains(
+            $release->id,
+            Release::query()->inProgress()->pluck('id')->all(),
+            'Una release conclusa compare ancora fra quelle in corso.'
+        );
+
+        /*
+         * Conclusa non significa archiviata: lo storico resta consultabile a tempo
+         * indeterminato (AC 6), con la catena e i valori forniti al loro posto.
+         */
+        $readable = Release::query()->with('steps.fields')->findOrFail($release->id);
+
+        $this->assertCount(3, $readable->steps);
+        $this->assertSame('2.4.0', $readable->steps->first()->fields->firstWhere('type', FieldType::ShortText)->value);
     }
 
     public function test_a_blocked_step_cannot_be_closed(): void
@@ -304,6 +414,26 @@ class CloseStepTest extends TestCase
             $release->steps()->where('status', ReleaseStepStatus::Active->value)->count(),
             'Un rifiuto ha alterato lo step attivo della release.'
         );
+    }
+
+    /**
+     * Percorre la catena chiudendo ogni step con il suo responsabile, e restituisce
+     * lo step finale come l'Action lo ha restituito.
+     *
+     * Rilegge lo step a ogni giro: quello caricato all'inizio direbbe ancora
+     * "bloccato", cioe lo stato di prima che la catena avanzasse.
+     */
+    private function closeWholeChain(Release $release): ReleaseStep
+    {
+        $closed = null;
+
+        foreach ($release->steps as $step) {
+            $step = $step->fresh();
+
+            $closed = app(CloseStep::class)->handle($step, $this->validValuesFor($step), $step->assignedUser);
+        }
+
+        return $closed;
     }
 
     /**
