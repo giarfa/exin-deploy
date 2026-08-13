@@ -168,8 +168,9 @@ class CloseStep
              * payload.
              *
              * Il payload **non** contiene i valori forniti: vivono sui campi dello
-             * snapshot, e duplicarli darebbe due fonti per lo stesso dato, destinate
-             * a divergere quando US-008 le mostrera entrambe.
+             * snapshot, e duplicarli darebbe due fonti per lo stesso dato: il
+             * dettaglio della release li mostra da la, e due copie divergerebbero
+             * alla prima correzione.
              */
             ReleaseEvent::create([
                 'release_id' => $release->id,

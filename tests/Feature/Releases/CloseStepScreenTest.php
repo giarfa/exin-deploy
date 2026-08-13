@@ -316,6 +316,46 @@ class CloseStepScreenTest extends TestCase
         $response->assertDontSee(__('releases.step_close_action'));
     }
 
+    public function test_every_state_of_a_step_leads_back_to_the_release_detail(): void
+    {
+        /*
+         * Due uscite, e in tutti e tre gli stati: chi arriva da un collegamento
+         * salvato su uno step bloccato ha bisogno del contesto piu di chiunque altro.
+         * Asserito su ognuno dei tre rami perche il blocco dei comandi e reso una
+         * volta sola fuori dal `@if` degli stati: una rifinitura che lo spostasse
+         * dentro un ramo perderebbe gli altri due senza che nulla protesti.
+         */
+        $release = $this->releaseInProgress();
+        $active = $release->steps->first();
+        $blocked = $release->steps->get(1);
+
+        $detail = route('releases.show', $release);
+
+        $this->actingAs($active->assignedUser);
+        $this->get(route('releases.step', $active))
+            ->assertOk()
+            ->assertSee($detail)
+            ->assertSee(__('releases.step_back_release'));
+
+        $this->actingAs($blocked->assignedUser);
+        $this->get(route('releases.step', $blocked))
+            ->assertOk()
+            ->assertSee($detail);
+
+        // `forceFill`: `completed_at` e `completed_by` non sono mass-assignable, e un
+        // `update()` le lascerebbe cadere in silenzio (vedi `.ai/rules/tests.md`).
+        $active->forceFill([
+            'status' => ReleaseStepStatus::Completed,
+            'completed_by' => $active->assigned_user_id,
+            'completed_at' => now(),
+        ])->save();
+
+        $this->actingAs($active->assignedUser);
+        $this->get(route('releases.step', $active->fresh()))
+            ->assertOk()
+            ->assertSee($detail);
+    }
+
     public function test_a_stored_link_that_is_not_http_is_shown_as_text_and_not_as_a_link(): void
     {
         /*

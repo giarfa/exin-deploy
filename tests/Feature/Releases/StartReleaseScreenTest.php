@@ -73,6 +73,27 @@ class StartReleaseScreenTest extends TestCase
         $component->assertSee(ReleaseStepStatus::Blocked->label());
     }
 
+    public function test_the_confirmation_leads_to_the_detail_of_the_release_just_started(): void
+    {
+        /*
+         * La conferma di avvio e l'unico punto in cui si sa quale release e appena
+         * nata: senza questa uscita chi ha avviato dovrebbe ritrovarla a mano. Il
+         * collegamento porta alla release **appena avviata**, non a un elenco — ed e
+         * cio che l'asserzione fissa, insieme alla sua presenza.
+         */
+        $project = $this->projectReadyToRelease();
+
+        $component = Livewire::test('releases.start', ['project' => $project])
+            ->set('label', 'v2.4.0')
+            ->call('start')
+            ->assertHasNoErrors();
+
+        $release = Release::where('project_id', $project->id)->firstOrFail();
+
+        $component->assertSee(route('releases.show', $release));
+        $component->assertSee(__('releases.started_open_detail'));
+    }
+
     public function test_a_missing_label_is_refused_in_validation_without_creating_anything(): void
     {
         $project = $this->projectReadyToRelease();

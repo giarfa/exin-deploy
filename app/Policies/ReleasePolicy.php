@@ -43,8 +43,10 @@ class ReleasePolicy
     /**
      * Consultare l'elenco delle release.
      *
-     * Resta negato ai non amministratori: l'elenco con i filtri e la sua Policy
-     * definitiva appartengono a US-009.
+     * Resta negato ai non amministratori **anche ora che `view` e aperta a tutti**:
+     * le due non si allineano per sbaglio. Il dettaglio risponde a "dove e fermo
+     * questo rilascio"; l'elenco e una superficie diversa — filtri, storico di ogni
+     * progetto — e la sua Policy si decide con la schermata che la usa, in US-009.
      */
     public function viewAny(User $user): bool
     {
@@ -54,12 +56,24 @@ class ReleasePolicy
     /**
      * Consultare una singola release.
      *
-     * Resta negato ai non amministratori: il dettaglio con valori e registro, e
-     * l'apertura ai membri coinvolti, appartengono a US-008.
+     * Concessa a **ogni utente autenticato**, anche a chi non e responsabile di
+     * alcuno step di quella release: sapere dove e fermo un rilascio non e un
+     * privilegio, e la funzione stessa dello strumento. Lo strumento non invia
+     * notifiche (rischio accettato n.1 del PRD), quindi chiunque debba sollecitare
+     * deve poter vedere su chi il flusso si e fermato e da quanto.
+     *
+     * Cosa **resta chiuso**, e non per dimenticanza: `viewAny` — l'elenco con i
+     * filtri e la sua Policy si decidono in US-009, e concederla qui darebbe
+     * un'autorizzazione senza una schermata che la usi — e `delete`, negata a
+     * chiunque per sempre.
+     *
+     * Il dettaglio e in **sola lettura**: compilare e chiudere restano decise da
+     * `ReleaseStepPolicy`, che concede solo al responsabile dello step attivo o a
+     * un amministratore.
      */
     public function view(User $user, Release $release): bool
     {
-        return false;
+        return true;
     }
 
     /**

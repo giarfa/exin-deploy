@@ -19,8 +19,9 @@ use Livewire\Component;
  * Avvio di una release su un progetto.
  *
  * Deliberatamente minima: qui si indica un'etichetta e si ottiene la conferma
- * visiva che lo snapshot esiste. L'elenco con i filtri e di US-009, il dettaglio
- * completo con valori e registro e di US-008.
+ * visiva che lo snapshot esiste. Da questa conferma si passa al dettaglio della
+ * release, che mostra la catena con lo stato di ogni step e le informazioni
+ * fornite; l'elenco con i filtri e di US-009.
  *
  * Le precondizioni sono mostrate **prima** del tentativo, e quando qualcosa manca
  * il comando e disabilitato con il motivo accanto: portare a una pagina che
@@ -282,11 +283,11 @@ new class extends Component
                         </span>
 
                         {{--
-                            **Ponte** verso la schermata di chiusura, non la
-                            navigazione definitiva: "i miei step" (US-007) e il
-                            dettaglio release (US-008) non esistono ancora, e senza
-                            un punto d'accesso questa catena resterebbe una pagina
-                            senza uscite.
+                            Scorciatoia verso la schermata di chiusura per chi ha
+                            appena avviato ed e anche il responsabile del primo step:
+                            la navigazione ordinaria passa da "i miei step" (US-007) e
+                            dal dettaglio della release (US-008), raggiungibile qui
+                            sotto.
 
                             Il comando compare solo quando la Policy lo consente.
                             Nasconderlo non e autorizzazione — quella vive nel
@@ -305,9 +306,19 @@ new class extends Component
                 @endforeach
             </ol>
 
-            <flux:button wire:click="startAnother" variant="ghost" size="sm">
-                {{ __('releases.start_another') }}
-            </flux:button>
+            {{-- Il dettaglio della release e la destinazione naturale dopo l'avvio:
+                 la stessa catena, ma con lo stato che avanza. Impilati a piena
+                 larghezza sotto la soglia, in linea sopra. --}}
+            <div class="flex flex-col gap-3 max-lg:*:min-h-11 max-lg:*:w-full lg:flex-row lg:items-center">
+                <flux:button :href="route('releases.show', $startedId)" variant="outline" size="sm"
+                             icon="queue-list">
+                    {{ __('releases.started_open_detail') }}
+                </flux:button>
+
+                <flux:button wire:click="startAnother" variant="ghost" size="sm">
+                    {{ __('releases.start_another') }}
+                </flux:button>
+            </div>
         </flux:card>
     @else
         @if ($operationError)

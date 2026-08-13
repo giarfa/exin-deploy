@@ -84,21 +84,35 @@ class ReleasePolicyTest extends TestCase
         $this->assertFalse(Gate::forUser(User::factory()->member()->create())->allows('delete', $release));
     }
 
-    public function test_consultation_stays_closed_until_the_specs_that_open_it(): void
+    public function test_any_authenticated_member_can_consult_a_release_even_when_unrelated_to_it(): void
     {
         $release = Release::factory()->create();
-        $member = User::factory()->member()->create();
 
-        // US-008 aprira il dettaglio ai membri coinvolti, US-009 l'elenco: finche
-        // quelle schermate non esistono, l'accesso non e concesso a nessuno oltre
-        // agli amministratori.
-        $this->assertFalse(Gate::forUser($member)->allows('view', $release));
-        $this->assertFalse(Gate::forUser($member)->allows('viewAny', Release::class));
+        // Un membro **estraneo**: nessuno step assegnato, nessun coinvolgimento.
+        // Sapere dove e fermo un rilascio non e un privilegio — e la funzione dello
+        // strumento, che non invia notifiche.
+        $stranger = User::factory()->member()->create();
 
-        $administrator = User::factory()->admin()->create();
+        $this->assertTrue(Gate::forUser($stranger)->allows('view', $release));
+        $this->assertTrue(Gate::forUser(User::factory()->admin()->create())->allows('view', $release));
+    }
 
-        $this->assertTrue(Gate::forUser($administrator)->allows('view', $release));
-        $this->assertTrue(Gate::forUser($administrator)->allows('viewAny', Release::class));
+    public function test_a_guest_is_redirected_to_the_login_instead_of_reading_a_release(): void
+    {
+        $release = Release::factory()->create();
+
+        // La lettura e aperta a chi e autenticato, non a chiunque: `auth` resta la
+        // precondizione della rotta.
+        $this->get(route('releases.show', $release))->assertRedirect(route('login'));
+    }
+
+    public function test_the_list_stays_closed_even_now_that_the_detail_is_open(): void
+    {
+        // Le due ability non si allineano per sbaglio: l'elenco con i filtri e una
+        // superficie diversa, e la sua Policy si decide con la schermata che la usa
+        // (US-009).
+        $this->assertFalse(Gate::forUser(User::factory()->member()->create())->allows('viewAny', Release::class));
+        $this->assertTrue(Gate::forUser(User::factory()->admin()->create())->allows('viewAny', Release::class));
     }
 
     public function test_the_start_decision_is_taken_on_the_project(): void

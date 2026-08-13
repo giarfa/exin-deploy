@@ -46,4 +46,7 @@ return [
     'waiting_section' => 'Release in corso su cui sei coinvolto',
     'waiting_row' => 'in attesa di :name su «:step» da :duration',
     'waiting_no_notifications' => 'Lo strumento non invia notifiche: se una di queste e ferma da troppo, sollecita a voce.',
+    // La card e il collegamento: questa riga dice dove porta, perche "in attesa di
+    // X da due giorni" non lascia intuire che ci sia altro da vedere.
+    'waiting_open_detail' => 'Vedi la catena completa',
 ];

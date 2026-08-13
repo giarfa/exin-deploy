@@ -47,8 +47,12 @@ class ReleaseStepPolicy
      * trovi.
      *
      * Anche da chiuso o bloccato: chi ne risponde deve poter leggere cosa gli e
-     * stato chiesto e cosa ha fornito. L'apertura del dettaglio a tutti i membri
-     * coinvolti nella release e US-008.
+     * stato chiesto e cosa ha fornito.
+     *
+     * E piu restrittiva di `ReleasePolicy::view()`, che concede il dettaglio della
+     * release a ogni membro autenticato, e la differenza e voluta: il dettaglio
+     * mostra la catena in sola lettura, questa ability apre la pagina da cui uno
+     * step si compila e si chiude.
      */
     public function view(User $user, ReleaseStep $step): bool
     {

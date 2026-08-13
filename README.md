@@ -334,6 +334,7 @@ rilascio e avvenuto.
 | `/progetti` | Progetti, con il comando di avvio release per riga | amministratore |
 | `/progetti/{progetto}/responsabili` | Mappatura ruolo → persona del progetto | amministratore |
 | `/progetti/{progetto}/rilascio` | **Avvio di una release** | amministratore |
+| `/rilasci/{release}` | **Dettaglio della release** — catena, responsabili, valori | ogni membro |
 | `/step/{step}` | **Compilazione e chiusura di uno step** | responsabile dello step o amministratore |
 | `/template` · `/template/{t}/step` · `/template/{t}/step/{s}/campi` | Processo di rilascio | amministratore |
 | `/responsabili-predefiniti` | Mappatura predefinita di team | amministratore |
@@ -394,12 +395,58 @@ sono paginabili ne limitabili in database**: quando servira un elenco esteso o l
 di processo (FR-024), l'ordine va spostato in SQL insieme al resto.
 
 `Release::activeStep()` e `ReleaseStep::withActivationInstant()` nascono qui ma sono **seam
-condivisi**: il dettaglio della release (US-008) e l'elenco (US-009) leggono lo stesso
-stato, e vanno letti come tali e non come dettaglio interno di questa schermata.
+condivisi**: il dettaglio della release riusa lo scope dell'istante di attivazione e l'elenco
+(US-009) leggera lo stesso stato. Vanno letti come tali e non come dettaglio interno di
+questa schermata.
 
 Finche US-011 non e consegnata, `migrate:fresh --seed` produce un ambiente **senza release**:
 la schermata mostra lo stato vuoto, ed e corretto. Per provarla si avvia una release
 dall'interfaccia (`/progetti/{progetto}/rilascio`).
+
+#### Il dettaglio della release
+
+`/rilasci/{release}` risponde alla domanda "dove siamo e chi stiamo aspettando" (FR-014):
+l'intera catena nell'ordine congelato, con lo stato di ogni step, il ruolo congelato, il
+nome del responsabile, e i valori forniti sugli step chiusi. E una schermata di **sola
+lettura**: nessuna azione, nessun form, nessuna scrittura. L'unico comando presente porta
+altrove — a `/step/{step}` — e compare solo dove `ReleaseStepPolicy::fill()` lo consente.
+
+**La lettura e aperta a ogni membro autenticato**, anche a chi e estraneo alla catena.
+`ReleasePolicy::view()` concede a chiunque sia autenticato mentre `viewAny()` resta negata ai
+non amministratori: **le due non si allineano per sbaglio**. Sapere dove e fermo un rilascio
+non e un privilegio — su uno strumento che non invia notifiche, e la funzione stessa dello
+strumento — ma l'elenco con i suoi filtri e una superficie diversa, e la sua Policy si decide
+con la schermata che la usa (US-009).
+
+Una sola lettura di dominio, interamente in eager loading: progetto, template, autore
+dell'avvio, e la catena con campi, responsabile e autore della chiusura. Due vincoli non
+ovvi, entrambi coperti da `ReleaseDetailQueryBudgetTest`:
+
+1. `withActivationInstant()` **ridefinisce la select** (`select('release_steps.*')`), quindi
+   va applicato prima di qualsiasi altra aggiunta alla select: un `withCount` messo prima
+   verrebbe cancellato senza avviso.
+2. La **relazione inversa** verso la release va popolata a mano sugli step caricati
+   (`setRelation('release', $release)`). Senza, il primo step della catena — quello che
+   ripiega su `release.started_at` per sapere da quando e aperto — risalirebbe alla release
+   con una query propria. `Release::activeStep()` ottiene lo stesso con `chaperone()`, che su
+   una `HasMany` caricata da `load()` non e disponibile.
+
+Le informazioni fornite di uno step chiuso sono rese da `x-releases.step-values`, condiviso
+con la schermata di chiusura: dentro quel componente vive la verifica dello schema `http(s)`
+prima di rendere un valore come collegamento cliccabile, e **due copie sarebbero due posti in
+cui dimenticare di correggerla**. `WellFormedLink` garantisce lo schema in scrittura, ma una
+riga arrivata da un import o da una correzione a mano sul database non passa da quella
+regola.
+
+Il nome del template mostrato nel riquadro dei dati e quello **attuale**, ed e citato come
+provenienza e non come definizione: catena, ordine e campi arrivano tutti dallo snapshot. La
+nota accanto lo dichiara a chi legge. Alternativa scartata: congelare `template_name` su
+`releases`, una colonna in piu per un dato che nessun percorso di esecuzione interroga.
+
+Le **briciole di navigazione** sono in deroga dichiarata al mockup, che apre con "Release":
+l'elenco non esiste ancora e `/progetti` e riservata agli amministratori, quindi entrambe le
+voci sarebbero un vicolo cieco o un 403 per un membro. La prima voce porta a "i miei step";
+US-009 la sostituira con l'elenco.
 
 ### Configurazione del processo
 
