@@ -265,7 +265,7 @@ specs:
       title: 'Esecuzione del rilascio'
     priority: HIGH
     points: 3
-    status: 'IN PROGRESS'
+    status: REVIEW
     body: |
       #### US-006: Conclusione della release come consegna in produzione
 
@@ -293,6 +293,7 @@ specs:
     status_history:
       - { status: PLANNED, at: '2026-08-13T16:16:11+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-13T16:26:21+00:00' }
+      - { status: REVIEW, at: '2026-08-13T16:49:40+00:00' }
     rework: false
   -
     code: US-007
