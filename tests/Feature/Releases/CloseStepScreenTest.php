@@ -211,6 +211,8 @@ class CloseStepScreenTest extends TestCase
         // La schermata annuncia la consegna gia prima dell'invio: chiudere questo
         // step non passa il flusso a nessuno, lo conclude.
         $component->assertSee(__('releases.step_hands_over_last'));
+        // E dice che la chiusura e definitiva: e la frase che tiene fede a FR-019.
+        $component->assertSee(__('releases.step_closing_is_final'));
 
         foreach ($this->validValuesFor($step) as $field => $value) {
             $component->set('values.'.$field, $value);
@@ -222,6 +224,18 @@ class CloseStepScreenTest extends TestCase
 
         $this->assertSame(ReleaseStatus::Completed, $release->fresh()->status);
         $this->assertSame(ReleaseStepStatus::Completed, $step->fresh()->status);
+
+        /*
+         * Dopo la consegna la pagina non offre piu alcun comando sullo step (AC 7):
+         * ne la chiusura ne il salvataggio, e nessun testo lascia intendere che il
+         * passaggio possa essere riaperto.
+         */
+        $component->assertDontSee(__('releases.step_close_action'));
+        $component->assertDontSee(__('releases.step_save_action'));
+        $component->assertSee(__('releases.step_release_completed_notice', [
+            'release' => $release->label,
+            'date' => $release->fresh()->completed_at->format('d/m/Y H:i'),
+        ]));
     }
 
     public function test_a_blocked_step_offers_no_form_and_says_who_is_awaited(): void

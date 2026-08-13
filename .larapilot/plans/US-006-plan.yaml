@@ -319,11 +319,11 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent`; `php artisan test --compact tests/Feature/Releases/`
 
       ## Completion Criteria
-      - [ ] Nessun riferimento residuo a `ReleaseCompletionIsNotAvailableYet` o a `closing_last_step` nel codice e nei testi
-      - [ ] La chiusura dell'ultimo step annuncia la consegna con etichetta e istante
-      - [ ] Nessun testo promette la riapertura di uno step (AC 7)
-      - [ ] Il rifiuto del doppio invio rende il messaggio coerente col caso che lo ha prodotto
-      - [ ] Riquadro leggibile a 375 px senza scorrimento orizzontale
+      - [x] Nessun riferimento residuo a `ReleaseCompletionIsNotAvailableYet` o a `closing_last_step` nel codice e nei testi
+      - [x] La chiusura dell'ultimo step annuncia la consegna con etichetta e istante
+      - [x] Nessun testo promette la riapertura di uno step (AC 7)
+      - [x] Il rifiuto del doppio invio rende il messaggio coerente col caso che lo ha prodotto
+      - [x] Riquadro leggibile a 375 px senza scorrimento orizzontale
 
       ## Test Data
       - N/A — nessuna modifica a modelli o schema
@@ -333,9 +333,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: 83add9e6804687064f4f66aa0a570c75dd14c82b
+      short_sha: 83add9e
+      subject: 'feat(US-006): TASK-03 schermata e testi della conclusione della release'
+      committed_at: '2026-08-13T18:35:29+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: sola lettura della release conclusa e rifiuto tracciato'
@@ -450,4 +456,4 @@ tasks:
       - TASK-02
       - TASK-04
       - TASK-05
-updated_at: '2026-08-13T16:33:04+00:00'
+updated_at: '2026-08-13T16:35:29+00:00'
