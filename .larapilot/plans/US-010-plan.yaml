@@ -112,7 +112,7 @@ tasks:
     id: TASK-00
     title: 'Ramo di lavoro per il registro delle transizioni'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
     body: |-
       ## Description
@@ -129,8 +129,8 @@ tasks:
       3. Commit di ancoraggio del ramo
 
       ## Completion Criteria
-      - [ ] Il ramo `feature/US-010-registro-transizioni` esiste in locale e contiene US-009
-      - [ ] Descrizione della PR verso `develop` preparata in locale
+      - [x] Il ramo `feature/US-010-registro-transizioni` esiste in locale e contiene US-009
+      - [x] Descrizione della PR verso `develop` preparata in locale
 
       ## Test Data
       - N/A — nessuna modifica di modelli o schema
@@ -139,6 +139,12 @@ tasks:
       - Commit: `chore(US-010): TASK-00 ramo di lavoro per il registro delle transizioni`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: preparata in locale, aperta da remoto solo su richiesta
+    commit:
+      sha: 263a05e0cea8c8cc27c1bf6ab8f2d95add6f49d8
+      short_sha: 263a05e
+      subject: 'chore(US-010): TASK-00 ramo di lavoro per il registro delle transizioni'
+      committed_at: '2026-08-14T00:22:23+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Policy del registro, rotta e via di accesso dal dettaglio'
@@ -446,4 +452,4 @@ tasks:
       - Commit: `docs(US-010): TASK-07 changelog, README e regola sul registro`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:22:14+00:00'
+updated_at: '2026-08-13T22:22:23+00:00'

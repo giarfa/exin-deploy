@@ -205,4 +205,12 @@ return [
     'detail_meta_completed_steps' => 'Step completati',
     'detail_meta_completed_steps_value' => ':completed di :total',
     'detail_template_frozen' => 'Il template e congelato all\'avvio: modifiche successive a :template non alterano questa release.',
+    'detail_open_log' => 'Apri il registro delle transizioni',
+
+    /*
+     * Registro delle transizioni (US-010). Le etichette delle azioni non hanno
+     * chiavi qui: vivono su `App\Enums\ReleaseEventAction::label()`, dove sta il
+     * vocabolario che finisce anche in colonna.
+     */
+    'log_heading' => 'Registro delle transizioni',
 ];

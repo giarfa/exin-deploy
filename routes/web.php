@@ -3,6 +3,7 @@
 use App\Models\DefaultRoleAssignment;
 use App\Models\Project;
 use App\Models\Release;
+use App\Models\ReleaseEvent;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -143,6 +144,22 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/rilasci/{release}', 'releases.show')
         ->can('view', 'release')
         ->name('releases.show');
+
+    /*
+     * Registro delle transizioni di una release: cosa e successo, per mano di chi e
+     * quando. Rotta propria e non una sezione del dettaglio perche le due
+     * rispondono a domande diverse — "dove siamo" contro "come ci siamo arrivati" —
+     * e perche questa e l'unica superficie con righe a **visibilita differenziata**
+     * (i tentativi non autorizzati sono riservati agli amministratori), che dentro
+     * una schermata che mostra tutto a tutti diventerebbe invisibile a chi legge.
+     *
+     * L'ability e sugli **eventi** e non sulla release: e sugli eventi che la
+     * visibilita si decide. Il `->can()` c'e, come sul dettaglio: nessun tentativo
+     * da registrare, quindi la protezione resta a due livelli.
+     */
+    Route::livewire('/rilasci/{release}/registro', 'releases.log')
+        ->can('viewAny', ReleaseEvent::class)
+        ->name('releases.log');
 
     /*
      * Compilazione e chiusura di uno step di una release avviata.

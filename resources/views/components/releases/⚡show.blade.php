@@ -358,6 +358,19 @@ new class extends Component
                 <flux:text class="text-xs">
                     {{ __('releases.detail_template_frozen', ['template' => $release->workflowTemplate->name]) }}
                 </flux:text>
+
+                <flux:separator variant="subtle" />
+
+                {{-- Il passaggio da "dove siamo" a "come ci siamo arrivati": questa
+                     pagina mostra lo stato, il registro la cronologia che lo ha
+                     prodotto. Sotto 1024 px il comando occupa la larghezza e
+                     l'altezza minima del bersaglio. --}}
+                <div class="max-lg:*:min-h-11 max-lg:*:w-full">
+                    <flux:button :href="route('releases.log', $release)" variant="outline"
+                                 size="sm" icon="clock">
+                        {{ __('releases.detail_open_log') }}
+                    </flux:button>
+                </div>
             </flux:card>
         </div>
     </div>
