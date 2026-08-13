@@ -7,7 +7,6 @@ use App\Enums\FieldType;
 use App\Enums\ReleaseEventAction;
 use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseStepStatus;
-use App\Exceptions\ReleaseCompletionIsNotAvailableYet;
 use App\Exceptions\StepIsNotOpen;
 use App\Exceptions\StepValuesAreInvalid;
 use App\Models\Release;
@@ -207,23 +206,24 @@ class CloseStepTest extends TestCase
         $this->assertSame(ReleaseStepStatus::Active, $release->steps->get(2)->fresh()->status);
     }
 
-    public function test_the_last_step_is_refused_because_completing_the_release_is_not_available_yet(): void
+    public function test_closing_the_last_step_completes_the_release(): void
     {
         $release = $this->releaseInProgress(steps: 1);
         $step = $release->steps->first();
+        $actor = $step->assignedUser;
 
-        $this->expectException(ReleaseCompletionIsNotAvailableYet::class);
+        $closed = app(CloseStep::class)->handle($step, $this->validValuesFor($step), $actor);
 
-        try {
-            app(CloseStep::class)->handle($step, $this->validValuesFor($step), $step->assignedUser);
-        } finally {
-            // Il confine con US-006 non deve lasciare stati intermedi: uno step
-            // chiuso senza successore lascerebbe la release senza turno di nessuno.
-            $this->assertSame(ReleaseStatus::InProgress, $release->fresh()->status);
-            $this->assertSame(ReleaseStepStatus::Active, $step->fresh()->status);
-            $this->assertNull($step->fresh()->completed_at);
-            $this->assertSame(0, ReleaseEvent::count());
-        }
+        // Lo stesso confine che US-005 verificava al contrario: la chiusura
+        // dell'ultimo step non lascia piu la catena ferma, la consegna.
+        $this->assertSame(ReleaseStepStatus::Completed, $closed->status);
+
+        $release = $release->fresh();
+
+        $this->assertSame(ReleaseStatus::Completed, $release->status);
+        $this->assertSame($actor->id, $release->completed_by);
+        $this->assertNotNull($release->completed_at);
+        $this->assertSame(ReleaseStepStatus::Completed, $step->fresh()->status);
     }
 
     public function test_a_blocked_step_cannot_be_closed(): void

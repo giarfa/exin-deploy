@@ -168,9 +168,9 @@ tasks:
       7. Redigere titolo e corpo della PR verso `develop` (titolo `US-006: Conclusione della release come consegna in produzione`; corpo con collegamento al piano e elenco dei task) e tenerli **in locale**
 
       ## Completion Criteria
-      - [ ] `develop` contiene il merge di US-005 e la suite e verde su quel commit
-      - [ ] Il branch `feature/US-006-conclusione-release` esiste in locale e parte da `develop`
-      - [ ] Descrizione di PR verso `develop` redatta in locale (nessuna apertura remota)
+      - [x] `develop` contiene il merge di US-005 e la suite e verde su quel commit
+      - [x] Il branch `feature/US-006-conclusione-release` esiste in locale e parte da `develop`
+      - [x] Descrizione di PR verso `develop` redatta in locale (nessuna apertura remota)
 
       ## Test Data
       - N/A — nessuna modifica a modelli o schema
@@ -181,8 +181,14 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale; apertura remota solo su richiesta esplicita
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: b5284dcde3c4a195119e75211fe9aba0b02a17b9
+      short_sha: b5284dc
+      subject: 'chore(US-006): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-13T18:27:12+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Conclusione della release nel ramo terminale di CloseStep'
@@ -432,4 +438,4 @@ tasks:
       - TASK-02
       - TASK-04
       - TASK-05
-updated_at: '2026-08-13T16:16:11+00:00'
+updated_at: '2026-08-13T16:27:15+00:00'

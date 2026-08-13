@@ -5,7 +5,6 @@ namespace App\Actions\Releases;
 use App\Enums\ReleaseEventAction;
 use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseStepStatus;
-use App\Exceptions\ReleaseCompletionIsNotAvailableYet;
 use App\Exceptions\StepAlreadyClosed;
 use App\Exceptions\StepIsNotOpen;
 use App\Exceptions\StepValuesAreInvalid;
@@ -14,18 +13,20 @@ use App\Models\ReleaseEvent;
 use App\Models\ReleaseStep;
 use App\Models\ReleaseStepField;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Chiude uno step compilato e passa il flusso al responsabile successivo.
+ * Chiude uno step compilato e passa il flusso al responsabile successivo, oppure
+ * conclude la release quando lo step chiuso e l'ultimo della catena.
  *
  * E l'**unico percorso di avanzamento**. Chiusura dello step, attivazione del
- * successivo e scrittura dei due eventi avvengono in **una sola transazione**, come
- * impone `.ai/rules/app.md`: se una qualsiasi di quelle scritture fallisse da sola,
- * la release resterebbe in uno stato che nessuna schermata sa raccontare — uno step
- * chiuso e nessuno attivo, oppure due attivi, oppure un avanzamento senza traccia
- * nel registro.
+ * successivo — o conclusione della release — e scrittura degli eventi avvengono in
+ * **una sola transazione**, come impone `.ai/rules/app.md`: se una qualsiasi di
+ * quelle scritture fallisse da sola, la release resterebbe in uno stato che nessuna
+ * schermata sa raccontare — uno step chiuso e nessuno attivo, oppure due attivi,
+ * oppure una release conclusa con l'ultimo step ancora aperto.
  *
  * Legge **solo lo snapshot**: nessuna query su `step_definitions`,
  * `field_definitions`, `workflow_templates` o `project_role_assignments`.
@@ -43,8 +44,7 @@ class CloseStep
      *
      * @throws StepIsNotOpen se la release e conclusa, o lo step e bloccato o gia completato
      * @throws StepValuesAreInvalid se i valori forniti non soddisfano cio che lo step chiede
-     * @throws StepAlreadyClosed se un altro invio ha chiuso lo step per primo
-     * @throws ReleaseCompletionIsNotAvailableYet se lo step e l'ultimo della catena (US-006)
+     * @throws StepAlreadyClosed se un altro invio ha chiuso lo step — o concluso la release — per primo
      */
     public function handle(ReleaseStep $step, array $values, User $actor): ReleaseStep
     {
@@ -151,17 +151,52 @@ class CloseStep
                 throw StepAlreadyClosed::during($step);
             }
 
+            /*
+             * L'evento di chiusura viene scritto **prima** del bivio perche
+             * appartiene a entrambi i rami: uno step si chiude sia quando la catena
+             * prosegue sia quando finisce. Scriverlo due volte piu sotto darebbe due
+             * copie della stessa riga, destinate a divergere alla prima modifica del
+             * payload.
+             *
+             * Il payload **non** contiene i valori forniti: vivono sui campi dello
+             * snapshot, e duplicarli darebbe due fonti per lo stesso dato, destinate
+             * a divergere quando US-008 le mostrera entrambe.
+             */
+            ReleaseEvent::create([
+                'release_id' => $release->id,
+                'release_step_id' => $step->id,
+                'user_id' => $actor->id,
+                'action' => ReleaseEventAction::StepCompleted,
+                'payload' => [
+                    'position' => $step->position,
+                    'step' => $step->name,
+                    'fields_filled' => collect($normalized)->reject(fn (?string $value): bool => $value === null)->count(),
+                ],
+            ]);
+
             $next = $step->nextStep();
 
             if ($next === null) {
                 /*
-                 * Ramo terminale della catena: concludere la release e US-006
-                 * (FR-017). Rifiutare tiene lo stato coerente — l'ultimo step resta
-                 * attivo e in carico al suo responsabile — mentre chiudere lo stesso
-                 * lascerebbe una release `in_corso` senza alcuno step attivo, cioe
-                 * la violazione dell'invariante che questa spec deve dimostrare.
+                 * Ramo terminale della catena: lo step chiuso era l'ultimo, quindi la
+                 * release e consegnata (FR-017). La conclusione avviene **qui dentro**,
+                 * nella stessa transazione: una release `in_corso` senza alcuno step
+                 * attivo sarebbe la violazione dell'invariante — al massimo uno step
+                 * attivo per release, **zero** solo quando la release e conclusa.
                  */
-                throw ReleaseCompletionIsNotAvailableYet::on($step);
+                $this->completeRelease($release, $step, $actor, $now);
+
+                /*
+                 * La release aggiornata viaggia con lo step restituito: senza, il
+                 * chiamante avrebbe in mano uno step completato accanto a una release
+                 * che dice ancora "in corso", e la schermata annuncerebbe la consegna
+                 * di un rilascio apparentemente ancora aperto.
+                 */
+                return $step->setRelation('release', $release)->forceFill([
+                    'status' => ReleaseStepStatus::Completed,
+                    'completed_by' => $actor->id,
+                    'completed_at' => $now,
+                ])->syncOriginal();
             }
 
             $activated = ReleaseStep::query()
@@ -185,23 +220,7 @@ class CloseStep
              * Due eventi, non uno: il registro documenta le **transizioni** (FR-016),
              * e qui ne avvengono due — un passaggio si chiude e un altro si apre.
              * Riunirle direbbe meno di quello che e successo.
-             *
-             * Il payload **non** contiene i valori forniti: vivono sui campi dello
-             * snapshot, e duplicarli darebbe due fonti per lo stesso dato, destinate
-             * a divergere quando US-008 le mostrera entrambe.
              */
-            ReleaseEvent::create([
-                'release_id' => $release->id,
-                'release_step_id' => $step->id,
-                'user_id' => $actor->id,
-                'action' => ReleaseEventAction::StepCompleted,
-                'payload' => [
-                    'position' => $step->position,
-                    'step' => $step->name,
-                    'fields_filled' => collect($normalized)->reject(fn (?string $value): bool => $value === null)->count(),
-                ],
-            ]);
-
             ReleaseEvent::create([
                 'release_id' => $release->id,
                 'release_step_id' => $next->id,
@@ -227,6 +246,73 @@ class CloseStep
                 'completed_at' => $now,
             ])->syncOriginal();
         });
+    }
+
+    /**
+     * Conclude la release: stato `conclusa`, autore e istante della consegna, evento
+     * nel registro.
+     *
+     * Resta un metodo **privato** e non diventa una Action a se stante, ed e una
+     * deviazione consapevole dalla regola "una Action per operazione di dominio":
+     * una `CompleteRelease` invocabile dall'esterno sarebbe un secondo percorso di
+     * scrittura sullo stato della release, cioe l'opposto dell'invariante che questa
+     * classe esiste per tenere — chiusura dello step, avanzamento o conclusione, ed
+     * eventi in **una sola transazione**. Una release si conclude chiudendo il suo
+     * ultimo step, e non c'e un altro modo per cui abbia senso.
+     *
+     * @throws StepAlreadyClosed se un altro invio ha gia concluso la release
+     */
+    private function completeRelease(Release $release, ReleaseStep $step, User $actor, CarbonInterface $now): void
+    {
+        /*
+         * Conclusione in **compare-and-swap**, per lo stesso motivo gia registrato in
+         * `.ai/rules/releases.md` per la chiusura dello step: su SQLite il
+         * `lockForUpdate()` preso in cima non produce SQL — la grammatica non
+         * supporta `FOR UPDATE` — quindi la garanzia effettiva contro la doppia
+         * conclusione e questo update condizionato a `in_corso`. Su MySQL e
+         * PostgreSQL e il lock a serializzare, e il vincolo di portabilita
+         * (`.ai/rules/general.md`) impone che il codice resti corretto su tutti e tre
+         * i motori: nessuno dei due meccanismi e ridondante.
+         */
+        $completed = Release::query()
+            ->whereKey($release->getKey())
+            ->where('status', ReleaseStatus::InProgress->value)
+            ->update([
+                'status' => ReleaseStatus::Completed->value,
+                'completed_by' => $actor->id,
+                'completed_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+        if ($completed === 0) {
+            throw StepAlreadyClosed::whileConcludingRelease($step);
+        }
+
+        /*
+         * Il payload non conta gli step della catena: la posizione dell'ultimo dice
+         * gia quanti sono, e contarli sarebbe una query per un dato gia in mano.
+         */
+        ReleaseEvent::create([
+            'release_id' => $release->id,
+            'release_step_id' => $step->id,
+            'user_id' => $actor->id,
+            'action' => ReleaseEventAction::ReleaseCompleted,
+            'payload' => [
+                'label' => $release->label,
+                'step' => $step->name,
+                'position' => $step->position,
+            ],
+        ]);
+
+        /*
+         * `forceFill` perche `completed_by` e `completed_at` non sono attributi
+         * assegnabili in massa: li scrive solo questa Action.
+         */
+        $release->forceFill([
+            'status' => ReleaseStatus::Completed,
+            'completed_by' => $actor->id,
+            'completed_at' => $now,
+        ])->syncOriginal();
     }
 
     /**

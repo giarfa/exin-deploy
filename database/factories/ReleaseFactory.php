@@ -93,8 +93,8 @@ class ReleaseFactory extends Factory
     }
 
     /**
-     * Release gia conclusa: porta autore e istante della conclusione, che US-006
-     * scrivera chiudendo l'ultimo step.
+     * Release gia conclusa: porta autore e istante della conclusione, gli stessi che
+     * `App\Actions\Releases\CloseStep` scrive chiudendo l'ultimo step della catena.
      */
     public function completed(): static
     {
