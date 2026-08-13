@@ -310,7 +310,7 @@ specs:
       title: 'Visibilità e tracciabilità'
     priority: HIGH
     points: 5
-    status: 'IN PROGRESS'
+    status: REVIEW
     body: |
       #### US-007: Vista operativa: i miei step
 
@@ -341,6 +341,7 @@ specs:
     status_history:
       - { status: PLANNED, at: '2026-08-13T17:08:06+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-13T17:23:14+00:00' }
+      - { status: REVIEW, at: '2026-08-13T17:53:32+00:00' }
     rework: false
   -
     code: US-008
