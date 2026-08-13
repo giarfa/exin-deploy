@@ -406,7 +406,7 @@ specs:
       title: 'Visibilità e tracciabilità'
     priority: HIGH
     points: 3
-    status: 'IN PROGRESS'
+    status: REVIEW
     body: |
       #### US-009: Elenco e storico delle release
 
@@ -435,6 +435,7 @@ specs:
     status_history:
       - { status: PLANNED, at: '2026-08-13T21:54:44+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-13T21:54:54+00:00' }
+      - { status: REVIEW, at: '2026-08-13T22:18:42+00:00' }
     rework: false
   -
     code: US-010
@@ -444,7 +445,7 @@ specs:
       title: 'Visibilità e tracciabilità'
     priority: HIGH
     points: 5
-    status: TODO
+    status: 'IN PROGRESS'
     body: |
       #### US-010: Registro consultabile delle transizioni
 
@@ -471,6 +472,10 @@ specs:
       - [ ] I tentativi di chiusura non autorizzati compaiono nel registro con l'indicazione dell'attore
       - [ ] Il registro è consultabile da ogni membro autenticato; le voci relative a tentativi non autorizzati sono visibili solo agli amministratori
       - [ ] Nessuna query N+1 (verificato)
+    status_history:
+      - { status: PLANNED, at: '2026-08-13T22:22:14+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-13T22:22:23+00:00' }
+    rework: false
   -
     code: US-011
     title: 'Ambiente dimostrativo coerente'

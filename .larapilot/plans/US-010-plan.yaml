@@ -1,0 +1,449 @@
+code: US-010
+plan_body: |-
+  ## Soluzione tecnica
+
+  La **scrittura** degli eventi e gia consegnata: `StartRelease`, `CloseStep` e
+  `RecordUnauthorizedStepAttempt` scrivono le cinque azioni di `ReleaseEventAction`, e
+  `ReleaseEvent` rifiuta gia modifica e cancellazione (`ReleaseEventIsAppendOnly`, vincolo
+  permanente 10 del README). Questa spec porta la **consultazione** e trasforma le garanzie di
+  immutabilita da proprieta del modello a proprieta verificata dell'intera applicazione.
+
+  **Schermata** — `resources/views/components/releases/⚡log.blade.php` sulla rotta
+  `/rilasci/{release}/registro` (`releases.log`), raggiunta dal dettaglio della release. Rotta
+  propria e non una sezione del dettaglio: le due rispondono a domande diverse — "dove siamo e
+  chi stiamo aspettando" contro "cosa e successo e per mano di chi" — e il dettaglio e gia una
+  pagina lunga. Il registro e inoltre l'unica superficie con righe **a visibilita differenziata**,
+  e mescolarla a una schermata che mostra tutto a tutti renderebbe quella differenza invisibile
+  a chi legge il codice.
+
+  **Autorizzazione** — nuova `ReleaseEventPolicy`:
+
+  | Ability | Chi | Perche |
+  | --- | --- | --- |
+  | `viewAny` | ogni membro autenticato | la tracciabilita e una prova consultabile, non un privilegio |
+  | `view` | ogni membro, **tranne** sui tentativi non autorizzati, riservati agli amministratori | una riga che nomina chi ha provato a fare cosa non e informazione di processo ma di sicurezza |
+  | `update`, `delete` | **nessuno**, amministratori inclusi | un registro correggibile a posteriori non e una prova |
+
+  `update` e `delete` stanno fra le `NOT_FILTERED` — la stessa convenzione di
+  `ReleasePolicy::delete()` — altrimenti il filtro `before()` le concederebbe a un
+  amministratore proprio dove il vincolo vale anche per lui.
+
+  **Filtro delle righe** — la Policy decide sul singolo evento, ma la schermata non puo
+  caricarli tutti e scartarli in memoria: sarebbe un conteggio che rivela quante righe nascoste
+  esistono, e uno spreco su un registro che cresce con il rilascio. Il filtro vive quindi in uno
+  scope `ReleaseEvent::visibleTo(User)`, e **Policy e scope devono dire la stessa cosa**: un
+  test li confronta riga per riga sullo stesso insieme, cosi che aprire l'una senza l'altra
+  faccia fallire la suite.
+
+  **Fuso orario** — `config('app.timezone')` e `UTC` e i cast Eloquent restituiscono istanti in
+  quel fuso: memorizzazione e visualizzazione coincidono gia oggi, e tutte le viste usano lo
+  stesso formato `d/m/Y H:i`. Questa spec non rifattorizza nulla: verifica l'invariante con un
+  test che legge il **valore grezzo** in tabella e lo confronta con quello reso, e che pretende
+  lo stesso istante identico su due schermate diverse. Un formato ripetuto in dieci viste e
+  poco elegante; un formato centralizzato in un helper che nessun test copre sarebbe peggio.
+
+  **Lettura** — una query, ordine cronologico crescente (`created_at`, spareggio su `id` UUIDv7
+  che e monotono), con `user` e `releaseStep` in eager loading. Usa l'indice
+  `(release_id, created_at)` creato con la tabella proprio per questa lettura.
+
+  ## Decisioni
+
+  **Ordine crescente e non decrescente.** Le altre schermate mostrano il piu recente in cima
+  perche rispondono a "cosa devo fare ora". Il registro racconta **come e andata**, e una
+  cronologia si legge dall'inizio: l'avvio in cima, la consegna in fondo. E anche l'unico ordine
+  in cui "step attivato" ha senso subito dopo "step completato".
+
+  **Le voci nascoste non sono contate.** A un membro non amministratore il registro non dice
+  "3 voci non visibili": il numero dei tentativi non autorizzati e esso stesso informazione di
+  sicurezza, e dichiararlo senza mostrarlo sarebbe il peggiore dei due mondi.
+
+  **L'immutabilita si verifica anche a livello di rotte.** Il criterio chiede che *nessuna
+  rotta, comando o funzione dell'interfaccia* consenta la modifica: il modello che rifiuta non
+  basta a dimostrarlo. Il test elenca le rotte applicative e pretende che le uniche non-GET
+  siano quelle di autenticazione, su una lista bianca esplicita — chi aggiungera un percorso di
+  scrittura dovra passare da quella lista, non aggirarla.
+
+  **Nessuna paginazione.** Un registro ha un numero di righe proporzionale alla lunghezza della
+  catena — dell'ordine della decina per rilascio, piu i tentativi. Non e la tabella che cresce
+  senza limiti.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` (nessun push automatico)
+  - Precondizione: US-009 e in `REVIEW` e non ancora integrata in `develop` — TASK-00 rami dalla
+    sua punta, perche il registro si raggiunge dal dettaglio e cita l'elenco nelle briciole
+  - Branch: `feature/US-010-registro-transizioni` dalla punta di US-009
+  - Un solo commit per task, Conventional Commits con codice spec e task
+  - PR verso `develop` preparata localmente; nessun push finche l'utente non lo chiede
+  - Merge in `develop` solo dopo approvazione umana in `/larapilot-review`
+
+  ## Strategia dei dati di prova
+
+  - Nessuna modifica di schema. `ReleaseEventFactory` guadagna gli stati mancanti — chiusura,
+    attivazione, conclusione, tentativo non autorizzato — con i payload che le Action scrivono
+    davvero: un registro di prova con cinque righe uguali non dimostrerebbe la resa per tipo.
+  - Lo scenario dimostrativo (registro popolato nel seeder) resta di US-011.
+  - `php artisan migrate:fresh --seed` deve continuare a completare senza errori.
+
+  ## Strategia di test
+
+  - Bar: `NORMAL` — Pest/PHPUnit feature, unit e policy. Nessun browser, nessuna suite di
+    viewport.
+  - `ReleaseLogScreenTest` — le cinque azioni rese in ordine cronologico con attore, istante e
+    step; visibilita differenziata dei tentativi; accesso di un membro; rifiuto all'anonimo.
+  - `ReleaseEventPolicyTest` — `viewAny` aperta, `view` differenziata, `update` e `delete`
+    negate **anche** a un amministratore; Policy e scope `visibleTo` in accordo sullo stesso
+    insieme.
+  - `ReleaseEventAppendOnlyTest` — esteso con la lista bianca delle rotte non-GET e con
+    l'assenza di percorsi di scrittura verso gli eventi.
+  - `ReleaseLogInstantTest` — istanti memorizzati in UTC e resi nel fuso dell'applicazione, con
+    lo stesso valore su registro e dettaglio.
+  - `ReleaseLogQueryBudgetTest` — stesso costo con una voce e con dieci.
+
+  ## Verifica manuale (handoff)
+
+  1. Avvia una release, chiudi uno step, prova ad aprire lo step di un altro da un account non
+     autorizzato, concludi la release: il registro deve mostrare le cinque azioni in ordine.
+  2. Rileggi lo stesso registro da un account **non** amministratore: il tentativo non
+     autorizzato non compare, e nulla ne segnala l'esistenza.
+  3. A 375 px la cronologia resta leggibile in colonna singola, senza scorrimento orizzontale.
+tasks:
+  -
+    id: TASK-00
+    title: 'Ramo di lavoro per il registro delle transizioni'
+    type: Impl
+    status: TODO
+    dependencies: {}
+    body: |-
+      ## Description
+      Prepara il ramo di lavoro. US-009 e in `REVIEW` e non ancora integrata in `develop`: il
+      registro si raggiunge dal dettaglio della release e ne eredita le briciole verso l'elenco,
+      quindi ramificare da `develop` farebbe nascere US-010 senza la schermata che la precede.
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+
+      ## Steps
+      1. `git checkout -b feature/US-010-registro-transizioni feature/US-009-elenco-storico-release`
+      2. Prepara titolo e corpo della PR interna verso `develop` (solo in locale)
+      3. Commit di ancoraggio del ramo
+
+      ## Completion Criteria
+      - [ ] Il ramo `feature/US-010-registro-transizioni` esiste in locale e contiene US-009
+      - [ ] Descrizione della PR verso `develop` preparata in locale
+
+      ## Test Data
+      - N/A — nessuna modifica di modelli o schema
+
+      ## Git Deliverables
+      - Commit: `chore(US-010): TASK-00 ramo di lavoro per il registro delle transizioni`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: preparata in locale, aperta da remoto solo su richiesta
+  -
+    id: TASK-01
+    title: 'Policy del registro, rotta e via di accesso dal dettaglio'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-00
+    body: |-
+      ## Description
+      L'autorizzazione del registro e la sua raggiungibilita. La Policy e nuova perche l'oggetto
+      della decisione e l'**evento** e non la release: la visibilita differenziata dei tentativi non
+      autorizzati si decide riga per riga, e appenderla a `ReleasePolicy` la nasconderebbe dietro
+      un'ability che parla di un'altra entita.
+
+      ## Files Involved
+      - app/Policies/ReleaseEventPolicy.php (nuovo)
+      - routes/web.php
+      - resources/views/components/releases/⚡log.blade.php (nuovo, forma minima)
+      - resources/views/components/releases/⚡show.blade.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. `php artisan make:policy ReleaseEventPolicy --model=ReleaseEvent --no-interaction`
+      2. `viewAny` → `true`; `view` → `true` tranne su `ReleaseEventAction::UnauthorizedAttempt`,
+         riservata agli amministratori; `update` e `delete` → `false` per **chiunque**, con
+         `update` e `delete` nell'elenco `NOT_FILTERED` del filtro `before()` (stessa convenzione di
+         `ReleasePolicy`), altrimenti un amministratore le otterrebbe dal filtro.
+      3. Documenta in testa alla Policy che `update`/`delete` non sono difese ridondanti rispetto a
+         `ReleaseEventIsAppendOnly`: il modello rifiuta le scritture che passano da lui, la Policy
+         nega l'intenzione **prima**, e il vincolo permanente 10 spiega cosa nessuno dei due copre
+         (le scritture di massa del query builder).
+      4. Rotta `/rilasci/{release}/registro` → `releases.log`, con `->can('viewAny', ReleaseEvent::class)`
+         sul middleware e commento sul perche il `->can()` qui c'e (nessun tentativo da registrare,
+         quindi vale la protezione a due livelli).
+      5. Componente minimo con `Gate::authorize('viewAny', ReleaseEvent::class)` al montaggio.
+      6. Dal dettaglio della release, un collegamento al registro nel riquadro dei dati: e da li che
+         si passa da "dove siamo" a "come ci siamo arrivati".
+      7. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=Release`
+
+      ## Completion Criteria
+      - [ ] Un membro non amministratore apre `/rilasci/{release}/registro`; un anonimo e rediretto
+      - [ ] `update` e `delete` negate anche a un amministratore
+      - [ ] Il registro e raggiungibile dal dettaglio della release
+      - [ ] Pint e Larastan (livello 5) passano
+
+      ## Test Data
+      - N/A — nessuna modifica di schema
+
+      ## Git Deliverables
+      - Commit: `feat(US-010): TASK-01 apre il registro delle transizioni e registra la rotta`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+  -
+    id: TASK-02
+    title: 'Lettura cronologica e filtro di visibilita sul modello'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-01
+    body: |-
+      ## Description
+      Gli scope che il registro interroga, e gli stati di factory che permettono di provarlo su un
+      registro realistico invece che su cinque righe uguali.
+
+      Il filtro di visibilita vive in **database** e non in memoria: caricare tutte le righe per
+      scartarle dopo significherebbe leggere righe che chi guarda non puo vedere, e il loro numero
+      e a sua volta informazione di sicurezza.
+
+      ## Files Involved
+      - app/Models/ReleaseEvent.php
+      - database/factories/ReleaseEventFactory.php
+
+      ## Steps
+      1. `#[Scope] chronological(Builder $query)` — `created_at` crescente, spareggio su `id`:
+         gli UUIDv7 sono monotoni, quindi due eventi scritti nello stesso istante — che una sola
+         transazione produce sempre, chiusura e attivazione — restano nell'ordine in cui sono
+         avvenuti. Ordinare sul solo istante li lascerebbe scambiarsi di posto fra due letture.
+      2. `#[Scope] visibleTo(Builder $query, User $user)` — esclude
+         `ReleaseEventAction::UnauthorizedAttempt` quando chi guarda non e amministratore.
+         Documenta che questo scope e la **stessa decisione** di `ReleaseEventPolicy::view()`,
+         espressa in query, e che un test li tiene allineati.
+      3. `#[Scope] forRelease(Builder $query, Release $release)`, che usa l'indice
+         `(release_id, created_at)` creato con la tabella per questa lettura.
+      4. Stati di factory con i payload che le Action scrivono davvero: `stepCompleted()`,
+         `stepActivated()`, `releaseCompleted()`, `unauthorizedAttempt()`. Uno stato con un payload
+         inventato produrrebbe test verdi su una resa che nessun evento reale attiva.
+      5. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=ReleaseEvent`
+
+      ## Completion Criteria
+      - [ ] Scope disponibili e documentati
+      - [ ] Le factory producono le cinque azioni con i payload reali
+      - [ ] Pint e Larastan (livello 5) passano
+
+      ## Test Data
+      - [ ] `ReleaseEventFactory` guadagna uno stato per ciascuna azione, con il payload che la
+            Action corrispondente scrive
+      - [ ] Nessuna modifica di schema, quindi nessuna migrazione e nessun seeder da toccare qui
+
+      ## Git Deliverables
+      - Commit: `feat(US-010): TASK-02 lettura cronologica e filtro di visibilita del registro`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+  -
+    id: TASK-03
+    title: 'Schermata del registro'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-02
+    body: |-
+      ## Description
+      La cronologia resa: cosa e successo, per mano di chi, quando, e su quale step.
+
+      ## Files Involved
+      - resources/views/components/releases/⚡log.blade.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. Una sola lettura: `ReleaseEvent::forRelease($release)->visibleTo(auth()->user())->chronological()->with(['user', 'releaseStep'])->get()`.
+      2. Lista **ordinata** (`<ol>`): l'ordine e parte dell'informazione, non impaginazione.
+         Colonna singola a ogni larghezza — una cronologia non ha nulla da affiancare.
+      3. Una riga per evento: azione con **icona e parola** (mai il solo colore), attore, istante,
+         e lo step interessato quando c'e. L'avvio non ne ha, e la riga deve dirlo invece di
+         lasciare un campo vuoto.
+      4. Il dettaglio della riga viene dal payload, con una frase per azione — versione e template
+         sull'avvio, campi compilati sulla chiusura, responsabile sull'attivazione, ability
+         tentata sul tentativo non autorizzato. Il payload e nullable e le sue chiavi variano per
+         tipo: leggilo con `??`, mai come se fosse garantito, perche una riga scritta da una
+         versione precedente non ha le chiavi aggiunte dopo.
+      5. Le voci di tentativo non autorizzato sono rese con un'evidenza propria e una nota che
+         dice a chi sono visibili: un amministratore deve sapere che sta guardando qualcosa che
+         gli altri non vedono.
+      6. Stato vuoto: non accade su una release avviata (l'avvio scrive sempre una riga), ma una
+         pagina che tacesse davanti a un registro vuoto lascerebbe senza sapere se sia un difetto.
+      7. Briciole verso elenco e dettaglio, e un rientro esplicito al dettaglio.
+      8. Testi in `lang/it/releases.php` con prefisso `log_`. Le etichette delle azioni restano su
+         `ReleaseEventAction::label()`, dove sta il vocabolario.
+      9. Verifica a 375, 768 e 1280 px. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=Release`
+
+      ## Completion Criteria
+      - [ ] Le cinque azioni sono rese in ordine cronologico con attore, istante e step
+      - [ ] Un membro non amministratore non vede le voci di tentativo non autorizzato
+      - [ ] Nessuno scorrimento orizzontale a 375/768/1280 px
+      - [ ] Pint e Larastan (livello 5) passano
+
+      ## Test Data
+      - N/A — nessuna modifica di schema
+
+      ## Git Deliverables
+      - Commit: `feat(US-010): TASK-03 schermata del registro delle transizioni`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+  -
+    id: TASK-04
+    title: 'Copertura della schermata e della visibilita differenziata'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-03
+    body: |-
+      ## Description
+      Copertura funzionale del registro e della Policy che lo governa.
+
+      ## Files Involved
+      - tests/Feature/Releases/ReleaseLogScreenTest.php (nuovo)
+      - tests/Feature/Releases/ReleaseEventPolicyTest.php (nuovo)
+
+      ## Steps
+      1. Costruisci il registro passando dalle **Action reali** (`StartRelease`, `CloseStep`,
+         `RecordUnauthorizedStepAttempt`) almeno in un caso: un registro assemblato solo con le
+         factory dimostrerebbe la resa di righe che nessun percorso applicativo scrive.
+      2. Casi della schermata: le cinque azioni in ordine cronologico; attore e istante su ogni
+         voce; lo step interessato dove previsto e la sua assenza sull'avvio; due eventi della
+         stessa transazione nell'ordine in cui sono avvenuti; accesso di un membro; anonimo
+         rediretto.
+      3. Visibilita differenziata: un amministratore vede il tentativo non autorizzato, un membro
+         no — e la pagina di quest'ultimo **non** ne segnala l'esistenza in alcun modo, nemmeno con
+         un conteggio.
+      4. `ReleaseEventPolicyTest`: `viewAny` aperta a un membro; `view` differenziata per azione;
+         `update` e `delete` negate anche a un amministratore. Piu il caso che tiene insieme le due
+         decisioni: **Policy e scope `visibleTo` devono concordare** riga per riga sullo stesso
+         insieme, per entrambi i livelli applicativi.
+      5. `php artisan test --filter="ReleaseLogScreen|ReleaseEventPolicy"`
+
+      ## Completion Criteria
+      - [ ] Tutti i criteri di accettazione funzionali hanno un test
+      - [ ] I test passano
+
+      ## Git Deliverables
+      - Commit: `test(US-010): TASK-04 copertura del registro e della visibilita differenziata`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+  -
+    id: TASK-05
+    title: 'Immutabilita verificata a livello di applicazione e fuso orario'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-04
+    body: |-
+      ## Description
+      Il criterio non chiede che il **modello** rifiuti — quello esiste da US-004 — ma che *nessuna
+      rotta, comando o funzione dell'interfaccia* consenta di modificare o cancellare una voce. E
+      un'affermazione sull'applicazione intera, e va verificata come tale.
+
+      ## Files Involved
+      - tests/Feature/Releases/ReleaseEventAppendOnlyTest.php
+      - tests/Feature/Releases/ReleaseLogInstantTest.php (nuovo)
+
+      ## Steps
+      1. Lista bianca delle rotte: elenca le rotte applicative e pretendi che le uniche a
+         dichiarare metodi diversi da GET/HEAD siano quelle note di autenticazione e
+         dell'aggiornamento Livewire. Il messaggio di fallimento deve **nominare** la rotta
+         inattesa: un test che dice solo "non corrisponde" costringe a cercarla a mano.
+      2. Nessun comando Artisan applicativo scrive sugli eventi: verifica che
+         `app/Console` non contenga percorsi di cancellazione (oggi la cartella non esiste — il
+         test lo dichiara invece di lasciarlo implicito).
+      3. `ReleaseLogInstantTest`: l'istante e memorizzato in UTC — confronto con il **valore
+         grezzo** letto via query builder, non con l'attributo gia trasformato dal cast — ed e reso
+         nel fuso dell'applicazione. Lo stesso istante deve comparire identico su registro e
+         dettaglio: la coerenza fra le viste e quello che il criterio chiede, e si dimostra
+         confrontandole, non ispezionando una vista sola.
+      4. `php artisan test --filter="ReleaseEventAppendOnly|ReleaseLogInstant"`
+
+      ## Completion Criteria
+      - [ ] Nessuna rotta applicativa fuori dalla lista bianca accetta metodi di scrittura
+      - [ ] Gli istanti sono memorizzati in UTC e resi nel fuso dell'applicazione
+      - [ ] Lo stesso istante e reso identico su registro e dettaglio
+      - [ ] I test passano
+
+      ## Git Deliverables
+      - Commit: `test(US-010): TASK-05 immutabilita a livello di applicazione e fuso orario`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+  -
+    id: TASK-06
+    title: 'Budget di query del registro'
+    type: Test
+    status: TODO
+    dependencies:
+      - TASK-05
+    body: |-
+      ## Description
+      Il registro carica per ogni voce l'attore e lo step interessato: e la stessa forma di N+1 gia
+      vista sulle altre schermate operative, su una tabella che cresce per tutta la vita del
+      rilascio.
+
+      ## Files Involved
+      - tests/Feature/Releases/ReleaseLogQueryBudgetTest.php (nuovo)
+
+      ## Steps
+      1. Stessa forma di `ReleaseIndexQueryBudgetTest`: contatore su `DB::listen`, confronto fra un
+         registro da una voce e uno da dieci, sulla **pagina resa**.
+      2. Alterna gli eventi con e senza step (l'avvio non ne ha): un insieme di sole chiusure non
+         proverebbe che la relazione nullable non fa scattare una query per riga.
+      3. Un caso letto da un amministratore, cioe con le voci di tentativo incluse: e l'insieme piu
+         grande, e il filtro di visibilita non deve introdurre una lettura per riga.
+      4. `php artisan test --filter=ReleaseLogQueryBudget`
+
+      ## Completion Criteria
+      - [ ] Il costo non dipende dal numero di voci del registro
+      - [ ] Il test passa
+
+      ## Git Deliverables
+      - Commit: `test(US-010): TASK-06 budget di query del registro`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+  -
+    id: TASK-07
+    title: 'Changelog, README e regole di progetto'
+    type: Impl
+    status: TODO
+    dependencies:
+      - TASK-06
+    body: |-
+      ## Description
+      Documentazione di baseline: cosa cambia per chi usa lo strumento, cosa deve sapere chi
+      tocchera questo codice.
+
+      ## Files Involved
+      - CHANGELOG.md
+      - README.md
+      - .ai/rules (tramite `record-rule`)
+
+      ## Steps
+      1. `CHANGELOG.md` Unreleased: registro consultabile (US-010, FR-016), con la visibilita
+         differenziata dei tentativi dichiarata in chiaro.
+      2. `README.md`: la rotta nella tabella delle schermate; una sezione sul registro con le tre
+         scelte non ovvie — ordine crescente, voci nascoste non contate, immutabilita verificata
+         anche a livello di rotte. Aggiorna il vincolo permanente 10, che oggi descrive solo la
+         difesa del modello e va esteso alla Policy.
+      3. `record-rule` sulla nuova Policy: il doppio presidio (Policy piu modello) e il vincolo che
+         `visibleTo` e `ReleaseEventPolicy::view()` restino allineati — chi tocca l'uno senza
+         l'altro apre una fuga o una riga fantasma.
+
+      ## Completion Criteria
+      - [ ] Changelog e README aggiornati
+      - [ ] Vincolo permanente 10 esteso alla Policy
+      - [ ] Regola registrata sulla Policy degli eventi
+
+      ## Test Data
+      - N/A — nessuna modifica di schema
+
+      ## Git Deliverables
+      - Commit: `docs(US-010): TASK-07 changelog, README e regola sul registro`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+updated_at: '2026-08-13T22:22:14+00:00'
