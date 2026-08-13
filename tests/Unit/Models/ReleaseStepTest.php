@@ -8,6 +8,7 @@ use App\Models\Release;
 use App\Models\ReleaseStep;
 use App\Models\ReleaseStepField;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -160,6 +161,119 @@ class ReleaseStepTest extends TestCase
         $this->assertTrue($role->isReferenced());
         $this->assertSame(1, $role->referenceCounts()['releaseSteps']);
         $this->assertStringContainsString('step di release', $role->usageLabel());
+    }
+
+    public function test_the_awaiting_user_scope_lists_only_the_open_steps_of_that_person(): void
+    {
+        $member = User::factory()->create();
+        $colleague = User::factory()->create();
+        $release = Release::factory()->create();
+
+        $mine = ReleaseStep::factory()->for($release)->active()->create([
+            'position' => 1,
+            'assigned_user_id' => $member->id,
+        ]);
+
+        ReleaseStep::factory()->for($release)->blocked()->create(['position' => 2, 'assigned_user_id' => $member->id]);
+        ReleaseStep::factory()->for($release)->completed()->create(['position' => 3, 'assigned_user_id' => $member->id]);
+        ReleaseStep::factory()->for($release)->active()->create(['position' => 4, 'assigned_user_id' => $colleague->id]);
+
+        $found = ReleaseStep::query()->awaitingUser($member)->pluck('id');
+
+        $this->assertSame([$mine->id], $found->all());
+    }
+
+    public function test_the_awaiting_user_scope_ignores_the_steps_of_a_completed_release(): void
+    {
+        $member = User::factory()->create();
+
+        $closed = Release::factory()->completed()->create();
+        ReleaseStep::factory()->for($closed)->active()->create(['position' => 1, 'assigned_user_id' => $member->id]);
+
+        $this->assertSame([], ReleaseStep::query()->awaitingUser($member)->pluck('id')->all());
+    }
+
+    public function test_the_activation_instant_of_the_first_step_is_the_release_start(): void
+    {
+        $release = Release::factory()->create(['started_at' => now()->subDays(2)]);
+
+        ReleaseStep::factory()->for($release)->active()->create(['position' => 1]);
+
+        $step = ReleaseStep::query()->withActivationInstant()->with('release')->firstOrFail();
+
+        $this->assertTrue($release->started_at->equalTo($step->activationInstant()));
+    }
+
+    public function test_the_activation_instant_of_a_later_step_is_the_closure_of_the_previous_one(): void
+    {
+        // I due istanti coincidono per costruzione: `CloseStep` chiude il
+        // precedente e attiva questo nella stessa transazione.
+        $release = Release::factory()->create(['started_at' => now()->subDays(5)]);
+        // `startOfSecond()` e necessario, non cosmetico: la colonna conserva i
+        // secondi e non i microsecondi, quindi un istante con frazione tornerebbe
+        // troncato e il confronto fallirebbe su un dato in realta corretto.
+        $handover = now()->subHours(4)->startOfSecond();
+
+        ReleaseStep::factory()->for($release)->completed()->create(['position' => 1, 'completed_at' => now()->subDays(3)]);
+        ReleaseStep::factory()->for($release)->completed()->create(['position' => 2, 'completed_at' => $handover]);
+        $open = ReleaseStep::factory()->for($release)->active()->create(['position' => 3]);
+
+        $step = ReleaseStep::query()->withActivationInstant()->with('release')->whereKey($open->id)->firstOrFail();
+
+        // Il precedente e quello di posizione 2, non il primo della catena: la
+        // sottoquery ordina per posizione decrescente e ne prende uno solo.
+        $this->assertTrue($handover->equalTo($step->activationInstant()));
+    }
+
+    public function test_the_activation_instant_refuses_to_guess_without_its_scope(): void
+    {
+        // Un ripiego silenzioso direbbe "aperto da 5 giorni" su uno step aperto da
+        // quattro ore, e nessuno lo noterebbe guardando la schermata.
+        $release = Release::factory()->create(['started_at' => now()->subDays(5)]);
+
+        ReleaseStep::factory()->for($release)->completed()->create(['position' => 1, 'completed_at' => now()->subHours(4)]);
+        $open = ReleaseStep::factory()->for($release)->active()->create(['position' => 2]);
+
+        $this->expectException(\LogicException::class);
+
+        $open->activationInstant();
+    }
+
+    public function test_the_activation_instant_does_not_cost_a_query_per_row(): void
+    {
+        $release = Release::factory()->create();
+
+        for ($position = 1; $position <= 5; $position++) {
+            ReleaseStep::factory()->for($release)->completed()->create([
+                'position' => $position,
+                'completed_at' => now()->subHours(10 - $position),
+            ]);
+        }
+
+        $steps = ReleaseStep::query()->withActivationInstant()->with('release')->ordered()->get();
+
+        $queries = 0;
+        DB::listen(function () use (&$queries): void {
+            $queries++;
+        });
+
+        $instants = $steps->map(fn (ReleaseStep $step): string => $step->activationInstant()->toIso8601String());
+
+        $this->assertCount(5, $instants);
+        $this->assertSame(0, $queries, "La lettura degli istanti ha eseguito {$queries} query: la sottoquery non e stata applicata.");
+    }
+
+    public function test_the_activation_instant_scope_keeps_the_whole_row(): void
+    {
+        // Senza `select('release_steps.*')` la sola `addSelect` ridurrebbe la query
+        // a quell'unica colonna, e la schermata resterebbe senza nome ne ruolo.
+        $created = ReleaseStep::factory()->active()->create(['position' => 1]);
+
+        $step = ReleaseStep::query()->withActivationInstant()->firstOrFail();
+
+        $this->assertSame($created->name, $step->name);
+        $this->assertSame($created->role_name, $step->role_name);
+        $this->assertSame(ReleaseStepStatus::Active, $step->status);
     }
 
     public function test_the_release_step_count_is_reused_when_already_loaded(): void

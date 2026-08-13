@@ -310,7 +310,7 @@ specs:
       title: 'Visibilità e tracciabilità'
     priority: HIGH
     points: 5
-    status: TODO
+    status: DONE
     body: |
       #### US-007: Vista operativa: i miei step
 
@@ -328,16 +328,28 @@ specs:
       responsabile, con progetto, release e nome dello step, apribili in un tocco. È leggibile e usabile a 375 px.
 
       **Criteri di accettazione**
-      - [ ] Dopo il login la vista "i miei step" è la schermata di ingresso, non una dashboard di grafici
-      - [ ] Elenca esclusivamente gli step in stato attivo di cui l'utente autenticato è responsabile, su tutti i progetti
-      - [ ] Ogni voce mostra progetto, etichetta della release, nome dello step, posizione (es. "Step 2 di 5") e ruolo
-      - [ ] Uno step attivo di cui l'utente non è responsabile non compare nell'elenco
-      - [ ] Stato vuoto esplicito quando nessuno step attende l'utente, che spiega quando ne comparirà uno
-      - [ ] Blocco secondario con le release in corso che coinvolgono l'utente, indicando chi trattiene il flusso e da quanto tempo — mitigazione dell'assenza di notifiche registrata nel PRD fra i rischi accettati
-      - [ ] Nessuna query N+1: release, step e responsabili caricati in eager loading (verificato)
-      - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/index.html`: mobile first a 375 px, target touch almeno 44x44 px, sidebar a drawer sotto 1024 px
-      - [ ] Gli stati sono resi con icona e parola, mai dal solo colore
-      - [ ] Il contatore degli step in attesa è annunciato agli screen reader con `aria-live="polite"`
+      - [x] Dopo il login la vista "i miei step" è la schermata di ingresso, non una dashboard di grafici
+      - [x] Elenca esclusivamente gli step in stato attivo di cui l'utente autenticato è responsabile, su tutti i progetti
+      - [x] Ogni voce mostra progetto, etichetta della release, nome dello step, posizione (es. "Step 2 di 5") e ruolo
+      - [x] Uno step attivo di cui l'utente non è responsabile non compare nell'elenco
+      - [x] Stato vuoto esplicito quando nessuno step attende l'utente, che spiega quando ne comparirà uno
+      - [x] Blocco secondario con le release in corso che coinvolgono l'utente, indicando chi trattiene il flusso e da quanto tempo — mitigazione dell'assenza di notifiche registrata nel PRD fra i rischi accettati
+      - [x] Nessuna query N+1: release, step e responsabili caricati in eager loading (verificato)
+      - [x] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/index.html`: mobile first a 375 px, target touch almeno 44x44 px, sidebar a drawer sotto 1024 px
+      - [x] Gli stati sono resi con icona e parola, mai dal solo colore
+      - [x] Il contatore degli step in attesa è annunciato agli screen reader con `aria-live="polite"`
+    status_history:
+      - { status: PLANNED, at: '2026-08-13T17:08:06+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-13T17:23:14+00:00' }
+      - { status: REVIEW, at: '2026-08-13T17:53:32+00:00' }
+      - { status: DONE, at: '2026-08-13T20:51:31+00:00' }
+    rework: false
+    merge_commit:
+      sha: 75f000e6206a5d17fe9ec489c6d6d2a7825bb71a
+      short_sha: 75f000e
+      subject: 'chore(US-007): passaggio in revisione e consuntivo di sessione'
+      committed_at: '2026-08-13T19:53:45+02:00'
+      url: null
   -
     code: US-008
     title: 'Dettaglio della release con catena e informazioni fornite'

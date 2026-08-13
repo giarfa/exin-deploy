@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Passaggio di una release avviata: la copia congelata di uno step del template,
@@ -35,6 +36,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ReleaseStepStatus $status
  * @property CarbonInterface|null $completed_at
  * @property string $release_id
+ * @property CarbonInterface|null $previous_step_completed_at colonna calcolata da `withActivationInstant()`, assente senza quello scope
  */
 #[Fillable([
     'release_id',
@@ -62,6 +64,13 @@ class ReleaseStep extends Model
             'position' => 'integer',
             'status' => ReleaseStepStatus::class,
             'completed_at' => 'datetime',
+            /*
+             * Non e una colonna: e l'alias della sottoquery di
+             * `withActivationInstant()`. Il cast e comunque necessario, altrimenti
+             * l'istante tornerebbe come stringa e `diffForHumans()` non esisterebbe
+             * su di essa.
+             */
+            'previous_step_completed_at' => 'datetime',
         ];
     }
 
@@ -184,11 +193,114 @@ class ReleaseStep extends Model
     }
 
     /**
+     * Istante in cui lo step ha ricevuto il flusso, cioe da quando attende chi ne
+     * risponde.
+     *
+     * **Derivato, non memorizzato.** Non esiste una colonna `activated_at`, e non
+     * per dimenticanza: `App\Actions\Releases\CloseStep` chiude lo step precedente
+     * e attiva questo **nella stessa transazione**, quindi il `completed_at` del
+     * precedente e l'istante di attivazione di questo — coincidono per costruzione
+     * e non per approssimazione. Sul primo della catena non c'e un precedente, e
+     * l'istante e quello di avvio della release, che `StartRelease` scrive creando
+     * gia attivo lo step in posizione 1.
+     *
+     * La scelta e registrata nel piano di US-007 ("Decisione — da quanto uno step
+     * e aperto") insieme all'alternativa scartata: quando servira **ordinare o
+     * filtrare in database** su questo istante, la colonna diventera giustificata.
+     *
+     * Richiede lo scope `withActivationInstant()` sulla query e la release
+     * caricata. L'assenza dell'alias non torna un ripiego silenzioso ma
+     * un'eccezione: una durata sbagliata e indistinguibile da una giusta a chi
+     * guarda la schermata, e il blocco delle release in attesa esiste proprio per
+     * dire da quanto qualcuno e fermo.
+     *
+     * **La guardia e pero a senso unico**, e va saputo: l'alias vale `null` sia
+     * quando non esiste uno step precedente — il caso legittimo, il primo della
+     * catena — sia quando il precedente esiste ma non porta un `completed_at`, che
+     * sarebbe un dato incoerente. Entrambi ripiegano su `started_at`. Nessun
+     * percorso applicativo produce il secondo caso (`CloseStep` scrive stato e
+     * istante nella stessa `update`), quindi distinguerli costerebbe una seconda
+     * sottoquery per un dato che oggi non esiste.
+     *
+     * @throws \LogicException quando la query non ha applicato `withActivationInstant()`
+     */
+    public function activationInstant(): CarbonInterface
+    {
+        if (! array_key_exists('previous_step_completed_at', $this->attributes)) {
+            throw new \LogicException(
+                'ReleaseStep::activationInstant() richiede lo scope withActivationInstant() sulla query.'
+            );
+        }
+
+        return $this->previous_step_completed_at ?? $this->release->started_at;
+    }
+
+    /**
      * Step in ordine di esecuzione.
      */
     #[Scope]
     protected function ordered(Builder $query): void
     {
         $query->orderBy('position');
+    }
+
+    /**
+     * Step aperti in attesa di una persona: il contenuto di "i miei step".
+     *
+     * Il filtro e **sull'assegnazione**, non sulla Policy. `ReleaseStepPolicy`
+     * concede a un amministratore la lettura di qualunque step, ma questa
+     * schermata si chiama "i miei step": mostrargli anche quelli altrui la
+     * trasformerebbe in un cruscotto di sorveglianza e seppellirebbe cio che
+     * attende davvero lui.
+     *
+     * Le release concluse restano fuori due volte — non hanno step attivi per
+     * invariante, e la condizione lo dice comunque: quell'invariante e mantenuta
+     * dal codice, e una schermata che ci si appoggia in silenzio si romperebbe
+     * senza spiegare perche il giorno in cui un dato incoerente entrasse.
+     *
+     * Usa l'indice `(assigned_user_id, status)` creato con la tabella.
+     */
+    #[Scope]
+    protected function awaitingUser(Builder $query, User $user): void
+    {
+        $query->where('assigned_user_id', $user->id)
+            ->where('status', ReleaseStepStatus::Active)
+            // Sottoquery su `Release::inProgress()` e non una seconda copia della
+            // condizione sullo stato: cosa significhi "in corso" e deciso in un
+            // posto solo, e il giorno in cui FR-020 aggiungera "annullata" questa
+            // schermata la seguira senza essere toccata.
+            ->whereIn('release_id', Release::query()->inProgress()->select('id'));
+    }
+
+    /**
+     * Aggiunge alla riga l'istante di chiusura dello step precedente, letto con una
+     * sottoquery correlata: costo costante, nessuna query per riga.
+     *
+     * `select('{tabella}.*')` non e ridondante: la sola `addSelect` sostituirebbe
+     * la lista delle colonne con quell'unico alias, e la query tornerebbe righe
+     * senza nome, stato ne ruolo. **Conseguenza da conoscere: questo scope
+     * ridefinisce la select**, quindi va applicato prima di eventuali `withCount`
+     * o select aggiuntive, che altrimenti verrebbero cancellate senza avviso.
+     *
+     * La tabella interna e **aliasata**: senza `previous_steps` i `whereColumn`
+     * legherebbero entrambi i lati alla stessa tabella e la sottoquery
+     * confronterebbe ogni riga con se stessa.
+     *
+     * Solo costrutti portabili: nessuna funzione specifica di SQLite, perche il
+     * passaggio a PostgreSQL o MySQL deve restare un cambio di configurazione.
+     */
+    #[Scope]
+    protected function withActivationInstant(Builder $query): void
+    {
+        $table = $query->getModel()->getTable();
+
+        $query->select($table.'.*')->addSelect([
+            'previous_step_completed_at' => DB::table($table.' as previous_steps')
+                ->select('previous_steps.completed_at')
+                ->whereColumn('previous_steps.release_id', $table.'.release_id')
+                ->whereColumn('previous_steps.position', '<', $table.'.position')
+                ->orderByDesc('previous_steps.position')
+                ->limit(1),
+        ]);
     }
 }

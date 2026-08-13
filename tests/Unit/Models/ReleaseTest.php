@@ -5,8 +5,10 @@ namespace Tests\Unit\Models;
 use App\Enums\ReleaseStatus;
 use App\Models\Release;
 use App\Models\ReleaseStep;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -86,5 +88,71 @@ class ReleaseTest extends TestCase
 
         $this->assertTrue($found->contains($running->id));
         $this->assertFalse($found->contains($done->id));
+    }
+
+    public function test_the_active_step_relation_returns_the_step_the_release_is_stopped_on(): void
+    {
+        $release = Release::factory()->create();
+
+        ReleaseStep::factory()->for($release)->completed()->create(['position' => 1]);
+        $open = ReleaseStep::factory()->for($release)->active()->create(['position' => 2]);
+        ReleaseStep::factory()->for($release)->blocked()->create(['position' => 3]);
+
+        $this->assertSame($open->id, $release->activeStep->id);
+    }
+
+    public function test_a_completed_release_has_no_active_step(): void
+    {
+        // `null` qui e l'esito legittimo dell'invariante — al piu uno step attivo
+        // per release, zero quando e conclusa — e non un difetto dei dati: chi
+        // rende una release conclusa deve prevederlo.
+        $release = Release::factory()->completed()->create();
+
+        ReleaseStep::factory()->for($release)->completed()->create(['position' => 1]);
+
+        $this->assertNull($release->activeStep);
+    }
+
+    public function test_the_active_step_is_eager_loadable(): void
+    {
+        // E il motivo per cui e una relazione e non un metodo che filtra la catena
+        // gia caricata: un elenco che risalisse allo step attivo riga per riga
+        // pagherebbe una query per release.
+        Release::factory()->count(3)->create()->each(
+            fn (Release $release) => ReleaseStep::factory()->for($release)->active()->create(['position' => 1])
+        );
+
+        $releases = Release::query()->with('activeStep')->get();
+
+        $queries = 0;
+        DB::listen(function () use (&$queries): void {
+            $queries++;
+        });
+
+        $names = $releases->map(fn (Release $release): string => (string) $release->activeStep?->name);
+
+        $this->assertCount(3, $names);
+        $this->assertSame(0, $queries, "La lettura dello step attivo ha eseguito {$queries} query: l'eager loading non ha preso.");
+    }
+
+    public function test_the_involving_scope_finds_releases_where_the_person_holds_any_step(): void
+    {
+        $member = User::factory()->create();
+        $other = User::factory()->create();
+
+        $held = Release::factory()->create();
+        ReleaseStep::factory()->for($held)->completed()->create(['position' => 1, 'assigned_user_id' => $member->id]);
+        // Lo stato dello step non entra nel filtro: chi ha gia chiuso il proprio
+        // resta coinvolto nel rilascio, ed e proprio a lui che serve sapere su chi
+        // si e fermato dopo.
+        ReleaseStep::factory()->for($held)->active()->create(['position' => 2, 'assigned_user_id' => $other->id]);
+
+        $foreign = Release::factory()->create();
+        ReleaseStep::factory()->for($foreign)->active()->create(['position' => 1, 'assigned_user_id' => $other->id]);
+
+        $found = Release::query()->involving($member)->pluck('id');
+
+        $this->assertTrue($found->contains($held->id));
+        $this->assertFalse($found->contains($foreign->id));
     }
 }

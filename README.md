@@ -327,7 +327,7 @@ rilascio e avvenuto.
 
 | Rotta | Pagina | Accesso |
 | --- | --- | --- |
-| `/` | I miei step — segnaposto fino a US-007 | ogni membro |
+| `/` | **I miei step** — schermata di ingresso | ogni membro |
 | `/impostazioni/sicurezza` | Verifica in due passaggi | ogni membro |
 | `/membri` | Membri del team | amministratore |
 | `/ruoli` | Ruoli funzionali | amministratore |
@@ -342,12 +342,64 @@ La voce **Release** nella navigazione resta marcata "in arrivo": la pagina che p
 l'**elenco** delle release (US-009), non la schermata di avvio, che si raggiunge dal
 progetto su cui si rilascia.
 
-`/step/{step}` si raggiunge oggi dalla catena mostrata dopo l'avvio, ed e un **ponte**
-dichiarato come tale nel codice: la navigazione definitiva verso i propri step e "i miei
-step" (US-007), il dettaglio della release e US-008. La pagina rende tre stati diversi
-dello stesso step — attivo con il form, completato in sola lettura, bloccato con
-l'indicazione di chi si sta aspettando — perche chi arriva da un collegamento salvato non
-sa in quale stato lo trovera.
+`/step/{step}` si raggiunge dalla schermata di ingresso e dalla catena mostrata dopo
+l'avvio. La pagina rende tre stati diversi dello stesso step — attivo con il form,
+completato in sola lettura, bloccato con l'indicazione di chi si sta aspettando — perche
+chi arriva da un collegamento salvato non sa in quale stato lo trovera.
+
+#### La schermata di ingresso: "i miei step"
+
+**Non e una dashboard di grafici**, ed e una scelta di prodotto: senza notifiche (FR-025,
+fuori perimetro) questa pagina e il posto in cui si scopre che qualcosa e fermo su di te.
+La compongono due query, entrambe sullo snapshot congelato:
+
+1. **Gli step che ti attendono** — `ReleaseStep::awaitingUser($user)`: step in stato attivo
+   assegnati a chi guarda, su release in corso, con release, progetto e lunghezza della
+   catena in eager loading (`withCount('steps')` da il denominatore di "Step 2 di 5").
+   Il filtro e **sull'assegnazione e non sulla Policy**: `ReleaseStepPolicy` concede a un
+   amministratore la lettura di qualunque step, ma questa schermata si chiama "i miei step"
+   e mostrargli anche quelli altrui la trasformerebbe in un cruscotto di sorveglianza.
+2. **Le release in attesa di altri** — `Release::inProgress()->involving($user)` meno quelle
+   il cui step attivo e tuo, con `activeStep` e il suo responsabile in eager loading. E la
+   mitigazione del rischio accettato n.1 del PRD: dice **chi** trattiene il flusso e **da
+   quanto**, cosi che chiunque possa sollecitare invece di scoprire il blocco a valle.
+
+**Da quanto uno step e aperto: derivato, non memorizzato.** Non esiste una colonna
+`release_steps.activated_at`, e non per dimenticanza. `CloseStep` chiude lo step precedente
+e attiva il successivo **nella stessa transazione**: il `completed_at` del precedente **e**
+l'istante di attivazione di questo, per costruzione e non per approssimazione. Sul primo
+della catena non c'e un precedente, e l'istante e `release.started_at`, che `StartRelease`
+scrive creando gia attivo lo step in posizione 1.
+
+Lo legge lo scope `ReleaseStep::withActivationInstant()` con una sottoquery correlata
+(alias `previous_step_completed_at`, castato a `datetime`), piu `activationInstant()` che
+applica il ripiego. Costo costante, nessun N+1, solo Eloquent portabile. Chiamare
+`activationInstant()` senza lo scope **solleva un'eccezione** invece di ripiegare in
+silenzio: una durata sbagliata e indistinguibile da una giusta a chi guarda la schermata.
+
+L'alternativa scartata — una colonna `activated_at` scritta da `StartRelease` e `CloseStep`
+— sarebbe piu diretta in lettura ma imporrebbe di riaprire due Action gia verificate contro
+il doppio invio concorrente, piu un backfill, per un dato che i dati gia contengono. Quando
+servira **ordinare o filtrare in database** su quell'istante (per esempio le metriche di
+processo, FR-024), la colonna diventera giustificata: si aggiunge allora, con backfill nella
+stessa migrazione.
+
+**L'ordinamento dei due blocchi avviene in PHP**, ed e deliberato — con un limite noto.
+Ordinare in database e possibile e portabile (`ORDER BY COALESCE(<sottoquery>,
+releases.started_at)` con un join sulle release): non e vero che si sarebbe costretti a
+ordinare sulla colonna nuda, dove la posizione dei `NULL` cambia da motore a motore. Solo,
+qui non paga: l'insieme e quello che **una persona sola** tiene aperto, gia interamente
+caricato, e riordinarlo in memoria non costa una query. Il limite e che i due blocchi **non
+sono paginabili ne limitabili in database**: quando servira un elenco esteso o le metriche
+di processo (FR-024), l'ordine va spostato in SQL insieme al resto.
+
+`Release::activeStep()` e `ReleaseStep::withActivationInstant()` nascono qui ma sono **seam
+condivisi**: il dettaglio della release (US-008) e l'elenco (US-009) leggono lo stesso
+stato, e vanno letti come tali e non come dettaglio interno di questa schermata.
+
+Finche US-011 non e consegnata, `migrate:fresh --seed` produce un ambiente **senza release**:
+la schermata mostra lo stato vuoto, ed e corretto. Per provarla si avvia una release
+dall'interfaccia (`/progetti/{progetto}/rilascio`).
 
 ### Configurazione del processo
 
@@ -485,9 +537,12 @@ riga, con icona e parola.
     migrazione di dati evitabile. Con la conclusione della release il vocabolario e ora
     scritto per intero: nessun caso resta inutilizzato. Il motivo per cui e nato completo
     resta valido per chi aggiungera il sesto (l'annullamento, FR-020).
-12. **La rotta `/step/{step}` non porta un `->can()`, ed e l'unica.** La protezione a due
-    livelli (middleware sulla rotta piu Gate dentro il componente) vale per tutte le altre
-    rotte di questa applicazione. Qui il middleware rifiuterebbe **prima** che il codice
+12. **La rotta `/step/{step}` non porta un `->can()`, ed e l'unica in deroga.** La
+    protezione a due livelli (middleware sulla rotta piu Gate dentro il componente) vale per
+    tutte le rotte che hanno qualcosa da autorizzare. Fa storia a se `/`, la schermata di
+    ingresso: non porta un `->can()` perche non c'e alcuna ability da valutare — la pagina
+    proietta soltanto cio che e assegnato a chi guarda, e `auth` e la sola precondizione.
+    Qui invece l'ability esiste, e il middleware rifiuterebbe **prima** che il codice
     applicativo possa registrare il tentativo non autorizzato nel log e nel registro delle
     transizioni, che e un criterio di accettazione di US-005 (FR-012). Il controllo non e
     piu debole: `authorizeOrRecord()` nel componente registra e poi rifiuta con 403, al

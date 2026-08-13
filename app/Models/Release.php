@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ReleaseStatus;
+use App\Enums\ReleaseStepStatus;
 use Carbon\CarbonInterface;
 use Database\Factories\ReleaseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Rilascio avviato su un progetto: il contenitore dello snapshot congelato del
@@ -98,6 +100,38 @@ class Release extends Model
     }
 
     /**
+     * Step su cui la release e ferma; `null` quando e conclusa.
+     *
+     * E una **relazione** e non un metodo che filtra la catena gia caricata,
+     * perche deve essere caricabile in eager loading (`with('activeStep')`): un
+     * elenco di release che risalisse allo step attivo riga per riga pagherebbe
+     * una query per release, che e esattamente cio che la vista operativa non puo
+     * permettersi.
+     *
+     * Regge sull'invariante mantenuta da `App\Actions\Releases\CloseStep`: al
+     * massimo uno step attivo per release, zero quando la release e conclusa.
+     * Su una release conclusa `null` e quindi un esito legittimo e non un difetto
+     * dei dati — chi la rende deve prevederlo.
+     *
+     * Nasce per "i miei step" (US-007) ma e un seam condiviso: il dettaglio della
+     * release (US-008) e l'elenco (US-009) leggono lo stesso stato.
+     *
+     * `chaperone()` non e una rifinitura: `ReleaseStep::activationInstant()` ripiega
+     * su `release->started_at` quando lo step attivo e il primo della catena — cioe
+     * su ogni release appena avviata — e senza la relazione inversa gia popolata
+     * quel ripiego caricherebbe la release **una query per riga**, riportando l'N+1
+     * proprio nel blocco che esiste per dire da quanto qualcuno e fermo.
+     *
+     * @return HasOne<ReleaseStep, $this>
+     */
+    public function activeStep(): HasOne
+    {
+        return $this->hasOne(ReleaseStep::class)
+            ->where('status', ReleaseStepStatus::Active)
+            ->chaperone();
+    }
+
+    /**
      * Persona che ha avviato il rilascio.
      *
      * @return BelongsTo<User, $this>
@@ -124,5 +158,20 @@ class Release extends Model
     protected function inProgress(Builder $query): void
     {
         $query->where('status', ReleaseStatus::InProgress);
+    }
+
+    /**
+     * Release che coinvolgono una persona: quelle in cui le e stato assegnato
+     * almeno uno step, **in qualunque stato**.
+     *
+     * Lo stato non entra nel filtro deliberatamente: chi ha gia chiuso il proprio
+     * step resta coinvolto nel rilascio, e sapere su chi si e fermato dopo di lui
+     * e proprio l'informazione che il blocco delle release in attesa esiste per
+     * dare. Restringere agli step attivi lo svuoterebbe.
+     */
+    #[Scope]
+    protected function involving(Builder $query, User $user): void
+    {
+        $query->whereHas('steps', fn (Builder $steps) => $steps->where('assigned_user_id', $user->id));
     }
 }

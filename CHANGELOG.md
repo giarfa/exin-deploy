@@ -106,6 +106,17 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   amministratori inclusi. La conclusione e registrata nel registro delle transizioni, e
   resta consultabile a tempo indeterminato. La riapertura di uno step resta fuori
   perimetro.
+- **Vista operativa "i miei step"** (US-007, FR-013): la schermata di ingresso non e piu un
+  segnaposto, ed e deliberatamente una lista di lavoro e non una dashboard di grafici.
+  Elenca gli step attivi di cui chi entra e responsabile, su tutti i progetti, con progetto,
+  etichetta della release, nome dello step, posizione sul totale, ruolo congelato e da
+  quanto e aperto. Il filtro e sull'assegnazione e non sull'autorizzazione: nemmeno un
+  amministratore vede qui gli step altrui. Quando nulla lo attende, lo stato vuoto dice
+  **quando** comparira uno step, non solo che non ce ne sono.
+- **Blocco "Release in corso su cui sei coinvolto"** (US-007): dice chi trattiene il flusso,
+  su quale step e da quanto tempo. E la mitigazione del rischio accettato n.1 del PRD —
+  l'assenza di notifiche (FR-025, fuori perimetro) — e non un abbellimento: senza, un
+  rilascio fermo resta invisibile finche qualcuno non lo cerca.
 - **Diagrammi del modello e delle transizioni** nel README: entita-relazioni con definizione
   e istanza distinte, e macchina a stati di step e release annotata con gli eventi scritti
   nel registro.
