@@ -221,6 +221,33 @@ class MyStepsScreenTest extends TestCase
         ]));
     }
 
+    public function test_the_waiting_card_leads_to_the_release_detail(): void
+    {
+        /*
+         * La card **intera** e il collegamento al dettaglio: questo blocco pone la
+         * domanda "chi trattiene il flusso e da quanto", e il dettaglio ne e la
+         * risposta estesa. Asserito perche senza questa riga una rifinitura grafica
+         * potrebbe riportare la card a un riquadro inerte lasciando la suite verde,
+         * e il dettaglio tornerebbe raggiungibile solo a mano.
+         */
+        $member = User::factory()->create();
+        $holder = User::factory()->create();
+
+        $release = $this->releaseOn('Sito Corporate', 'v3.1.0', steps: 3);
+        $mine = $this->assign($release, position: 1, user: $member, role: 'Dev Lead');
+        $mine->forceFill([
+            'status' => ReleaseStepStatus::Completed,
+            'completed_by' => $member->id,
+            'completed_at' => now()->subDays(2),
+        ])->save();
+        $this->assign($release, position: 2, user: $holder, role: 'DevOps');
+
+        $this->actingAs($member)->get(route('home'))
+            ->assertOk()
+            ->assertSee(route('releases.show', $release))
+            ->assertSee(__('my-steps.waiting_open_detail'));
+    }
+
     public function test_a_release_whose_turn_is_mine_is_listed_once_and_not_among_those_waiting(): void
     {
         $member = User::factory()->create();

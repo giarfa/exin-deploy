@@ -136,7 +136,7 @@ return [
     'detail_step_owner' => ':role — :name',
     'detail_step_closed_at' => 'Chiuso da :name il :date',
     'detail_step_active_since' => 'Attivo da :duration',
-    'detail_step_required_fields' => '{0} nessuna informazione richiesta|{1} una informazione richiesta|[2,*] :count informazioni richieste',
+    'detail_step_required_fields' => '{0} nessuna informazione richiesta|{1} un\'informazione richiesta|[2,*] :count informazioni richieste',
     'detail_step_open_reserved' => 'Il comando e visibile solo al responsabile dello step o a un amministratore.',
     'detail_step_unlocks_after' => 'Si sblocca alla chiusura dello step :position.',
     'detail_step_unlocks_last' => 'Ultimo step: la sua chiusura conclude il rilascio.',
