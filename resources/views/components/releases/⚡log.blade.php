@@ -36,6 +36,17 @@ new class extends Component
     {
         // Secondo livello dopo il middleware, come su tutte le altre schermate.
         Gate::authorize('viewAny', ReleaseEvent::class);
+
+        /*
+         * **Due ability e non una**, e la seconda non e ridondante: il middleware
+         * autorizza la consultazione dei registri in generale, questa autorizza la
+         * lettura di **questa** release. Oggi `ReleasePolicy::view()` concede a ogni
+         * membro autenticato e le due coincidono; il giorno in cui una release
+         * diventasse riservata — un progetto sotto embargo, un cliente separato — il
+         * suo registro seguirebbe da solo invece di restare aperto perche nessuno si
+         * e ricordato di questa pagina.
+         */
+        Gate::authorize('view', $this->release);
     }
 
     /**
@@ -80,6 +91,24 @@ new class extends Component
     }
 
     /**
+     * Frase di dettaglio di ogni voce, indicizzata per evento.
+     *
+     * Proprieta calcolata e non metodo pubblico: in Livewire ogni metodo pubblico e
+     * invocabile dal browser come azione, e la superficie di scrittura di questa
+     * pagina deve restare vuota — e cio che `ReleaseEventAppendOnlyTest` verifica.
+     * Le proprieta calcolate non sono invocabili.
+     *
+     * @return array<string, string|null>
+     */
+    #[Computed]
+    public function detailByEvent(): array
+    {
+        return $this->entries
+            ->mapWithKeys(fn (ReleaseEvent $event): array => [$event->id => $this->detailOf($event)])
+            ->all();
+    }
+
+    /**
      * Frase di dettaglio di una voce, costruita dal suo payload.
      *
      * Il payload e **nullable** e le sue chiavi variano per azione: si legge con
@@ -88,7 +117,7 @@ new class extends Component
      * poterla mostrare comunque — e in sola aggiunta, quindi nessuno potra tornare
      * indietro a completarla.
      */
-    public function detailOf(ReleaseEvent $event): ?string
+    private function detailOf(ReleaseEvent $event): ?string
     {
         $payload = $event->payload ?? [];
 
@@ -115,9 +144,29 @@ new class extends Component
                 : null,
 
             ReleaseEventAction::UnauthorizedAttempt => __('releases.log_detail_unauthorized', [
-                'ability' => __('releases.log_ability_'.($payload['ability'] ?? 'unknown')),
+                'ability' => __('releases.log_ability_'.$this->recordedAbility($payload)),
             ]),
         };
+    }
+
+    /**
+     * Ability tracciata, ricondotta a quelle previste.
+     *
+     * Il nome finisce dentro una **chiave di traduzione**, e il payload e un dato
+     * memorizzato: senza questo filtro un valore imprevisto produrrebbe una chiave
+     * inesistente, e la pagina mostrerebbe `releases.log_ability_qualcosa` invece di
+     * una frase. Le ability tracciate sono solo quelle che
+     * `RecordUnauthorizedStepAttempt` scrive — compilare e chiudere — ma il registro
+     * e in sola aggiunta e conserva anche cio che una versione precedente vi ha
+     * lasciato.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function recordedAbility(array $payload): string
+    {
+        $ability = $payload['ability'] ?? null;
+
+        return in_array($ability, ['fill', 'close'], true) ? $ability : 'unknown';
     }
 };
 ?>
@@ -167,7 +216,7 @@ new class extends Component
              bisogno della soglia dei 1024 px. --}}
         <ol class="space-y-3">
             @foreach ($this->entries as $event)
-                @php($detail = $this->detailOf($event))
+                @php($detail = $this->detailByEvent[$event->id])
 
                 <li wire:key="event-{{ $event->id }}">
                     <flux:card class="space-y-2">

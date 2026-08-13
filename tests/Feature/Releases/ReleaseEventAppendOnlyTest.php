@@ -118,8 +118,10 @@ class ReleaseEventAppendOnlyTest extends TestCase
          * fa fallire l'aggiunta del primo metodo che scriva, invece di lasciarla
          * passare perche nessun bottone lo richiama ancora.
          *
-         * Le proprieta calcolate non entrano nell'elenco: `#[Computed]` non le
-         * rende invocabili come azioni.
+         * Restano `mount`, che il framework invoca al montaggio e non su richiesta
+         * del browser, e le proprieta calcolate, che `#[Computed]` non rende
+         * invocabili come azioni. La superficie di **azione** della pagina e quindi
+         * vuota, ed e cio che il criterio chiede.
          */
         $source = File::get(resource_path('views/components/releases/⚡log.blade.php'));
 
@@ -128,7 +130,7 @@ class ReleaseEventAppendOnlyTest extends TestCase
         $declared = collect($matches[1])->sort()->values()->all();
 
         $this->assertSame(
-            ['detailOf', 'entries', 'icons', 'mount'],
+            ['detailByEvent', 'entries', 'icons', 'mount'],
             $declared,
             'Il registro ha guadagnato un metodo pubblico: in Livewire e un\'azione invocabile dal browser. '
             .'Se e di sola lettura, aggiungilo all\'elenco atteso; se scrive, non appartiene a questa schermata.'

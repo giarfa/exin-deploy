@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Models\ProjectRoleAssignment;
 use App\Models\Release;
 use App\Models\ReleaseEvent;
+use App\Models\ReleaseStep;
 use App\Models\ReleaseStepField;
 use App\Models\Role;
 use App\Models\StepDefinition;
@@ -164,6 +165,32 @@ class ReleaseLogScreenTest extends TestCase
             ->get(route('releases.show', $release))
             ->assertOk()
             ->assertSee(route('releases.log', $release), false);
+    }
+
+    public function test_every_action_of_the_vocabulary_is_rendered_with_an_icon_and_a_word(): void
+    {
+        $release = Release::factory()->create();
+        $step = ReleaseStep::factory()->for($release)->create(['position' => 1]);
+
+        // Una voce per **ogni** caso dell'enum: la mappa delle icone e un array
+        // indicizzato per valore, quindi un caso aggiunto senza icona non
+        // produrrebbe un difetto grafico ma una pagina che non si apre. Il
+        // vocabolario e dichiarato destinato a crescere (FR-020, l'annullamento),
+        // e questo test e il posto in cui quella crescita si presenta.
+        foreach (ReleaseEventAction::cases() as $action) {
+            ReleaseEvent::factory()->for($release)->create([
+                'action' => $action,
+                'release_step_id' => $step->id,
+            ]);
+        }
+
+        $response = $this->actingAs(User::factory()->admin()->create())
+            ->get(route('releases.log', $release))->assertOk();
+
+        foreach (ReleaseEventAction::cases() as $action) {
+            // La parola: lo stato non e mai reso dal solo colore ne dalla sola icona.
+            $response->assertSee($action->label());
+        }
     }
 
     public function test_a_guest_is_redirected_to_the_login(): void

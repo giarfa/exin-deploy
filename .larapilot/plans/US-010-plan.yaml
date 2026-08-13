@@ -452,7 +452,7 @@ tasks:
     id: TASK-07
     title: 'Changelog, README e regole di progetto'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-06
     body: |-
@@ -477,9 +477,9 @@ tasks:
          l'altro apre una fuga o una riga fantasma.
 
       ## Completion Criteria
-      - [ ] Changelog e README aggiornati
-      - [ ] Vincolo permanente 10 esteso alla Policy
-      - [ ] Regola registrata sulla Policy degli eventi
+      - [x] Changelog e README aggiornati
+      - [x] Vincolo permanente 10 esteso alla Policy
+      - [x] Regola registrata sulla Policy degli eventi
 
       ## Test Data
       - N/A — nessuna modifica di schema
@@ -488,4 +488,10 @@ tasks:
       - Commit: `docs(US-010): TASK-07 changelog, README e regola sul registro`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:34:53+00:00'
+    commit:
+      sha: ed6cb5d8bfbfce42e03a44517906d0f7c6daa395
+      short_sha: ed6cb5d
+      subject: 'docs(US-010): TASK-07 changelog, README e regola sul registro'
+      committed_at: '2026-08-14T00:36:29+02:00'
+      url: null
+updated_at: '2026-08-13T22:36:30+00:00'
