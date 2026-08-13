@@ -193,17 +193,16 @@ stateDiagram-v2
 
     state Release {
         [*] --> in_corso : avvio / release_avviata
-        in_corso --> conclusa : chiusura dell'ultimo step (US-006) / release_conclusa
+        in_corso --> conclusa : chiusura dell'ultimo step / release_conclusa
         conclusa --> [*]
     }
 ```
 
 Cosa il diagramma non ammette, ed e voluto: nessuna freccia **torna** indietro — la
 riapertura di uno step e FR-019, rinviata oltre l'MVP — e non esiste uno stato
-"saltato", perche il PRD non prevede di scavalcare un passaggio. Finche `in_corso -->
-conclusa` non esiste (US-006), la chiusura dell'ultimo step della catena viene
-**rifiutata**: chiuderlo lascerebbe una release in corso senza alcuno step attivo, cioe
-la violazione dell'invariante che la riga sotto dichiara.
+"saltato", perche il PRD non prevede di scavalcare un passaggio. `conclusa` e uno stato
+terminale in senso stretto: una release conclusa e in sola lettura per chiunque,
+amministratori inclusi, e nessuno step torna compilabile.
 
 ### Avvio di una release
 
@@ -280,8 +279,26 @@ del PRD; su MySQL e PostgreSQL il lock serializza davvero, e il vincolo di porta
 impone che il codice resti corretto su tutti e tre. Togliere il secondo perche "c'e il
 lock" romperebbe proprio l'ambiente su cui il prodotto gira.
 
+**Quando lo step chiuso e l'ultimo, la release e consegnata.** La conclusione non e un
+percorso a parte: avviene dentro la stessa transazione della chiusura, sul ramo terminale
+di `CloseStep` — la release passa a `conclusa` con autore e istante della consegna, e il
+registro riceve `release_conclusa` dopo `step_completato`. Anche qui la scrittura e un
+compare-and-swap condizionato a `in_corso`, per lo stesso motivo dell'update sullo step:
+due invii dell'ultimo passaggio producono **una sola** conclusione. Non e stata estratta
+in una Action pubblica proprio per questo: una `CompleteRelease` invocabile dall'esterno
+sarebbe un secondo percorso di scrittura sullo stato della release, cioe l'opposto
+dell'invariante che questa transazione tiene.
+
+Una release conclusa **esce da quelle in corso** e resta consultabile a tempo
+indeterminato, in sola lettura: `ReleaseStepPolicy` nega `fill` e `close` a chiunque —
+sono le due ability che il filtro `before()` non decide, quindi il divieto vale anche per
+un amministratore — mentre `view` resta consentita, altrimenti la conclusione renderebbe
+illeggibile proprio cio che esiste per conservare. La riapertura di uno step resta fuori
+perimetro (FR-019), e nessun testo dell'interfaccia lascia intendere il contrario.
+
 **Invariante:** al massimo uno step attivo per release, zero solo quando la release e
-conclusa. E verificato da test lungo l'intera catena, non su un singolo passaggio.
+conclusa. E verificato da test lungo l'intera catena, non su un singolo passaggio, e il
+caso "zero" ha la sua prova sulla release conclusa.
 
 **Salvare senza chiudere** e un'azione separata (`App\Actions\Releases\SaveStepValues`):
 accetta un form incompleto, non fa avanzare nulla e **non scrive nel registro** — il
@@ -459,13 +476,15 @@ riga, con icona e parola.
     con il vincolo 1. La difesa contro la cancellazione e altrove: `ReleasePolicy::delete()`
     la nega a chiunque, amministratori inclusi, e nessun percorso applicativo cancella
     eventi. Chi introdurra il primo deve passare da quell'eccezione, non aggirarla.
-11. **`releases.completed_by` e `completed_at` nascono vuote.** Sono create da US-004 e
+11. **`releases.completed_by` e `completed_at` sono nate vuote.** Create da US-004 e
     riempite da US-006, quando la chiusura dell'ultimo step conclude la release:
-    aggiungerle dopo sarebbe una seconda migrazione sulla stessa tabella per una semantica
-    gia decisa dal PRD. Per lo stesso motivo `ReleaseEventAction` e nato con tutti e cinque
-    i casi di FR-016 quando US-004 ne scriveva uno solo — quei valori finiscono in
-    colonna e sopravvivono nello storico, quindi rinominarli dopo sarebbe una migrazione
-    di dati evitabile. Oggi ne restano due non scritti: `release_conclusa`, che e di US-006.
+    aggiungerle dopo sarebbe stata una seconda migrazione sulla stessa tabella per una
+    semantica gia decisa dal PRD. Per lo stesso motivo `ReleaseEventAction` e nato con
+    tutti e cinque i casi di FR-016 quando US-004 ne scriveva uno solo — quei valori
+    finiscono in colonna e sopravvivono nello storico, quindi rinominarli dopo sarebbe una
+    migrazione di dati evitabile. Con la conclusione della release il vocabolario e ora
+    scritto per intero: nessun caso resta inutilizzato. Il motivo per cui e nato completo
+    resta valido per chi aggiungera il sesto (l'annullamento, FR-020).
 12. **La rotta `/step/{step}` non porta un `->can()`, ed e l'unica.** La protezione a due
     livelli (middleware sulla rotta piu Gate dentro il componente) vale per tutte le altre
     rotte di questa applicazione. Qui il middleware rifiuterebbe **prima** che il codice
