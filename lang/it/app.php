@@ -4,8 +4,9 @@ return [
     'logout' => 'Esci',
 
     /*
-     * Navigazione. Le sezioni non ancora implementate restano visibili e marcate
-     * come previste: la struttura del prodotto deve essere leggibile da subito.
+     * Navigazione. Nessuna voce e piu marcata "in arrivo": con l'elenco delle
+     * release ogni sezione della sidebar porta a una pagina che esiste, e il
+     * componente che rendeva le voci previste e stato rimosso con la sua chiave.
      */
     'nav_operational' => 'Operativo',
     'nav_configuration' => 'Configurazione',
@@ -16,7 +17,6 @@ return [
     'nav_roles' => 'Ruoli',
     'nav_default_assignments' => 'Responsabili predefiniti',
     'nav_members' => 'Membri del team',
-    'nav_planned' => 'in arrivo',
 
     /*
      * Tema. La preferenza e persistita da Flux in localStorage.

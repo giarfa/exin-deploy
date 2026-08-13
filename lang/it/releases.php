@@ -124,6 +124,12 @@ return [
      * vocabolario. Il titolo delle informazioni fornite riusa
      * `step_values_heading`: e lo stesso blocco, reso dallo stesso componente.
      */
+    /*
+     * Elenco delle release (US-009). Prefisso `index_` come sulle altre schermate
+     * di collezione.
+     */
+    'index_heading' => 'Release',
+
     'detail_breadcrumb_my_steps' => 'I miei step',
     'detail_summary_in_progress' => 'Rilascio in corso — step :position di :total, in attesa di :name.',
     // Una release in corso ha sempre uno step attivo per invariante: questa riga

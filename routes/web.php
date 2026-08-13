@@ -110,6 +110,25 @@ Route::middleware('auth')->group(function (): void {
         ->name('releases.start');
 
     /*
+     * Elenco delle release, in corso e concluse, con i filtri per stato e per
+     * progetto. E aperto a ogni membro autenticato come il dettaglio: senza
+     * notifiche, sapere quali rilasci sono fermi e su chi e la funzione dello
+     * strumento (vedi `ReleasePolicy::viewAny`).
+     *
+     * Il `->can()` c'e, come sul dettaglio e a differenza di `/step/{releaseStep}`:
+     * qui non esiste alcun tentativo da registrare nel registro delle transizioni,
+     * quindi il middleware puo rifiutare per primo e la protezione resta a due
+     * livelli.
+     *
+     * Registrata **prima** di `/rilasci/{release}`: le rotte statiche precedono
+     * quelle con parametro, cosi che l'indirizzo dell'elenco non venga mai risolto
+     * come identificativo di una release.
+     */
+    Route::livewire('/rilasci', 'releases.index')
+        ->can('viewAny', Release::class)
+        ->name('releases.index');
+
+    /*
      * Dettaglio di una release: la catena congelata con lo stato di ogni step, i
      * responsabili e le informazioni fornite. Schermata di **sola lettura**.
      *

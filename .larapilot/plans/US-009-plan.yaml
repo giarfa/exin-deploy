@@ -119,7 +119,7 @@ tasks:
     id: TASK-00
     title: "Ramo di lavoro per l'elenco delle release"
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
     body: |-
       ## Description
@@ -140,9 +140,9 @@ tasks:
       5. Commit di ancoraggio del ramo
 
       ## Completion Criteria
-      - [ ] `develop` contiene i commit di US-008
-      - [ ] Il ramo `feature/US-009-elenco-storico-release` esiste in locale
-      - [ ] Descrizione della PR verso `develop` preparata in locale
+      - [x] `develop` contiene i commit di US-008
+      - [x] Il ramo `feature/US-009-elenco-storico-release` esiste in locale
+      - [x] Descrizione della PR verso `develop` preparata in locale
 
       ## Test Data
       - N/A — nessuna modifica di modelli o schema
@@ -151,6 +151,12 @@ tasks:
       - Commit: `chore(US-009): TASK-00 ramo di lavoro per l'elenco delle release`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: preparata in locale, aperta da remoto solo su richiesta
+    commit:
+      sha: d6a4d8abc1a8033246292f4adbe4f3fcd76322b2
+      short_sha: d6a4d8a
+      subject: "chore(US-009): TASK-00 ramo di lavoro per l'elenco delle release"
+      committed_at: '2026-08-13T23:55:17+02:00'
+      url: null
   -
     id: TASK-01
     title: "Apre l'elenco alle persone e registra la rotta"
@@ -472,4 +478,4 @@ tasks:
       - Commit: `docs(US-009): TASK-07 changelog, README e regola sull'elenco delle release`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T21:54:44+00:00'
+updated_at: '2026-08-13T21:55:23+00:00'

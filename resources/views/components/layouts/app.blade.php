@@ -37,13 +37,14 @@
                     {{ __('app.nav_my_steps') }}
                 </flux:navlist.item>
 
-                {{-- Voci non ancora implementate: disabilitate, non nascoste, perche la
-                     struttura del prodotto deve essere leggibile da subito.
-
-                     Resta pianificata anche ora che una release si avvia: la pagina che
-                     questa voce promette e l'**elenco** delle release (US-009), non la
-                     schermata di avvio, che si raggiunge dal progetto su cui si rilascia. --}}
-                <x-nav.planned icon="rocket-launch">{{ __('app.nav_releases') }}</x-nav.planned>
+                {{-- `releases.index` e non `releases.*`: il dettaglio di una release e
+                     la schermata di chiusura di uno step sono pagine proprie, e marcare
+                     la voce come corrente mentre l'elenco non e aperto direbbe a chi
+                     naviga da tastiera che si trova dove non e. --}}
+                <flux:navlist.item icon="rocket-launch" :href="route('releases.index')"
+                                   :current="request()->routeIs('releases.index')">
+                    {{ __('app.nav_releases') }}
+                </flux:navlist.item>
             </flux:navlist.group>
 
             @can('viewAny', App\Models\User::class)
