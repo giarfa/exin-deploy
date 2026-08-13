@@ -133,6 +133,21 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
 - **Il dettaglio si raggiunge da dove serve**: dal blocco "release in corso su cui sei
   coinvolto", che pone la domanda a cui questa pagina risponde; dalla schermata di uno step,
   in tutti e tre i suoi stati; e dalla conferma di avvio di una release.
+- **Elenco e storico delle release** (US-009, FR-015): la voce "Release" della navigazione
+  porta ora a una pagina. Due sezioni con colonne diverse perche rispondono a domande
+  diverse: quelle in corso dicono a che punto e la catena e chi trattiene il flusso, quelle
+  concluse chi ha consegnato, quando e in quanto tempo. Filtri per stato e per progetto, che
+  vivono nell'indirizzo e sopravvivono a una ricarica: un elenco filtrato e condivisibile.
+  Lo storico non ha limite di data ne paginazione — cresce di qualche riga a settimana e il
+  costo di lettura non dipende dal numero di righe.
+- **L'elenco e consultabile da ogni membro autenticato** (US-009): `ReleasePolicy::viewAny()`
+  passa da negata ad aperta, come gia `view()`. La decisione era rinviata di proposito alla
+  spec che porta la schermata — un'autorizzazione senza una pagina che la applichi non si sa
+  valutare. Avviare una release resta degli amministratori; cancellarne una resta di nessuno.
+- **Le briciole del dettaglio tornano conformi al mockup**: la prima voce e ora l'elenco
+  delle release e non piu "i miei step", ripiego dichiarato di US-008 quando l'elenco non
+  esisteva ancora.
+
 - **Diagrammi del modello e delle transizioni** nel README: entita-relazioni con definizione
   e istanza distinte, e macchina a stati di step e release annotata con gli eventi scritti
   nel registro.
@@ -143,6 +158,12 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   disattivato.
 - Documentazione baseline: README con avvio via Herd, nota architetturale sulla separazione
   fra definizione e istanza, questo changelog.
+
+### Removed
+
+- Il componente di navigazione `x-nav.planned` e la sua chiave di traduzione: nessuna
+  sezione della sidebar e piu marcata "in arrivo", e un componente senza chiamanti e codice
+  morto.
 
 ### Security
 

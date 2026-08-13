@@ -334,14 +334,16 @@ rilascio e avvenuto.
 | `/progetti` | Progetti, con il comando di avvio release per riga | amministratore |
 | `/progetti/{progetto}/responsabili` | Mappatura ruolo → persona del progetto | amministratore |
 | `/progetti/{progetto}/rilascio` | **Avvio di una release** | amministratore |
+| `/rilasci` | **Elenco e storico delle release** — in corso e concluse, con filtri | ogni membro |
 | `/rilasci/{release}` | **Dettaglio della release** — catena, responsabili, valori | ogni membro |
 | `/step/{step}` | **Compilazione e chiusura di uno step** | responsabile dello step o amministratore |
 | `/template` · `/template/{t}/step` · `/template/{t}/step/{s}/campi` | Processo di rilascio | amministratore |
 | `/responsabili-predefiniti` | Mappatura predefinita di team | amministratore |
 
-La voce **Release** nella navigazione resta marcata "in arrivo": la pagina che promette e
-l'**elenco** delle release (US-009), non la schermata di avvio, che si raggiunge dal
-progetto su cui si rilascia.
+Nessuna voce della navigazione e piu marcata "in arrivo": ogni sezione della sidebar porta a
+una pagina che esiste. Le due schermate che **non** compaiono in navigazione si raggiungono
+da dove servono e non da un menu — l'avvio di una release dal progetto su cui si rilascia, la
+chiusura di uno step da "i miei step" o dal dettaglio.
 
 `/step/{step}` si raggiunge dalla schermata di ingresso e dalla catena mostrata dopo
 l'avvio. La pagina rende tre stati diversi dello stesso step — attivo con il form,
@@ -396,7 +398,7 @@ di processo (FR-024), l'ordine va spostato in SQL insieme al resto.
 
 `Release::activeStep()` e `ReleaseStep::withActivationInstant()` nascono qui ma sono **seam
 condivisi**: il dettaglio della release riusa lo scope dell'istante di attivazione e l'elenco
-(US-009) leggera lo stesso stato. Vanno letti come tali e non come dettaglio interno di
+(US-009) legge lo stesso stato. Vanno letti come tali e non come dettaglio interno di
 questa schermata.
 
 Finche US-011 non e consegnata, `migrate:fresh --seed` produce un ambiente **senza release**:
@@ -412,11 +414,13 @@ lettura**: nessuna azione, nessun form, nessuna scrittura. L'unico comando prese
 altrove — a `/step/{step}` — e compare solo dove `ReleaseStepPolicy::fill()` lo consente.
 
 **La lettura e aperta a ogni membro autenticato**, anche a chi e estraneo alla catena.
-`ReleasePolicy::view()` concede a chiunque sia autenticato mentre `viewAny()` resta negata ai
-non amministratori: **le due non si allineano per sbaglio**. Sapere dove e fermo un rilascio
-non e un privilegio — su uno strumento che non invia notifiche, e la funzione stessa dello
-strumento — ma l'elenco con i suoi filtri e una superficie diversa, e la sua Policy si decide
-con la schermata che la usa (US-009).
+`ReleasePolicy::view()` concede a chiunque sia autenticato, e da US-009 lo fa anche
+`viewAny()`: le due **non** si sono allineate per uniformita — la decisione sull'elenco era
+rinviata di proposito finche la schermata non esisteva, perche un'autorizzazione senza una
+pagina che la applichi non si sa valutare. Cade dalla stessa parte per la stessa ragione:
+sapere dove e fermo un rilascio non e un privilegio, su uno strumento che non invia
+notifiche e la sua funzione. Restano negate `create` ai non amministratori e `delete` a
+chiunque.
 
 Una sola lettura di dominio, interamente in eager loading: progetto, template, autore
 dell'avvio, e la catena con campi, responsabile e autore della chiusura. Due vincoli non
@@ -443,10 +447,57 @@ provenienza e non come definizione: catena, ordine e campi arrivano tutti dallo 
 nota accanto lo dichiara a chi legge. Alternativa scartata: congelare `template_name` su
 `releases`, una colonna in piu per un dato che nessun percorso di esecuzione interroga.
 
-Le **briciole di navigazione** sono in deroga dichiarata al mockup, che apre con "Release":
-l'elenco non esiste ancora e `/progetti` e riservata agli amministratori, quindi entrambe le
-voci sarebbero un vicolo cieco o un 403 per un membro. La prima voce porta a "i miei step";
-US-009 la sostituira con l'elenco.
+Le **briciole di navigazione** aprono sull'elenco delle release, conformi al mockup. La
+deroga dichiarata da US-008 — quando l'elenco non esisteva e la prima voce ripiegava su "i
+miei step" — e caduta con la schermata che la motivava.
+
+#### L'elenco e lo storico delle release
+
+`/rilasci` risponde alla domanda d'insieme (FR-015): quali rilasci sono aperti, su chi si
+sono fermati, cosa e stato consegnato e quando. Sola lettura come il dettaglio.
+
+**Due sezioni con colonne diverse**, e non e una duplicazione: quella in corso mostra step
+corrente e responsabile in attesa, lo storico chi ha consegnato, quando e in quanto tempo.
+Uniformarle lascerebbe meta tabella vuota in entrambe.
+
+**Due ordinamenti diversi**, per la stessa ragione: una release aperta e "recente" se e stata
+**avviata** da poco, una conclusa se e stata **consegnata** da poco. Ordinare lo storico su
+`started_at` — la scorciatoia che sembra una pulizia — metterebbe in cima un rilascio avviato
+a marzo e consegnato ieri, sotto uno avviato e consegnato ad aprile. Il caso e coperto da un
+test con due release che si incrociano.
+
+**I filtri vivono nell'indirizzo** (`?stato=`, `?progetto=`) e non nel solo stato del
+componente: un elenco filtrato deve essere condivisibile e ricaricabile. Lo stato ha **tre**
+valori — `tutte`, `in_corso`, `conclusa` — perche il mockup mostra un filtro che nasconde una
+sezione, non un interruttore fra due schermate: senza il terzo non esisterebbe il ritorno
+alla vista d'insieme. Un valore fuori vocabolario mostra tutto invece di far fallire il cast
+a enum: il filtro arriva da un input non fidato.
+
+**Nessuna paginazione, nessun limite di data.** Lo storico e consultabile a tempo
+indeterminato per criterio di accettazione, e su un team interno cresce di qualche riga a
+settimana; un paginatore su due sezioni indipendenti nella stessa pagina introdurrebbe due
+parametri di pagina e due stati vuoti. Il costo di lettura **non dipende dal numero di
+release** (`ReleaseIndexQueryBudgetTest`), e filtrare per stato risparmia davvero la lettura
+della sezione nascosta. Quando lo storico raggiungera l'ordine delle centinaia la sezione
+conclusa va paginata: e la stessa soglia oltre la quale l'ordinamento di "i miei step" va
+spostato in SQL.
+
+**Una sola tabella semantica per sezione.** Sotto 1024 px le utility `max-lg:` la impilano in
+card — `thead` nascosto, righe a blocco, etichetta di colonna resa dal pseudo-elemento della
+cella (`content-[attr(data-label)]`) — e sopra torna una tabella. Il contenuto **non** e
+duplicato in due alberi DOM: uno screen reader lo leggerebbe due volte. Nessun
+`overflow-x-auto` da nessuna parte: il criterio di accettazione esclude lo scorrimento
+orizzontale a ogni larghezza, e un contenitore scorrevole sarebbe il modo piu facile per
+rientrarci senza accorgersene. L'etichetta di colonna arriva dallo stesso array che genera
+l'intestazione (`x-releases.list-cell`), quindi le due non possono divergere.
+
+Nessuna deroga alla regola dello snapshot: a differenza del dettaglio, qui non compare
+nemmeno il template di origine, e `SnapshotIsolationTest` verifica sulla pagina resa che
+l'elenco non interroghi alcuna delle quattro tabelle di definizione.
+
+Il comando "Avvia una release" del mockup **non** e stato portato in cima all'elenco: l'avvio
+si decide su un progetto (`/progetti/{progetto}/rilascio`) e un comando senza progetto non
+porterebbe da nessuna parte.
 
 ### Configurazione del processo
 

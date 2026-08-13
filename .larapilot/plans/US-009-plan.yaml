@@ -438,7 +438,7 @@ tasks:
     id: TASK-06
     title: "Budget di query dell'elenco"
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
     body: |-
@@ -463,13 +463,19 @@ tasks:
       4. `php artisan test --filter=ReleaseIndexQueryBudget`
 
       ## Completion Criteria
-      - [ ] Il costo non dipende dal numero di release, in entrambe le sezioni
-      - [ ] Il test passa
+      - [x] Il costo non dipende dal numero di release, in entrambe le sezioni
+      - [x] Il test passa
 
       ## Git Deliverables
       - Commit: `test(US-009): TASK-06 budget di query dell'elenco delle release`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: 23107f5e9e4f30f71e142bee5bc50c69d89531d2
+      short_sha: 23107f5
+      subject: "test(US-009): TASK-06 budget di query dell'elenco delle release"
+      committed_at: '2026-08-14T00:11:09+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Changelog, README e regole di progetto'
@@ -508,4 +514,4 @@ tasks:
       - Commit: `docs(US-009): TASK-07 changelog, README e regola sull'elenco delle release`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:10:01+00:00'
+updated_at: '2026-08-13T22:11:09+00:00'
