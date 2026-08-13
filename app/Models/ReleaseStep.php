@@ -214,6 +214,14 @@ class ReleaseStep extends Model
      * guarda la schermata, e il blocco delle release in attesa esiste proprio per
      * dire da quanto qualcuno e fermo.
      *
+     * **La guardia e pero a senso unico**, e va saputo: l'alias vale `null` sia
+     * quando non esiste uno step precedente — il caso legittimo, il primo della
+     * catena — sia quando il precedente esiste ma non porta un `completed_at`, che
+     * sarebbe un dato incoerente. Entrambi ripiegano su `started_at`. Nessun
+     * percorso applicativo produce il secondo caso (`CloseStep` scrive stato e
+     * istante nella stessa `update`), quindi distinguerli costerebbe una seconda
+     * sottoquery per un dato che oggi non esiste.
+     *
      * @throws \LogicException quando la query non ha applicato `withActivationInstant()`
      */
     public function activationInstant(): CarbonInterface
@@ -268,9 +276,11 @@ class ReleaseStep extends Model
      * Aggiunge alla riga l'istante di chiusura dello step precedente, letto con una
      * sottoquery correlata: costo costante, nessuna query per riga.
      *
-     * `select('release_steps.*')` non e ridondante: la sola `addSelect`
-     * sostituirebbe la lista delle colonne con quell'unico alias, e la query
-     * tornerebbe righe senza nome, stato ne ruolo.
+     * `select('{tabella}.*')` non e ridondante: la sola `addSelect` sostituirebbe
+     * la lista delle colonne con quell'unico alias, e la query tornerebbe righe
+     * senza nome, stato ne ruolo. **Conseguenza da conoscere: questo scope
+     * ridefinisce la select**, quindi va applicato prima di eventuali `withCount`
+     * o select aggiuntive, che altrimenti verrebbero cancellate senza avviso.
      *
      * La tabella interna e **aliasata**: senza `previous_steps` i `whereColumn`
      * legherebbero entrambi i lati alla stessa tabella e la sottoquery
@@ -282,11 +292,13 @@ class ReleaseStep extends Model
     #[Scope]
     protected function withActivationInstant(Builder $query): void
     {
-        $query->select('release_steps.*')->addSelect([
-            'previous_step_completed_at' => DB::table('release_steps as previous_steps')
+        $table = $query->getModel()->getTable();
+
+        $query->select($table.'.*')->addSelect([
+            'previous_step_completed_at' => DB::table($table.' as previous_steps')
                 ->select('previous_steps.completed_at')
-                ->whereColumn('previous_steps.release_id', 'release_steps.release_id')
-                ->whereColumn('previous_steps.position', '<', 'release_steps.position')
+                ->whereColumn('previous_steps.release_id', $table.'.release_id')
+                ->whereColumn('previous_steps.position', '<', $table.'.position')
                 ->orderByDesc('previous_steps.position')
                 ->limit(1),
         ]);

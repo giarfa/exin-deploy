@@ -116,11 +116,19 @@ class Release extends Model
      * Nasce per "i miei step" (US-007) ma e un seam condiviso: il dettaglio della
      * release (US-008) e l'elenco (US-009) leggono lo stesso stato.
      *
+     * `chaperone()` non e una rifinitura: `ReleaseStep::activationInstant()` ripiega
+     * su `release->started_at` quando lo step attivo e il primo della catena — cioe
+     * su ogni release appena avviata — e senza la relazione inversa gia popolata
+     * quel ripiego caricherebbe la release **una query per riga**, riportando l'N+1
+     * proprio nel blocco che esiste per dire da quanto qualcuno e fermo.
+     *
      * @return HasOne<ReleaseStep, $this>
      */
     public function activeStep(): HasOne
     {
-        return $this->hasOne(ReleaseStep::class)->where('status', ReleaseStepStatus::Active);
+        return $this->hasOne(ReleaseStep::class)
+            ->where('status', ReleaseStepStatus::Active)
+            ->chaperone();
     }
 
     /**

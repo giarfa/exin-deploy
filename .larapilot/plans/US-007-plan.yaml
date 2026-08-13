@@ -357,9 +357,9 @@ tasks:
       4. Nessun nuovo vincolo permanente da aggiungere all'elenco del README: questa spec non ne introduce.
 
       ## Completion Criteria
-      - [ ] Voce Unreleased nel CHANGELOG coerente con le precedenti
-      - [ ] La sezione Schermate del README descrive la nuova home
-      - [ ] La derivazione dell'istante di attivazione e documentata dove chi legge il codice la cerchera
+      - [x] Voce Unreleased nel CHANGELOG coerente con le precedenti
+      - [x] La sezione Schermate del README descrive la nuova home
+      - [x] La derivazione dell'istante di attivazione e documentata dove chi legge il codice la cerchera
 
       ## Test Data
       - N/A — nessuna modifica di schema o di modello
@@ -369,9 +369,15 @@ tasks:
       - Push: **da non eseguire** (`git_mode: GITFLOW`)
       - PR: aggiorna le note locali della PR
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
       - TASK-03
       - TASK-04
-updated_at: '2026-08-13T17:39:21+00:00'
+    commit:
+      sha: 8b1484561ef5f1fb1856d973703e007461f6f4b6
+      short_sha: 8b14845
+      subject: 'docs(US-007): TASK-05 changelog e documentazione della vista operativa'
+      committed_at: '2026-08-13T19:41:02+02:00'
+      url: null
+updated_at: '2026-08-13T17:41:02+00:00'

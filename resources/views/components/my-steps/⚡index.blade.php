@@ -5,6 +5,7 @@ use App\Models\Release;
 use App\Models\ReleaseStep;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -33,15 +34,19 @@ new class extends Component
     /**
      * Step aperti in carico a chi sta guardando, dal piu vecchio.
      *
-     * **Ordinamento in PHP e non in SQL**, ed e una scelta: l'istante di
-     * attivazione e `previous_step_completed_at` oppure, sul primo della catena,
-     * `release.started_at`. Ordinare in database su quella coppia significherebbe
-     * ordinare su una colonna che per il primo step e `NULL`, e la posizione dei
-     * `NULL` in un `ORDER BY` **cambia da motore a motore** — SQLite e MySQL li
-     * mettono in testa, PostgreSQL in coda. Sarebbe una trappola di portabilita
-     * proprio nel punto che il vincolo permanente 1 protegge, per riordinare un
-     * insieme che una persona sola tiene aperto: pochi elementi, gia caricati e
-     * ordinabili senza una query in piu.
+     * **Ordinamento in PHP e non in SQL**, ed e una scelta con un limite noto.
+     * L'istante di attivazione e `previous_step_completed_at` oppure, sul primo
+     * della catena, `release.started_at`: ordinarlo in database richiederebbe un
+     * `ORDER BY COALESCE(<sottoquery>, releases.started_at)` con un join sulle
+     * release. E fattibile e portabile — non e vero che sarebbe obbligato ordinare
+     * sulla colonna nuda, dove la posizione dei `NULL` cambia da motore a motore —
+     * ma qui non paga: l'insieme e quello che **una persona sola** tiene aperto,
+     * gia interamente caricato, e riordinarlo in memoria non costa una query.
+     *
+     * Il limite che questa scelta comporta va detto: cosi il blocco **non e
+     * paginabile ne limitabile in database**. Va bene per "i miei step"; il giorno
+     * in cui servisse un elenco esteso o le metriche di processo (FR-024), l'ordine
+     * va spostato in SQL insieme al resto.
      *
      * Chiave composita e non tre `sortBy` annidati: il formato `Y-m-d H:i:s` e
      * ordinabile lessicograficamente, quindi progetto ed etichetta valgono come
@@ -96,11 +101,25 @@ new class extends Component
                 'activeStep' => fn ($activeStep) => $activeStep->withActivationInstant()->with('assignedUser'),
             ])
             ->get()
-            // Una release in corso ha sempre uno step attivo per invariante. La
-            // schermata non ci si appoggia in silenzio: se un dato incoerente
-            // entrasse, questa riga sparirebbe invece di far fallire il rendering
-            // di tutta la pagina.
-            ->filter(fn (Release $release): bool => $release->activeStep !== null)
+            /*
+             * Una release in corso ha sempre uno step attivo per invariante. Se un
+             * dato incoerente entrasse, la riga sparisce invece di far fallire il
+             * rendering di tutta la pagina — ma **lascia traccia**: su uno strumento
+             * che esiste perche nulla resti fermo in silenzio, una release svanita
+             * dalla schermata senza una riga di log sarebbe il difetto peggiore
+             * possibile.
+             */
+            ->filter(function (Release $release): bool {
+                if ($release->activeStep !== null) {
+                    return true;
+                }
+
+                Log::warning('Release in corso senza step attivo, esclusa dalla vista operativa.', [
+                    'release_id' => $release->id,
+                ]);
+
+                return false;
+            })
             ->sortBy(fn (Release $release): string => implode('|', [
                 $release->activeStep->activationInstant()->format('Y-m-d H:i:s'),
                 $release->project->name,
@@ -127,10 +146,12 @@ new class extends Component
     <div class="mb-6">
         <flux:heading size="xl" level="1">{{ __('my-steps.heading') }}</flux:heading>
 
-        {{-- `aria-live="polite"`: il conteggio cambia dopo un aggiornamento
-             Livewire senza ricaricare la pagina, e chi non vede lo schermo deve
-             sentirlo. Resta nel DOM anche a zero — una regione live che compare
-             insieme al proprio contenuto non annuncia nulla. --}}
+        {{-- `aria-live="polite"` sul contatore. Oggi la pagina non ha azioni e non
+             si aggiorna da sola, quindi la regione non ha ancora nulla da
+             annunciare: e il contratto dichiarato dal mockup per quando ne avra
+             (aggiornamento periodico o chiusura di uno step senza ricarica), e va
+             messa **prima**, perche una regione live che compare insieme al proprio
+             contenuto non annuncia comunque niente. Resta nel DOM anche a zero. --}}
         <flux:text class="mt-1" aria-live="polite">
             {{ trans_choice('my-steps.counter', $this->mySteps->count(), [
                 'count' => $this->mySteps->count(),

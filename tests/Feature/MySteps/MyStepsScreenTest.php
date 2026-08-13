@@ -9,6 +9,7 @@ use App\Models\Release;
 use App\Models\ReleaseStep;
 use App\Models\Role;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -63,12 +64,22 @@ class MyStepsScreenTest extends TestCase
         $member = User::factory()->create();
         $colleague = User::factory()->create();
 
+        // Uno step **visibile** nello stesso insieme di prova, e non solo quello da
+        // escludere: senza, l'asserzione passerebbe anche se la schermata non
+        // rendesse nulla, cioe se la query fosse rotta invece che filtrata bene.
+        $mine = $this->assign(
+            $this->releaseOn('Portale Clienti', 'v2.4.0', steps: 3),
+            position: 1, user: $member, role: 'QA'
+        );
+
         $release = $this->releaseOn('Sito Corporate', 'v3.1.0', steps: 3);
         $foreign = $this->assign($release, position: 1, user: $colleague, role: 'DevOps');
 
         $this->actingAs($member)->get(route('home'))
             ->assertOk()
-            ->assertDontSee($foreign->name);
+            ->assertSee($mine->name)
+            ->assertDontSee($foreign->name)
+            ->assertDontSee('Sito Corporate');
     }
 
     public function test_not_even_an_administrator_sees_the_steps_of_others_here(): void
@@ -78,13 +89,70 @@ class MyStepsScreenTest extends TestCase
         $administrator = User::factory()->admin()->create();
         $colleague = User::factory()->create();
 
+        $mine = $this->assign(
+            $this->releaseOn('Portale Clienti', 'v2.4.0', steps: 3),
+            position: 1, user: $administrator, role: 'Dev Lead'
+        );
+
         $release = $this->releaseOn('Sito Corporate', 'v3.1.0', steps: 3);
         $foreign = $this->assign($release, position: 1, user: $colleague, role: 'DevOps');
 
         $response = $this->actingAs($administrator)->get(route('home'))->assertOk();
 
+        // Vede il proprio step, quindi la schermata funziona; non vede quello
+        // altrui, che e il criterio.
+        $response->assertSee($mine->name);
         $response->assertDontSee($foreign->name);
-        $response->assertSee(__('my-steps.empty_heading'));
+        $response->assertDontSee('Sito Corporate');
+    }
+
+    public function test_the_oldest_open_step_comes_first(): void
+    {
+        // E l'unica priorita utile a chi entra: chi aspetta da piu tempo sta in
+        // cima. Senza questa asserzione togliere l'ordinamento lascerebbe la suite
+        // verde, perche `assertSee` non guarda la posizione.
+        $member = User::factory()->create();
+
+        $recent = $this->releaseOn('App Preventivi', 'v1.9.2', steps: 3);
+        $this->closeFirstStepOf($recent, at: now()->subMinutes(20));
+        $recentStep = $this->assign($recent, position: 2, user: $member, role: 'QA');
+
+        $oldest = $this->releaseOn('Portale Clienti', 'v2.4.0', steps: 3);
+        $this->closeFirstStepOf($oldest, at: now()->subDays(3));
+        $oldestStep = $this->assign($oldest, position: 2, user: $member, role: 'Dev Lead');
+
+        $body = (string) $this->actingAs($member)->get(route('home'))->assertOk()->getContent();
+
+        // `e()` sui nomi: un passaggio come "Preparazione dell'ambiente" nella
+        // pagina e gia escaped, e cercarne la forma grezza non lo troverebbe.
+        $this->assertLessThan(
+            strpos($body, e($recentStep->name)),
+            strpos($body, e($oldestStep->name)),
+            'Lo step aperto da piu tempo deve comparire per primo.'
+        );
+    }
+
+    public function test_the_release_stuck_the_longest_comes_first_among_those_waiting(): void
+    {
+        $member = User::factory()->create();
+        $slow = User::factory()->create(['name' => 'Davide Rossi']);
+        $quick = User::factory()->create(['name' => 'Luca Serra']);
+
+        $recent = $this->releaseOn('App Preventivi', 'v1.9.2', steps: 3);
+        $this->involve($recent, user: $member, at: now()->subHours(6));
+        $this->assign($recent, position: 2, user: $quick, role: 'DevOps');
+
+        $oldest = $this->releaseOn('Sito Corporate', 'v3.1.0', steps: 3);
+        $this->involve($oldest, user: $member, at: now()->subDays(2));
+        $this->assign($oldest, position: 2, user: $slow, role: 'DevOps');
+
+        $body = (string) $this->actingAs($member)->get(route('home'))->assertOk()->getContent();
+
+        $this->assertLessThan(
+            strpos($body, 'Luca Serra'),
+            strpos($body, 'Davide Rossi'),
+            'La release ferma da piu tempo deve comparire per prima.'
+        );
     }
 
     public function test_blocked_completed_and_concluded_steps_stay_out_of_the_list(): void
@@ -264,6 +332,40 @@ class MyStepsScreenTest extends TestCase
         }
 
         return $release->load('steps');
+    }
+
+    /**
+     * Chiude il primo step della catena a un istante dato: e da li che
+     * `activationInstant()` ricava da quanto il successivo e aperto.
+     */
+    private function closeFirstStepOf(Release $release, CarbonInterface $at): ReleaseStep
+    {
+        $step = $release->steps->first();
+
+        $step->forceFill([
+            'status' => ReleaseStepStatus::Completed,
+            'completed_by' => $step->assigned_user_id,
+            'completed_at' => $at,
+        ])->save();
+
+        return $step;
+    }
+
+    /**
+     * Coinvolge una persona nella release chiudendo per lei il primo step: e cosi
+     * che si resta coinvolti in un rilascio su cui non si ha piu il turno.
+     */
+    private function involve(Release $release, User $user, CarbonInterface $at): ReleaseStep
+    {
+        $step = $this->assign($release, position: 1, user: $user, role: 'Dev Lead');
+
+        $step->forceFill([
+            'status' => ReleaseStepStatus::Completed,
+            'completed_by' => $user->id,
+            'completed_at' => $at,
+        ])->save();
+
+        return $step;
     }
 
     /**

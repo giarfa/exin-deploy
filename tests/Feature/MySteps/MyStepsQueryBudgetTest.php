@@ -137,11 +137,27 @@ class MyStepsQueryBudgetTest extends TestCase
      * Step attivi in carico alla persona, ognuno su un progetto e una release
      * diversi: e la forma reale del primo blocco, non dieci righe della stessa
      * catena.
+     *
+     * **Le forme si alternano di proposito.** Su una release appena avviata lo step
+     * attivo e il primo della catena, quindi non ha un precedente da cui leggere
+     * l'istante e `activationInstant()` ripiega su `release->started_at`: e il ramo
+     * piu facile da lasciare scoperto, e un insieme di prova che chiude sempre uno
+     * step precedente misurerebbe soltanto il percorso gia sicuro.
      */
     private function awaitingSteps(User $user, int $count): void
     {
         for ($index = 0; $index < $count; $index++) {
             $release = $this->chain(steps: 3);
+
+            if ($index % 2 === 0) {
+                // Release appena avviata: il turno e subito suo, nessun precedente.
+                $release->steps->first()->update([
+                    'assigned_user_id' => $user->id,
+                    'status' => ReleaseStepStatus::Active,
+                ]);
+
+                continue;
+            }
 
             $release->steps->first()->forceFill([
                 'status' => ReleaseStepStatus::Completed,
@@ -157,11 +173,28 @@ class MyStepsQueryBudgetTest extends TestCase
 
     /**
      * Release in corso che coinvolgono la persona ma sono ferme su qualcun altro.
+     *
+     * Anche qui le due forme si alternano: una release appena avviata e ferma sul
+     * primo step, e il ripiego su `release->started_at` e proprio il punto in cui
+     * l'eager loading della relazione inversa puo mancare.
      */
     private function waitingReleases(User $user, int $count): void
     {
         for ($index = 0; $index < $count; $index++) {
             $release = $this->chain(steps: 3);
+
+            if ($index % 2 === 0) {
+                // Appena avviata e gia ferma su un altro: il coinvolgimento della
+                // persona e uno step piu avanti, ancora bloccato.
+                $release->steps->first()->update([
+                    'assigned_user_id' => User::factory()->create()->id,
+                    'status' => ReleaseStepStatus::Active,
+                ]);
+
+                $release->steps->firstWhere('position', 3)->update(['assigned_user_id' => $user->id]);
+
+                continue;
+            }
 
             $release->steps->first()->forceFill([
                 'status' => ReleaseStepStatus::Completed,

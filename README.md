@@ -384,11 +384,14 @@ servira **ordinare o filtrare in database** su quell'istante (per esempio le met
 processo, FR-024), la colonna diventera giustificata: si aggiunge allora, con backfill nella
 stessa migrazione.
 
-**L'ordinamento del primo blocco avviene in PHP**, ed e deliberato: ordinare in database
-significherebbe ordinare su una colonna che per il primo step della catena e `NULL`, e la
-posizione dei `NULL` in un `ORDER BY` cambia da motore a motore — SQLite e MySQL li mettono
-in testa, PostgreSQL in coda. Sarebbe una trappola di portabilita proprio nel punto che il
-vincolo permanente 1 protegge, per riordinare un insieme che una persona sola tiene aperto.
+**L'ordinamento dei due blocchi avviene in PHP**, ed e deliberato — con un limite noto.
+Ordinare in database e possibile e portabile (`ORDER BY COALESCE(<sottoquery>,
+releases.started_at)` con un join sulle release): non e vero che si sarebbe costretti a
+ordinare sulla colonna nuda, dove la posizione dei `NULL` cambia da motore a motore. Solo,
+qui non paga: l'insieme e quello che **una persona sola** tiene aperto, gia interamente
+caricato, e riordinarlo in memoria non costa una query. Il limite e che i due blocchi **non
+sono paginabili ne limitabili in database**: quando servira un elenco esteso o le metriche
+di processo (FR-024), l'ordine va spostato in SQL insieme al resto.
 
 `Release::activeStep()` e `ReleaseStep::withActivationInstant()` nascono qui ma sono **seam
 condivisi**: il dettaglio della release (US-008) e l'elenco (US-009) leggono lo stesso
@@ -534,9 +537,12 @@ riga, con icona e parola.
     migrazione di dati evitabile. Con la conclusione della release il vocabolario e ora
     scritto per intero: nessun caso resta inutilizzato. Il motivo per cui e nato completo
     resta valido per chi aggiungera il sesto (l'annullamento, FR-020).
-12. **La rotta `/step/{step}` non porta un `->can()`, ed e l'unica.** La protezione a due
-    livelli (middleware sulla rotta piu Gate dentro il componente) vale per tutte le altre
-    rotte di questa applicazione. Qui il middleware rifiuterebbe **prima** che il codice
+12. **La rotta `/step/{step}` non porta un `->can()`, ed e l'unica in deroga.** La
+    protezione a due livelli (middleware sulla rotta piu Gate dentro il componente) vale per
+    tutte le rotte che hanno qualcosa da autorizzare. Fa storia a se `/`, la schermata di
+    ingresso: non porta un `->can()` perche non c'e alcuna ability da valutare — la pagina
+    proietta soltanto cio che e assegnato a chi guarda, e `auth` e la sola precondizione.
+    Qui invece l'ability esiste, e il middleware rifiuterebbe **prima** che il codice
     applicativo possa registrare il tentativo non autorizzato nel log e nel registro delle
     transizioni, che e un criterio di accettazione di US-005 (FR-012). Il controllo non e
     piu debole: `authorizeOrRecord()` nel componente registra e poi rifiuta con 403, al
