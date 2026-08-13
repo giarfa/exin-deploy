@@ -265,7 +265,7 @@ specs:
       title: 'Esecuzione del rilascio'
     priority: HIGH
     points: 3
-    status: REVIEW
+    status: DONE
     body: |
       #### US-006: Conclusione della release come consegna in produzione
 
@@ -283,18 +283,25 @@ specs:
       della consegna, non compare più tra quelle in corso e ogni tentativo di modifica è rifiutato.
 
       **Criteri di accettazione**
-      - [ ] La chiusura dell'ultimo step marca la release come conclusa, con autore e istante della consegna
-      - [ ] Una release conclusa non ha alcuno step attivo (verificato da test)
-      - [ ] Una release conclusa è in sola lettura: nessuno step è compilabile o riapribile, nemmeno da un amministratore
-      - [ ] Il tentativo di chiudere o modificare uno step di una release conclusa è rifiutato con esito 403 o 409
-      - [ ] La conclusione è registrata nel registro delle transizioni
-      - [ ] Una release conclusa non compare tra quelle in corso e resta consultabile a tempo indeterminato
-      - [ ] La riapertura di uno step da parte di un amministratore resta esclusa da questo rilascio (FR-019, rinviata alle fasi successive) e il messaggio all'utente non promette il contrario
+      - [x] La chiusura dell'ultimo step marca la release come conclusa, con autore e istante della consegna
+      - [x] Una release conclusa non ha alcuno step attivo (verificato da test)
+      - [x] Una release conclusa è in sola lettura: nessuno step è compilabile o riapribile, nemmeno da un amministratore
+      - [x] Il tentativo di chiudere o modificare uno step di una release conclusa è rifiutato con esito 403 o 409
+      - [x] La conclusione è registrata nel registro delle transizioni
+      - [x] Una release conclusa non compare tra quelle in corso e resta consultabile a tempo indeterminato
+      - [x] La riapertura di uno step da parte di un amministratore resta esclusa da questo rilascio (FR-019, rinviata alle fasi successive) e il messaggio all'utente non promette il contrario
     status_history:
       - { status: PLANNED, at: '2026-08-13T16:16:11+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-13T16:26:21+00:00' }
       - { status: REVIEW, at: '2026-08-13T16:49:40+00:00' }
+      - { status: DONE, at: '2026-08-13T17:00:33+00:00' }
     rework: false
+    merge_commit:
+      sha: e1468a5cbf1ef1d5aac6305744312d56bcc2628a
+      short_sha: e1468a5
+      subject: 'chore(US-006): passaggio in revisione e consuntivo di sessione'
+      committed_at: '2026-08-13T18:49:49+02:00'
+      url: null
   -
     code: US-007
     title: 'Vista operativa: i miei step'
