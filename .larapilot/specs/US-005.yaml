@@ -5,7 +5,7 @@ epic:
   title: 'Esecuzione del rilascio'
 priority: CRITICAL
 points: 8
-status: PLANNED
+status: DONE
 body: |
   #### US-005: Chiusura di uno step con validazione e avanzamento sequenziale
 
@@ -25,22 +25,34 @@ body: |
   chiudere lo step nemmeno invocando la rotta direttamente.
 
   **Criteri di accettazione**
-  - [ ] Il responsabile dello step attivo compila i campi e ne richiede la chiusura
-  - [ ] La chiusura è rifiutata quando un campo obbligatorio è vuoto, indicando quale campo e perché
-  - [ ] La chiusura è rifiutata quando un campo di tipo link contiene un URL malformato
-  - [ ] La chiusura è rifiutata quando un campo di tipo conferma obbligatorio non è spuntato
-  - [ ] Un campo opzionale lasciato vuoto non impedisce la chiusura
-  - [ ] Alla chiusura valida sono registrati valori, autore e istante; lo step passa a completato e il successivo ad attivo
-  - [ ] Chiusura, attivazione dello step successivo e scrittura dell'evento avvengono in una sola transazione
-  - [ ] Esiste al massimo uno step attivo per release in ogni momento (verificato da test)
-  - [ ] Due richieste concorrenti di chiusura dello stesso step producono un solo avanzamento e un solo evento, con lock pessimistico sulla riga della release (verificato da test)
-  - [ ] Uno step bloccato non è compilabile né chiudibile, nemmeno invocando la rotta direttamente
-  - [ ] Uno step completato è in sola lettura
-  - [ ] Solo il responsabile assegnato o un amministratore possono compilare e chiudere: controllo a livello di Policy lato server
-  - [ ] Un tentativo non autorizzato è rifiutato con 403, registrato nel log applicativo e nel registro delle transizioni
-  - [ ] Interfaccia conforme al mockup `.larapilot/mockups/superficie-operativa/chiusura-step.html`: errori collegati al campo con `aria-describedby`, riepilogo errori con `role="alert"`, obbligatorietà annunciata a parole
-  - [ ] Nota architetturale estesa con diagramma Mermaid della macchina a stati e diagramma ER che distingue tabelle di definizione e di istanza
+  - [x] Il responsabile dello step attivo compila i campi e ne richiede la chiusura
+  - [x] La chiusura è rifiutata quando un campo obbligatorio è vuoto, indicando quale campo e perché
+  - [x] La chiusura è rifiutata quando un campo di tipo link contiene un URL malformato
+  - [x] La chiusura è rifiutata quando un campo di tipo conferma obbligatorio non è spuntato
+  - [x] Un campo opzionale lasciato vuoto non impedisce la chiusura
+  - [x] Alla chiusura valida sono registrati valori, autore e istante; lo step passa a completato e il successivo ad attivo
+  - [x] Chiusura, attivazione dello step successivo e scrittura dell'evento avvengono in una sola transazione
+  - [x] Esiste al massimo uno step attivo per release in ogni momento (verificato da test)
+  - [x] Due richieste concorrenti di chiusura dello stesso step producono un solo avanzamento e un solo evento, con lock pessimistico sulla riga della release (verificato da test)
+  - [x] Uno step bloccato non è compilabile né chiudibile, nemmeno invocando la rotta direttamente
+  - [x] Uno step completato è in sola lettura
+  - [x] Solo il responsabile assegnato o un amministratore possono compilare e chiudere: controllo a livello di Policy lato server
+  - [x] Un tentativo non autorizzato è rifiutato con 403, registrato nel log applicativo e nel registro delle transizioni
+  - [x] Interfaccia conforme al mockup `.larapilot/mockups/superficie-operativa/chiusura-step.html`: errori collegati al campo con `aria-describedby`, riepilogo errori con `role="alert"`, obbligatorietà annunciata a parole
+  - [x] Nota architetturale estesa con diagramma Mermaid della macchina a stati e diagramma ER che distingue tabelle di definizione e di istanza
 status_history:
   - status: PLANNED
     at: '2026-08-13T08:56:21+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-13T09:00:44+00:00'
+  - status: REVIEW
+    at: '2026-08-13T09:45:21+00:00'
+  - status: DONE
+    at: '2026-08-13T16:08:18+00:00'
 rework: false
+merge_commit:
+  sha: 82a20d5ed63abac2a3b7a8a2bd8ac4b58228ab43
+  short_sha: 82a20d5
+  subject: 'chore(US-005): passaggio in revisione e consuntivo di sessione'
+  committed_at: '2026-08-13T11:45:36+02:00'
+  url: null

@@ -123,6 +123,67 @@ class ReleaseStep extends Model
     }
 
     /**
+     * Regole dell'intero form di chiusura, indicizzate per **identificativo** del
+     * campo.
+     *
+     * L'identificativo e non la posizione ne l'etichetta: la posizione dice dove
+     * sta il campo e non quale e, e due campi possono avere la stessa etichetta.
+     * La chiave e la stessa con cui la schermata indicizza i valori compilati,
+     * cosi che gli errori tornino sul campo che li ha prodotti.
+     *
+     * Legge la relazione e non le definizioni: chi la invoca deve averla caricata
+     * in eager loading, altrimenti paga una query per campo (vedi
+     * `CloseStepQueryBudgetTest`).
+     *
+     * @return array<string, list<mixed>>
+     */
+    public function closingRules(): array
+    {
+        return $this->fields
+            ->mapWithKeys(fn (ReleaseStepField $field): array => [
+                $field->id => $field->closingRules(),
+            ])
+            ->all();
+    }
+
+    /**
+     * Etichette congelate dei campi, come nomi leggibili dentro i messaggi di
+     * rifiuto: senza, un errore parlerebbe di un UUID.
+     *
+     * @return array<string, string>
+     */
+    public function closingAttributes(): array
+    {
+        return $this->fields
+            ->mapWithKeys(fn (ReleaseStepField $field): array => [
+                $field->id => $field->label,
+            ])
+            ->all();
+    }
+
+    /**
+     * Step che riceve il flusso quando questo si chiude; `null` sull'ultimo della
+     * catena.
+     *
+     * Legge **solo** lo snapshot: risalire a `step_definitions` per sapere cosa
+     * viene dopo riporterebbe la definizione dentro l'esecuzione, e riordinare un
+     * template cambierebbe l'ordine di una release gia avviata.
+     *
+     * La prima posizione maggiore, e non `position + 1`: le posizioni dello
+     * snapshot nascono contigue e non si riordinano, ma leggerle in questo modo non
+     * dipende da quella garanzia — un buco produrrebbe uno step orfano invece di
+     * una catena interrotta.
+     */
+    public function nextStep(): ?ReleaseStep
+    {
+        return static::query()
+            ->where('release_id', $this->release_id)
+            ->where('position', '>', $this->position)
+            ->ordered()
+            ->first();
+    }
+
+    /**
      * Step in ordine di esecuzione.
      */
     #[Scope]

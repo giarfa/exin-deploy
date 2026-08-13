@@ -47,4 +47,59 @@ return [
      */
 
     'duplicate_label' => 'Esiste gia una release con etichetta :label su questo progetto.',
+
+    /*
+     * Chiusura di uno step (US-005). I rifiuti sono distinti perche si risolvono in
+     * modi diversi: il primo non si risolve, il secondo si aspetta, il terzo si
+     * legge. Le chiavi arrivano dalle eccezioni di dominio, che le portano con se.
+     */
+    'closing_blocked_release_completed' => 'La release e conclusa: non ci sono piu step da chiudere.',
+    'closing_blocked_step_blocked' => 'Questo step non e ancora aperto: si attende la chiusura di quelli che lo precedono.',
+    'closing_blocked_step_completed' => 'Questo step e gia stato chiuso: i valori forniti sono in sola lettura.',
+    'closing_already_closed' => 'Lo step e stato chiuso da un altro invio: l\'avanzamento e avvenuto una sola volta, e il flusso e gia passato al responsabile successivo.',
+    'closing_last_step' => 'Questo e l\'ultimo step della catena e la conclusione del rilascio non e ancora disponibile: lo step resta aperto e in carico a te.',
+
+    /*
+     * Schermata di chiusura. Il tono e quello del mockup: "Chiudi lo step e
+     * prosegui" dice cosa accade dopo, "Salva" direbbe soltanto cosa fa il
+     * pulsante.
+     */
+    'step_back_home' => 'Torna ai miei step',
+    'step_context' => ':project · :release · step :position di :total',
+    'step_you_are_responsible' => 'sei il responsabile come :role',
+    'step_responsible_is' => 'responsabile: :name, come :role',
+
+    'step_instructions_heading' => 'Istruzioni del processo',
+    /*
+     * A chi passa il flusso: e la mitigazione progettuale dell'assenza di
+     * notifiche (rischio accettato n.1 del PRD). Chi chiude sa chi avvisare a voce.
+     */
+    'step_hands_over_to' => 'Alla chiusura di questo step il flusso passa a :name — :step.',
+    'step_hands_over_last' => 'Questo e l\'ultimo step della catena: la conclusione del rilascio arriva con una prossima versione dello strumento, e per ora lo step non si chiude.',
+
+    'step_required_marker' => ' (obbligatorio)',
+    'step_optional_hint' => 'Campo opzionale: la sua assenza non impedisce la chiusura.',
+
+    'step_errors_heading' => 'Non e stato possibile chiudere lo step',
+    'step_errors_intro' => '{1} Un\'informazione richiesta non e valida:|[2,*] :count informazioni richieste non sono valide:',
+
+    'step_close_action' => 'Chiudi lo step e prosegui',
+    'step_save_action' => 'Salva senza chiudere',
+    'step_closing_is_final' => 'La chiusura e definitiva: riaprire uno step non e previsto in questa versione dello strumento, e ogni transizione resta nel registro.',
+
+    'step_saved_notice' => 'Bozza salvata. Lo step resta aperto e in carico a te: puoi riprendere quando vuoi.',
+    'step_closed_heading' => 'Step chiuso',
+    'step_closed_handed_over' => 'Il flusso e passato a :name — :step. Avvisalo: lo strumento non invia notifiche.',
+
+    'step_completed_heading' => 'Step completato',
+    'step_completed_explained' => 'Chiuso da :name il :date. Le informazioni fornite sono in sola lettura.',
+    'step_blocked_heading' => 'Questo step non e ancora aperto',
+    'step_blocked_waiting' => 'Si attende la chiusura dello step :position — :step, in carico a :name.',
+    'step_blocked_waiting_unknown' => 'Si attende la chiusura degli step che lo precedono.',
+
+    'step_values_heading' => 'Informazioni fornite',
+    'step_value_not_provided' => 'Non fornito',
+    'step_value_confirmed' => 'Confermato',
+
+    'step_open_action' => 'Apri e compila',
 ];

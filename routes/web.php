@@ -100,6 +100,30 @@ Route::middleware('auth')->group(function (): void {
         ->can('create', [Release::class, 'project'])
         ->name('releases.start');
 
+    /*
+     * Compilazione e chiusura di uno step di una release avviata.
+     *
+     * **Un solo parametro**, e non `/rilasci/{release}/step/{releaseStep}`: lo step
+     * ha chiave primaria UUID e la release si raggiunge dalla relazione, quindi la
+     * forma annidata non aggiungerebbe sicurezza. Avrebbe invece richiesto
+     * `scopeBindings()`, che ricava il nome della relazione dal parametro
+     * (`releaseStep` -> `releaseSteps()`): un secondo nome per `Release::steps()`,
+     * cioe due nomi per la stessa catena congelata.
+     *
+     * **Nessun `->can()` sul middleware**, in deroga dichiarata alla protezione a
+     * due livelli adottata da tutte le altre rotte di questa applicazione. Il
+     * criterio di accettazione chiede che un tentativo non autorizzato sia
+     * **registrato** nel log e nel registro delle transizioni, e il middleware
+     * rifiuta prima che il codice applicativo possa scrivere quella riga. Il
+     * controllo resta pieno e vive nel componente, dove `authorizeOrRecord()`
+     * registra e poi rifiuta con 403 — al montaggio e su ogni azione.
+     *
+     * Senza questo commento la prossima revisione leggerebbe l'assenza del `->can()`
+     * come una dimenticanza, e aggiungerlo spegnerebbe il tracciamento.
+     */
+    Route::livewire('/step/{releaseStep}', 'releases.step')
+        ->name('releases.step');
+
     Route::livewire('/responsabili-predefiniti', 'default-assignments.index')
         ->can('viewAny', DefaultRoleAssignment::class)
         ->name('default-assignments.index');

@@ -10,9 +10,10 @@ namespace App\Enums;
  * quindi rinominarli piu avanti — quando esisteranno gia righe scritte —
  * costringerebbe a una migrazione di dati del tutto evitabile.
  *
- * Chi scrive cosa: `ReleaseStarted` e di US-004; `StepCompleted` e
- * `StepActivated` di US-005; `ReleaseCompleted` di US-006; `UnauthorizedAttempt`
- * di US-010. La consultazione del registro appartiene a US-010.
+ * Chi scrive cosa: `ReleaseStarted` e di US-004; `StepCompleted`, `StepActivated`
+ * e `UnauthorizedAttempt` di US-005 (rispettivamente `CloseStep` e
+ * `RecordUnauthorizedStepAttempt`); `ReleaseCompleted` di US-006. La consultazione
+ * del registro appartiene a US-010.
  */
 enum ReleaseEventAction: string
 {

@@ -136,17 +136,74 @@ La distinzione ha una ragione: rinominare un ruolo o riordinare un template non 
 riscrivere il passato, mentre una persona che cambia cognome deve comparire nello storico
 con il proprio nome attuale — e la stessa persona, non un nome fossile.
 
-La regola operativa e verificata da un test che ascolta le query eseguite mentre si legge
-una release: se ne compare una su `workflow_templates`, `step_definitions`,
-`field_definitions` o `project_role_assignments`, il test fallisce. Un altro test cancella
-gli step di definizione e verifica che la release resti leggibile per intero.
+La regola operativa e verificata da test che ascoltano le query eseguite mentre si **legge**
+una release e mentre si **chiude uno step**: se ne compare una su `workflow_templates`,
+`step_definitions`, `field_definitions` o `project_role_assignments`, il test fallisce.
+Altri due test cancellano gli step di definizione e verificano che la release resti
+leggibile per intero e che la catena avanzi comunque.
 
 Regole correlate, applicate dal codice: la chiusura di uno step, l'attivazione del
-successivo e la scrittura dell'evento avvengono in **una sola transazione**, e una release
+successivo e la scrittura degli eventi avvengono in **una sola transazione**, e una release
 ha al massimo **uno** step attivo per volta.
 
-I diagrammi (entita-relazioni e macchina a stati) arrivano con US-005, quando modello e
-transizioni sono completi.
+### Le due meta dello schema
+
+Il diagramma distingue i due gruppi. L'unica freccia tratteggiata e il **confine**: la
+copia che avviene all'avvio di una release. Non ci sono frecce di lettura che tornano
+dall'istanza alla definizione — i riferimenti che restano (`workflow_template_id`,
+`role_id`) dicono da dove la release e nata e rendono quelle righe non cancellabili,
+ma nessun percorso di esecuzione li segue per decidere come procedere.
+
+```mermaid
+erDiagram
+    %% ---- Definizione: la configurazione riusabile ----
+    ROLE ||--o{ STEP_DEFINITION : "e responsabile di"
+    ROLE ||--o{ PROJECT_ROLE_ASSIGNMENT : "assegnato da"
+    PROJECT ||--o{ PROJECT_ROLE_ASSIGNMENT : "mappa ruolo a persona"
+    PROJECT }o--|| WORKFLOW_TEMPLATE : "adotta"
+    WORKFLOW_TEMPLATE ||--o{ STEP_DEFINITION : "ordina"
+    STEP_DEFINITION ||--o{ FIELD_DEFINITION : "richiede"
+
+    %% ---- Confine fra i due gruppi: la copia all'avvio (StartRelease) ----
+    WORKFLOW_TEMPLATE ||..o{ RELEASE : "copiato all'avvio in"
+
+    %% ---- Istanza: un rilascio concreto ----
+    PROJECT ||--o{ RELEASE : "ospita"
+    RELEASE ||--o{ RELEASE_STEP : "catena congelata"
+    RELEASE_STEP ||--o{ RELEASE_STEP_FIELD : "campi congelati e valori"
+    RELEASE ||--o{ RELEASE_EVENT : "registro delle transizioni"
+    RELEASE_STEP ||--o{ RELEASE_EVENT : "transizione di uno step"
+    USER ||--o{ RELEASE_STEP : "ne e responsabile"
+    USER ||--o{ RELEASE_EVENT : "ne e l'attore"
+```
+
+### La macchina a stati
+
+Ogni transizione e annotata con l'evento che scrive nel registro: il registro non e un
+racconto a parte, e la traccia delle stesse frecce.
+
+```mermaid
+stateDiagram-v2
+    state ReleaseStep {
+        [*] --> bloccato : avvio della release
+        bloccato --> attivo : chiusura del precedente / step_attivato
+        attivo --> completato : chiusura valida / step_completato
+        completato --> [*]
+    }
+
+    state Release {
+        [*] --> in_corso : avvio / release_avviata
+        in_corso --> conclusa : chiusura dell'ultimo step (US-006) / release_conclusa
+        conclusa --> [*]
+    }
+```
+
+Cosa il diagramma non ammette, ed e voluto: nessuna freccia **torna** indietro — la
+riapertura di uno step e FR-019, rinviata oltre l'MVP — e non esiste uno stato
+"saltato", perche il PRD non prevede di scavalcare un passaggio. Finche `in_corso -->
+conclusa` non esiste (US-006), la chiusura dell'ultimo step della catena viene
+**rifiutata**: chiuderlo lascerebbe una release in corso senza alcuno step attivo, cioe
+la violazione dell'invariante che la riga sotto dichiara.
 
 ### Avvio di una release
 
@@ -181,6 +238,74 @@ uno stato preesistente da leggere e riscrivere, e l'unicita `(project_id, label)
 di schema fa fallire la seconda transazione, che non lascia nulla dietro di se. Il lock
 richiesto da `.ai/rules/app.md` riguarda l'**avanzamento**, dove invece lo stato c'e.
 
+### Chiusura di uno step e avanzamento
+
+Il responsabile dello step attivo compila i campi congelati e lo chiude; il flusso passa
+al responsabile successivo. L'avanzamento passa da **un solo percorso**,
+`App\Actions\Releases\CloseStep`, e avviene in **una sola transazione**.
+
+I controlli sono in quest'ordine, e l'ordine non e casuale:
+
+1. la release e in corso;
+2. lo step e **attivo** — bloccato e completato sono due rifiuti distinti, perche il
+   primo si aspetta e il secondo si legge;
+3. i valori forniti soddisfano cio che lo step chiede.
+
+Prima lo stato, poi i valori: validare per primo farebbe correggere un form che comunque
+non si sarebbe potuto chiudere.
+
+Le regole per tipo vivono su `ReleaseStepField::closingRules()`, accanto al dato
+congelato: testo breve fino a 255 caratteri, testo lungo fino a 5000, link fino a 2048 e
+validato da `App\Rules\WellFormedLink`, conferma obbligatoria da accettare. Ogni elenco
+apre con `bail`, cosi che un campo non produca due messaggi per lo stesso difetto.
+`WellFormedLink` **nomina i difetti trovati** ("manca lo schema (https://) e contiene uno
+spazio") invece di dire "non valido": chi incolla un indirizzo da una chat perde lo schema
+e si porta dietro uno spazio, e scoprire il secondo problema solo dopo aver corretto il
+primo e la stessa informazione data nel momento peggiore. La **raggiungibilita** non viene
+verificata: sarebbe una chiamata di rete dentro una validazione, e i report interni a cui
+questi campi rimandano non sono raggiungibili dal server.
+
+Un campo lasciato vuoto diventa `null` e non stringa vuota
+(`ReleaseStepField::normalizeValue()`): il dettaglio della release deve poter dire "non
+fornito", e `''` e un valore fornito che si dava il caso fosse vuoto.
+
+**Il doppio invio non produce due avanzamenti.** La chiusura e un **compare-and-swap**:
+un solo `update()` condizionato a `status = attivo`. Zero righe aggiornate significa che
+un'altra transazione e passata prima, e allora l'intera transazione viene annullata —
+nessun valore scritto, nessun evento. Il lock pessimistico sulla riga della release
+richiesto da `.ai/rules/app.md` c'e, e i due **non** sono ridondanti: su SQLite
+`lockForUpdate()` non produce SQL (la grammatica non supporta `FOR UPDATE`), quindi la
+garanzia effettiva li e l'update condizionato — l'alternativa prevista dall'invariante 3
+del PRD; su MySQL e PostgreSQL il lock serializza davvero, e il vincolo di portabilita
+impone che il codice resti corretto su tutti e tre. Togliere il secondo perche "c'e il
+lock" romperebbe proprio l'ambiente su cui il prodotto gira.
+
+**Invariante:** al massimo uno step attivo per release, zero solo quando la release e
+conclusa. E verificato da test lungo l'intera catena, non su un singolo passaggio.
+
+**Salvare senza chiudere** e un'azione separata (`App\Actions\Releases\SaveStepValues`):
+accetta un form incompleto, non fa avanzare nulla e **non scrive nel registro** — il
+registro documenta le transizioni (FR-016), e una bozza non lo e. Le regole di forma sono
+derivate da `closingRules()` con l'obbligatorieta rilassata, non riscritte: un link
+malformato viene rifiutato anche in bozza, perche salvarlo significherebbe riproporlo
+identico e rotto alla ripresa.
+
+**La rotta di chiusura non porta un `->can()`**, unica in tutta l'applicazione, ed e una
+deroga dichiarata alla protezione a due livelli. Il criterio di accettazione chiede che un
+tentativo non autorizzato sia **registrato** nel log applicativo e nel registro delle
+transizioni, e il middleware rifiuta prima che il codice applicativo possa scrivere quella
+riga. Il controllo resta pieno e vive nel componente: `authorizeOrRecord()` registra e poi
+rifiuta con 403, al montaggio e su **ogni** azione. Nel registro entrano solo i tentativi
+mutanti (`fill`, `close`): un `view` negato produce la voce di log e si ferma li, perche il
+registro non e cancellabile e un ricaricamento di indirizzo lo gonfierebbe di righe che non
+dicono nulla su come e andato il rilascio.
+
+`ReleaseStepPolicy` decide chi puo agire: il responsabile assegnato o un amministratore, e
+solo mentre lo step e attivo su una release in corso. `fill` e `close` stanno **fuori** dal
+filtro `before()`: il vincolo dello step attivo vale anche per un amministratore, perche
+quello non sarebbe un privilegio ma la catena che smette di descrivere l'ordine in cui il
+rilascio e avvenuto.
+
 ### Schermate
 
 | Rotta | Pagina | Accesso |
@@ -192,12 +317,20 @@ richiesto da `.ai/rules/app.md` riguarda l'**avanzamento**, dove invece lo stato
 | `/progetti` | Progetti, con il comando di avvio release per riga | amministratore |
 | `/progetti/{progetto}/responsabili` | Mappatura ruolo → persona del progetto | amministratore |
 | `/progetti/{progetto}/rilascio` | **Avvio di una release** | amministratore |
+| `/step/{step}` | **Compilazione e chiusura di uno step** | responsabile dello step o amministratore |
 | `/template` · `/template/{t}/step` · `/template/{t}/step/{s}/campi` | Processo di rilascio | amministratore |
 | `/responsabili-predefiniti` | Mappatura predefinita di team | amministratore |
 
 La voce **Release** nella navigazione resta marcata "in arrivo": la pagina che promette e
 l'**elenco** delle release (US-009), non la schermata di avvio, che si raggiunge dal
 progetto su cui si rilascia.
+
+`/step/{step}` si raggiunge oggi dalla catena mostrata dopo l'avvio, ed e un **ponte**
+dichiarato come tale nel codice: la navigazione definitiva verso i propri step e "i miei
+step" (US-007), il dettaglio della release e US-008. La pagina rende tre stati diversi
+dello stesso step — attivo con il form, completato in sola lettura, bloccato con
+l'indicazione di chi si sta aspettando — perche chi arriva da un collegamento salvato non
+sa in quale stato lo trovera.
 
 ### Configurazione del processo
 
@@ -307,8 +440,13 @@ riga, con icona e parola.
    cioe sull'unica cosa che quelle tabelle esistono per proteggere.
 9. **Una sola colonna `value` per tutti e quattro i tipi di campo.** Il valore fornito e
    sempre testo; la semantica per tipo — un link deve essere un indirizzo valido, una
-   conferma obbligatoria deve risultare spuntata — appartiene alla chiusura dello step
-   (US-005). Quattro colonne tipizzate ne lascerebbero tre sempre nulle su ogni riga.
+   conferma obbligatoria deve risultare spuntata — vive su
+   `ReleaseStepField::closingRules()` e `normalizeValue()`, accanto al dato congelato e in
+   **una sola copia**, usata sia dalla schermata di chiusura sia dalle due Action che
+   scrivono (`CloseStep`, `SaveStepValues`). Quattro colonne tipizzate ne lascerebbero tre
+   sempre nulle su ogni riga. Chi aggiunge un tipo a `FieldType` deve estendere quei due
+   metodi e il `match` della schermata: senza, il campo verrebbe reso come testo breve e
+   validato come tale.
 10. **`release_events` non ha `updated_at`, ed e voluto.** Il registro e in sola aggiunta:
     `update()` e `delete()` sollevano `ReleaseEventIsAppendOnly` dal modello, e lo schema
     non offre nemmeno la colonna che dichiarerebbe possibile la modifica. Un registro
@@ -324,10 +462,21 @@ riga, con icona e parola.
 11. **`releases.completed_by` e `completed_at` nascono vuote.** Sono create da US-004 e
     riempite da US-006, quando la chiusura dell'ultimo step conclude la release:
     aggiungerle dopo sarebbe una seconda migrazione sulla stessa tabella per una semantica
-    gia decisa dal PRD. Per lo stesso motivo `ReleaseEventAction` nasce con tutti e cinque
-    i casi di FR-016 anche se questa spec ne scrive uno solo — quei valori finiscono in
+    gia decisa dal PRD. Per lo stesso motivo `ReleaseEventAction` e nato con tutti e cinque
+    i casi di FR-016 quando US-004 ne scriveva uno solo — quei valori finiscono in
     colonna e sopravvivono nello storico, quindi rinominarli dopo sarebbe una migrazione
-    di dati evitabile.
+    di dati evitabile. Oggi ne restano due non scritti: `release_conclusa`, che e di US-006.
+12. **La rotta `/step/{step}` non porta un `->can()`, ed e l'unica.** La protezione a due
+    livelli (middleware sulla rotta piu Gate dentro il componente) vale per tutte le altre
+    rotte di questa applicazione. Qui il middleware rifiuterebbe **prima** che il codice
+    applicativo possa registrare il tentativo non autorizzato nel log e nel registro delle
+    transizioni, che e un criterio di accettazione di US-005 (FR-012). Il controllo non e
+    piu debole: `authorizeOrRecord()` nel componente registra e poi rifiuta con 403, al
+    montaggio e su ogni azione, e i test coprono anche il percorso che salta il middleware —
+    l'invocazione diretta dell'azione Livewire. Aggiungere il `->can()` farebbe fallire
+    `ReleaseStepPolicyTest::test_a_denied_read_is_logged_but_does_not_fill_the_register`,
+    che pretende la voce di log su un accesso negato: il 403 arriverebbe comunque, ma senza
+    traccia.
 
 ## Stack
 

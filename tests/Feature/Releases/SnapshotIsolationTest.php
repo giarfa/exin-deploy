@@ -2,11 +2,16 @@
 
 namespace Tests\Feature\Releases;
 
+use App\Actions\Releases\CloseStep;
 use App\Actions\Releases\StartRelease;
+use App\Enums\FieldType;
+use App\Enums\ReleaseStepStatus;
 use App\Models\FieldDefinition;
 use App\Models\Project;
 use App\Models\ProjectRoleAssignment;
 use App\Models\Release;
+use App\Models\ReleaseStep;
+use App\Models\ReleaseStepField;
 use App\Models\Role;
 use App\Models\StepDefinition;
 use App\Models\User;
@@ -173,6 +178,71 @@ class SnapshotIsolationTest extends TestCase
         );
     }
 
+    public function test_closing_a_step_never_touches_a_definition_table(): void
+    {
+        /*
+         * L'avanzamento e il punto in cui la tentazione e piu forte: per sapere
+         * "cosa viene dopo" e "cosa chiedeva questo step" basterebbe leggere il
+         * template. Se lo facesse, riordinare un template cambierebbe l'ordine di
+         * una release gia in corso, e le regole di validazione applicate oggi
+         * sarebbero quelle di adesso invece di quelle congelate all'avvio.
+         *
+         * Il test osserva la **chiusura vera**, non una query scritta qui dentro.
+         */
+        $project = $this->projectReadyToRelease();
+
+        $release = app(StartRelease::class)->handle($project, 'v2.4.0', User::factory()->admin()->create());
+
+        $step = $release->steps()->with('fields')->firstOrFail();
+        $actor = $step->assignedUser;
+
+        // L'ascolto comincia **dopo** l'avvio: durante l'avvio le tabelle di
+        // definizione vengono lette per forza, ed e proprio quella la copia.
+        $touched = [];
+        $observed = 0;
+
+        DB::listen(function (QueryExecuted $query) use (&$touched, &$observed): void {
+            $observed++;
+
+            foreach (self::DEFINITION_TABLES as $table) {
+                if (str_contains($query->sql, '"'.$table.'"') || str_contains($query->sql, ' '.$table.' ')) {
+                    $touched[] = $table;
+                }
+            }
+        });
+
+        app(CloseStep::class)->handle($step, $this->valuesFor($step), $actor);
+
+        $this->assertGreaterThan(0, $observed, 'Nessuna query osservata: il test non sta misurando niente.');
+
+        $this->assertSame(
+            [],
+            array_values(array_unique($touched)),
+            'La chiusura di uno step ha interrogato una tabella di definizione: lo snapshot non e piu la sola fonte di verita.'
+        );
+    }
+
+    public function test_the_chain_advances_after_the_definitions_are_deleted(): void
+    {
+        // Seconda prova dello stesso criterio, per la strada opposta: se
+        // l'avanzamento dipendesse dalle definizioni, cancellarle lo romperebbe.
+        $project = $this->projectReadyToRelease();
+
+        $release = app(StartRelease::class)->handle($project, 'v2.4.0', User::factory()->admin()->create());
+
+        $step = $release->steps()->with('fields')->firstOrFail();
+
+        StepDefinition::where('workflow_template_id', $project->workflow_template_id)->delete();
+
+        app(CloseStep::class)->handle($step, $this->valuesFor($step), $step->assignedUser);
+
+        $this->assertSame(ReleaseStepStatus::Completed, $step->fresh()->status);
+        $this->assertSame(
+            ReleaseStepStatus::Active,
+            $release->steps()->where('position', 2)->firstOrFail()->status
+        );
+    }
+
     public function test_the_frozen_chain_is_readable_without_any_definition_table(): void
     {
         // Seconda prova dello stesso criterio, per la strada opposta: se il
@@ -195,6 +265,25 @@ class SnapshotIsolationTest extends TestCase
         foreach ($names as $name) {
             $component->assertSee($name);
         }
+    }
+
+    /**
+     * Valori validi per ogni campo dello step, secondo il tipo congelato.
+     *
+     * @return array<string, mixed>
+     */
+    private function valuesFor(ReleaseStep $step): array
+    {
+        return $step->fields
+            ->mapWithKeys(fn (ReleaseStepField $field): array => [
+                $field->id => match ($field->type) {
+                    FieldType::ShortText => '2.4.0',
+                    FieldType::LongText => 'Verifica completata senza anomalie bloccanti.',
+                    FieldType::Link => 'https://ci.gruppoexcellence.com/pipeline/4471',
+                    FieldType::Confirmation => true,
+                },
+            ])
+            ->all();
     }
 
     /**

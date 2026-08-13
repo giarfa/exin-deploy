@@ -4,6 +4,7 @@ namespace Tests\Unit\Models;
 
 use App\Enums\ReleaseStepStatus;
 use App\Models\Concerns\OrderedByPosition;
+use App\Models\Release;
 use App\Models\ReleaseStep;
 use App\Models\ReleaseStepField;
 use App\Models\Role;
@@ -85,6 +86,60 @@ class ReleaseStepTest extends TestCase
         $this->assertSame(
             ['Primo', 'Secondo', 'Terzo'],
             $step->fields()->pluck('label')->all()
+        );
+    }
+
+    public function test_the_next_step_is_the_one_that_follows_in_the_same_release(): void
+    {
+        $release = Release::factory()->create();
+
+        $first = ReleaseStep::factory()->for($release)->create(['position' => 1]);
+        $second = ReleaseStep::factory()->for($release)->create(['position' => 2]);
+        $third = ReleaseStep::factory()->for($release)->create(['position' => 3]);
+
+        $this->assertSame($second->id, $first->nextStep()->id);
+        $this->assertSame($third->id, $second->nextStep()->id);
+    }
+
+    public function test_the_last_step_of_the_chain_has_no_next_step(): void
+    {
+        $release = Release::factory()->create();
+
+        ReleaseStep::factory()->for($release)->create(['position' => 1]);
+        $last = ReleaseStep::factory()->for($release)->create(['position' => 2]);
+
+        $this->assertNull($last->nextStep());
+    }
+
+    public function test_a_step_of_another_release_is_never_the_next_step(): void
+    {
+        // Il flusso avanza dentro la propria release: leggere per sola posizione
+        // farebbe passare il testimone alla catena di un altro rilascio.
+        $step = ReleaseStep::factory()->create(['position' => 1]);
+
+        ReleaseStep::factory()->create(['position' => 2]);
+
+        $this->assertNull($step->nextStep());
+    }
+
+    public function test_the_closing_rules_are_indexed_by_field_identifier(): void
+    {
+        $step = ReleaseStep::factory()->create();
+
+        $required = ReleaseStepField::factory()->for($step)->create(['position' => 1, 'is_required' => true]);
+        $optional = ReleaseStepField::factory()->for($step)->optional()->create(['position' => 2]);
+
+        $rules = $step->closingRules();
+
+        $this->assertSame([$required->id, $optional->id], array_keys($rules));
+        $this->assertContains('required', $rules[$required->id]);
+        $this->assertContains('nullable', $rules[$optional->id]);
+
+        // Le etichette congelate diventano i nomi leggibili dei messaggi: senza,
+        // un rifiuto parlerebbe di un UUID.
+        $this->assertSame(
+            [$required->id => $required->label, $optional->id => $optional->label],
+            $step->closingAttributes()
         );
     }
 
