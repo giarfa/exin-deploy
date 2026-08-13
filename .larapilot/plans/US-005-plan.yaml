@@ -925,19 +925,25 @@ tasks:
       10. Suite completa: `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Test verdi in locale e suite completa verde
-      - [ ] 403, riga di registro e voce di log verificati sul tentativo non autorizzato
-      - [ ] Rifiuto di `fill`/`close` all'amministratore su step non attivo verificato
-      - [ ] Flusso completo dall'interfaccia coperto, senza test browser
+      - [x] Test verdi in locale e suite completa verde
+      - [x] 403, riga di registro e voce di log verificati sul tentativo non autorizzato
+      - [x] Rifiuto di `fill`/`close` all'amministratore su step non attivo verificato
+      - [x] Flusso completo dall'interfaccia coperto, senza test browser
 
       ## Git Deliverables
       - Commit: `test(US-005): TASK-12 copre autorizzazione, tracciamento e flusso di chiusura`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornamento della descrizione locale
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-11
+    commit:
+      sha: 8ca09fe9daad72096895e828e92aba71ce0b405d
+      short_sha: 8ca09fe
+      subject: 'test(US-005): TASK-12 copre autorizzazione, tracciamento e flusso di chiusura'
+      committed_at: '2026-08-13T11:35:37+02:00'
+      url: null
   -
     id: TASK-13
     title: 'Documentazione: diagrammi Mermaid, nota architetturale e CHANGELOG'
@@ -990,4 +996,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-12
-updated_at: '2026-08-13T09:32:07+00:00'
+updated_at: '2026-08-13T09:35:38+00:00'

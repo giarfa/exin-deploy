@@ -76,6 +76,36 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
 - **Registro delle transizioni in sola aggiunta** (US-004, base di FR-016): una riga
   scritta non si modifica e non si cancella. E la condizione perche il registro valga come
   prova di cosa e successo durante un rilascio.
+- **Chiusura di uno step con validazione** (US-005, FR-010, FR-011): il responsabile dello
+  step attivo compila le informazioni congelate all'avvio e chiude il passaggio. Un campo
+  obbligatorio vuoto, un indirizzo malformato o una conferma non spuntata rifiutano la
+  chiusura, e il motivo dice cosa correggere: su un link il messaggio nomina i difetti
+  trovati — "manca lo schema (https://) e contiene uno spazio" — invece di dire soltanto
+  che non e valido. Un campo facoltativo lasciato vuoto non impedisce la chiusura, e resta
+  distinguibile da uno compilato a vuoto.
+- **Avanzamento sequenziale** (US-005, FR-010): alla chiusura valida vengono registrati
+  valori, autore e istante; lo step passa a completato e il successivo diventa attivo, in
+  **una sola transazione** insieme alle due righe del registro. Un doppio invio produce un
+  solo avanzamento e un solo passaggio di consegne. Una release ha al massimo uno step
+  attivo per volta, ed e verificato lungo l'intera catena.
+- **La schermata dice a chi passa il flusso** alla chiusura: lo strumento non invia
+  notifiche, quindi chi chiude sa chi avvisare. Uno step bloccato dice di chi si sta
+  aspettando la chiusura; uno step completato mostra le informazioni fornite in sola
+  lettura.
+- **Salvataggio senza chiusura** (US-005): una bozza si salva anche incompleta, senza far
+  avanzare la catena e senza scrivere nel registro — che documenta le transizioni, non i
+  salvataggi. Un indirizzo malformato viene rifiutato anche in bozza: salvarlo
+  significherebbe riproporlo rotto alla ripresa.
+- **Solo il responsabile o un amministratore compilano e chiudono** (US-005, FR-012), con
+  decisione a livello di Policy lato server. Il vincolo dello step attivo vale **anche** per
+  un amministratore: non si compila un passaggio il cui turno non e arrivato o che e gia
+  chiuso.
+- **Ultimo step della catena**: la chiusura e rifiutata con un messaggio esplicito finche la
+  conclusione della release (FR-017) non esiste. Chiuderlo lascerebbe una release in corso
+  senza alcuno step attivo.
+- **Diagrammi del modello e delle transizioni** nel README: entita-relazioni con definizione
+  e istanza distinte, e macchina a stati di step e release annotata con gli eventi scritti
+  nel registro.
 - **Ambiente dimostrativo**: seeder con il team di esempio, incluso un membro disattivato
   per verificare il rifiuto dell'accesso, piu cinque ruoli funzionali, la mappatura
   predefinita e due progetti di cui uno con una sostituzione. Include ora il template
@@ -104,6 +134,14 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   identificativo nell'indirizzo (binding annidato) ne passandolo a un'azione.
 - Un tipo di campo fuori dai quattro previsti e rifiutato lato server, non solo assente
   dal menu.
+- **Tentativi non autorizzati sugli step tracciati due volte** (US-005, FR-012): un
+  tentativo di compilare o chiudere senza esserne autorizzati e rifiutato con 403,
+  registrato nel log applicativo — per chi presidia il sistema — e nel registro delle
+  transizioni, che resta accanto al rilascio come prova di processo. Un accesso in sola
+  lettura negato produce la voce di log e si ferma li: il registro non e cancellabile, e un
+  ricaricamento di indirizzo lo gonfierebbe di righe che non dicono nulla sul rilascio.
+- I valori compilati non possono essere scritti su campi che non appartengono allo step
+  indicato: la chiusura itera sullo snapshot, non sulle chiavi ricevute.
 
 ### Changed
 
