@@ -343,7 +343,7 @@ tasks:
     id: TASK-04
     title: "Riporta le briciole del dettaglio all'elenco"
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
     body: |-
@@ -368,9 +368,9 @@ tasks:
       4. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=ReleaseDetail`
 
       ## Completion Criteria
-      - [ ] Il dettaglio apre le briciole sull'elenco, come il mockup
-      - [ ] Nessuna chiave di traduzione orfana
-      - [ ] I test del dettaglio restano verdi
+      - [x] Il dettaglio apre le briciole sull'elenco, come il mockup
+      - [x] Nessuna chiave di traduzione orfana
+      - [x] I test del dettaglio restano verdi
 
       ## Test Data
       - N/A — nessuna modifica di modelli o schema
@@ -379,6 +379,12 @@ tasks:
       - Commit: `refactor(US-009): TASK-04 riporta le briciole del dettaglio all'elenco`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
+    commit:
+      sha: 484ab9b1a10663d06138b082ba4d3a762ec0d614
+      short_sha: 484ab9b
+      subject: "refactor(US-009): TASK-04 riporta le briciole del dettaglio all'elenco"
+      committed_at: '2026-08-14T00:07:01+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Copertura della schermata e delle autorizzazioni'
@@ -496,4 +502,4 @@ tasks:
       - Commit: `docs(US-009): TASK-07 changelog, README e regola sull'elenco delle release`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:06:00+00:00'
+updated_at: '2026-08-13T22:07:01+00:00'

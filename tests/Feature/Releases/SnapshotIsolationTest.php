@@ -237,6 +237,57 @@ class SnapshotIsolationTest extends TestCase
         }
     }
 
+    public function test_the_release_list_never_touches_a_definition_table(): void
+    {
+        /*
+         * L'elenco (US-009) e la sola superficie operativa che **non** ha deroghe:
+         * il dettaglio cita il template di origine, qui non compare nemmeno quello.
+         * Tutte e quattro le tabelle restano quindi vietate, `workflow_templates`
+         * inclusa.
+         *
+         * La tentazione qui e la colonna "step corrente": leggerne il nome dal
+         * template invece che dallo snapshot darebbe la stessa stringa oggi, e una
+         * diversa il giorno in cui qualcuno rinomina uno step — riscrivendo a
+         * posteriori il racconto di un rilascio gia avvenuto.
+         *
+         * Come per il dettaglio, la verifica e sulla **pagina resa** e non su una
+         * query scritta qui dentro.
+         */
+        $project = $this->projectReadyToRelease();
+        $release = app(StartRelease::class)->handle($project, 'v2.4.0', User::factory()->admin()->create());
+
+        $names = $release->steps()->pluck('name');
+
+        $touched = [];
+        $observed = 0;
+
+        DB::listen(function (QueryExecuted $query) use (&$touched, &$observed): void {
+            $observed++;
+
+            foreach (self::DEFINITION_TABLES as $table) {
+                if (str_contains($query->sql, '"'.$table.'"') || str_contains($query->sql, ' '.$table.' ')) {
+                    $touched[] = $table;
+                }
+            }
+        });
+
+        $response = $this->actingAs(User::factory()->member()->create())
+            ->get(route('releases.index'))
+            ->assertOk();
+
+        $this->assertGreaterThan(0, $observed, 'Nessuna query osservata: il test non sta misurando niente.');
+
+        $this->assertSame(
+            [],
+            array_values(array_unique($touched)),
+            'L\'elenco delle release ha interrogato una tabella di definizione: lo snapshot non e piu la sola fonte di verita.'
+        );
+
+        // Lo step attivo e il primo della catena: e il nome che la colonna "step
+        // corrente" mostra, e arriva dallo snapshot.
+        $response->assertSee($names->first());
+    }
+
     public function test_closing_a_step_never_touches_a_definition_table(): void
     {
         /*
