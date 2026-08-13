@@ -84,6 +84,14 @@ Gli istanti sono riportati indietro nel tempo dopo la chiusura: le Action scrivo
 e giusto che lo facciano, ma un ambiente in cui tutto e successo nello stesso secondo non
 mostrerebbe ne le durate ("aperto da 2 giorni") ne l'ordinamento dello storico.
 
+**Con quale account guardare cosa.** L'amministratore `f.giarola@` vede tutto tranne uno step
+in carico: nello scenario e responsabile come Security dello step 3, che non e ancora il suo
+turno — quindi la sua schermata di ingresso mostra lo **stato vuoto** e, sotto, il blocco delle
+release in attesa. Non e un difetto del seed: il criterio di accettazione fissa lo scenario a
+"primo step chiuso, secondo attivo", e il secondo e di QA. Per vedere la vista operativa piena
+accedi come `m.bellini@` (QA, ha lo step attivo di `v2.4.0`) o `l.serra@` (Dev Lead, ha quello
+di `2026.08.1`).
+
 Il template **disattivato** resta senza release e nessun tentativo non autorizzato viene
 seminato: il primo perche `StartRelease` lo rifiuterebbe — un ambiente dimostrativo che
 contenga uno stato irriproducibile dall'applicazione mente — il secondo perche la traccia di

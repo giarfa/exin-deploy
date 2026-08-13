@@ -192,5 +192,26 @@ class DatabaseSeederTest extends TestCase
             $this->assertStringNotContainsStringIgnoringCase('lorem', $text);
             $this->assertStringNotContainsStringIgnoringCase('ipsum', $text);
         }
+
+        /*
+         * "Plausibile" non e solo l'assenza di riempitivi: e anche la coerenza fra
+         * quello che una riga dice e il rilascio a cui appartiene. Ogni release
+         * dichiara la **propria** versione, non quella di un'altra — un errore di
+         * forma giusta e contenuto sbagliato, che si nota leggendo la schermata e
+         * mai contando le righe.
+         */
+        foreach (Release::with('steps.fields')->get() as $release) {
+            $declared = $release->steps->flatMap->fields->firstWhere('label', 'Versione rilasciata');
+
+            if ($declared?->value === null) {
+                continue;
+            }
+
+            $this->assertSame(
+                $release->label,
+                $declared->value,
+                "Il rilascio {$release->label} dichiara di aver consegnato {$declared->value}."
+            );
+        }
     }
 }

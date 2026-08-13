@@ -254,7 +254,7 @@ tasks:
     id: TASK-03
     title: 'Changelog, README e regola sul seeder'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
     body: |-
@@ -279,8 +279,8 @@ tasks:
          incoerenza — meta seeder scrive stati, meta chiama Action.
 
       ## Completion Criteria
-      - [ ] Changelog e README aggiornati, senza affermazioni superate
-      - [ ] Regola registrata sul seeder
+      - [x] Changelog e README aggiornati, senza affermazioni superate
+      - [x] Regola registrata sul seeder
 
       ## Test Data
       - N/A — nessuna modifica di schema
@@ -289,4 +289,10 @@ tasks:
       - Commit: `docs(US-011): TASK-03 changelog, README e regola sull'ambiente dimostrativo`
       - Push: **saltato** (`git_mode: GITFLOW`)
       - PR: aggiornata in locale
-updated_at: '2026-08-13T22:47:08+00:00'
+    commit:
+      sha: 0e05670585823abf4072b63cdd4d01a0e75bed69
+      short_sha: '0e05670'
+      subject: "docs(US-011): TASK-03 changelog, README e regola sull'ambiente dimostrativo"
+      committed_at: '2026-08-14T00:48:38+02:00'
+      url: null
+updated_at: '2026-08-13T22:48:38+00:00'

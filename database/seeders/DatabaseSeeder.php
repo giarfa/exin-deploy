@@ -258,10 +258,16 @@ class DatabaseSeeder extends Seeder
      * Nessun lorem ipsum: sono frasi di rilascio vere, indirizzi plausibili e
      * conferme spuntate, come chiede il criterio di accettazione.
      *
+     * Il segnaposto `:label` viene sostituito con l'etichetta della release che si
+     * sta chiudendo. Senza, il rilascio concluso `v2.3.0` dichiarerebbe di aver
+     * consegnato `v2.4.0`: dati di forma giusta e contenuto sbagliato, che e
+     * esattamente cio che "plausibili per il dominio" esclude — e il tipo di
+     * incoerenza che si nota solo leggendo la schermata, mai contando le righe.
+     *
      * @var array<string, string>
      */
     private const STEP_VALUES = [
-        'Versione rilasciata' => 'v2.4.0',
+        'Versione rilasciata' => ':label',
         'Link alla pipeline' => 'https://ci.gruppoexcellence.com/portale-clienti/build/1842',
         'Note di preparazione' => 'Migrazione della tabella documenti inclusa: va eseguita prima del riavvio dei worker.',
         'Esito della verifica' => 'Provati caricamento documenti, ricerca e apertura richieste su Chrome e Safari. Nessuna regressione sulle aree toccate.',
@@ -494,7 +500,7 @@ class DatabaseSeeder extends Seeder
                 ->where('status', ReleaseStepStatus::Active)
                 ->firstOrFail();
 
-            app(CloseStep::class)->handle($step, $this->valuesFor($step), $step->assignedUser);
+            app(CloseStep::class)->handle($step, $this->valuesFor($step, $label), $step->assignedUser);
         }
 
         return $release->refresh();
@@ -541,11 +547,13 @@ class DatabaseSeeder extends Seeder
      *
      * @return array<string, string|null>
      */
-    private function valuesFor(ReleaseStep $step): array
+    private function valuesFor(ReleaseStep $step, string $label): array
     {
         return $step->fields
             ->mapWithKeys(fn (ReleaseStepField $field): array => [
-                $field->id => self::STEP_VALUES[$field->label] ?? null,
+                $field->id => isset(self::STEP_VALUES[$field->label])
+                    ? str_replace(':label', $label, self::STEP_VALUES[$field->label])
+                    : null,
             ])
             ->all();
     }
