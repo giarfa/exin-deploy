@@ -132,10 +132,10 @@ tasks:
 
       ## Criteri di completamento
 
-      - [ ] US-007 risulta integrata in `develop` (il file `my-steps/⚡index.blade.php` e presente su `develop`)
-      - [ ] La suite e verde su `develop` dopo l'integrazione
-      - [ ] Il ramo `feature/US-008-dettaglio-release` esiste in locale
-      - [ ] Titolo e corpo della PR verso `develop` sono redatti
+      - [x] US-007 risulta integrata in `develop` (il file `my-steps/⚡index.blade.php` e presente su `develop`)
+      - [x] La suite e verde su `develop` dopo l'integrazione
+      - [x] Il ramo `feature/US-008-dettaglio-release` esiste in locale
+      - [x] Titolo e corpo della PR verso `develop` sono redatti
 
       ## Dati di prova
 
@@ -147,8 +147,14 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale; apertura remota solo su richiesta esplicita
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: be08a70dc74392ad4de73ce066b6bf5a7706a767
+      short_sha: be08a70
+      subject: 'chore(US-008): TASK-00 ramo di lavoro per il dettaglio della release'
+      committed_at: '2026-08-13T23:04:52+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Apertura della lettura della release a ogni membro e rotta di dettaglio'
@@ -176,11 +182,11 @@ tasks:
 
       ## Criteri di completamento
 
-      - [ ] `ReleasePolicy::view()` concede a ogni utente autenticato, con PHPDoc aggiornato che dice cosa resta chiuso
-      - [ ] `viewAny()` e `delete()` invariate
-      - [ ] La rotta `releases.show` risponde su `/rilasci/{release}` con doppia protezione dichiarata nel commento
-      - [ ] `ReleasePolicyTest` copre membro estraneo, amministratore e i due dinieghi residui
-      - [ ] `php artisan route:list --path=rilasci` mostra la rotta con il middleware `can:view,release`
+      - [x] `ReleasePolicy::view()` concede a ogni utente autenticato, con PHPDoc aggiornato che dice cosa resta chiuso
+      - [x] `viewAny()` e `delete()` invariate
+      - [x] La rotta `releases.show` risponde su `/rilasci/{release}` con doppia protezione dichiarata nel commento
+      - [x] `ReleasePolicyTest` copre membro estraneo, amministratore e i due dinieghi residui
+      - [x] `php artisan route:list --path=rilasci` mostra la rotta con il middleware `can:view,release`
 
       ## Dati di prova
 
@@ -192,9 +198,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: 0851e28756dccb019fc1b9bbbb5bb8ca4990bace
+      short_sha: '0851e28'
+      subject: 'feat(US-008): TASK-01 apre la lettura della release e registra la rotta di dettaglio'
+      committed_at: '2026-08-13T23:06:11+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Estrarre i valori forniti in un componente condiviso'
@@ -222,10 +234,10 @@ tasks:
 
       ## Criteri di completamento
 
-      - [ ] `x-releases.step-values` rende i quattro tipi di campo e il caso "non fornito"
-      - [ ] I link con schema diverso da `http`/`https` restano testo, non diventano `href`
-      - [ ] `⚡step.blade.php` usa il componente e non contiene piu una seconda copia della logica
-      - [ ] `CloseStepScreenTest` verde senza modifiche: la resa della schermata di chiusura e invariata
+      - [x] `x-releases.step-values` rende i quattro tipi di campo e il caso "non fornito"
+      - [x] I link con schema diverso da `http`/`https` restano testo, non diventano `href`
+      - [x] `⚡step.blade.php` usa il componente e non contiene piu una seconda copia della logica
+      - [x] `CloseStepScreenTest` verde senza modifiche: la resa della schermata di chiusura e invariata
 
       ## Dati di prova
 
@@ -237,9 +249,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: bd488bc7f2a6567f5a1351b7e12919865cf1f331
+      short_sha: bd488bc
+      subject: 'refactor(US-008): TASK-02 estrae i valori forniti in un componente condiviso'
+      committed_at: '2026-08-13T23:07:15+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Schermata di dettaglio della release con catena e dati del rilascio'
@@ -275,16 +293,16 @@ tasks:
 
       ## Criteri di completamento
 
-      - [ ] La vista mostra etichetta, progetto, stato, template di origine, autore e istante di avvio
-      - [ ] La sequenza degli step segue l'ordine congelato dello snapshot, con lo stato di ciascuno
-      - [ ] Ogni step mostra ruolo (`role_name` congelato) e nome del responsabile risolto
-      - [ ] Gli step completati mostrano valori, autore e istante di chiusura
-      - [ ] Gli step bloccati non mostrano alcun campo compilabile
-      - [ ] Il comando di apertura appare solo dove `@can('fill', $step)` lo consente
-      - [ ] I campi link sono collegamenti, le conferme un esito affermativo (via `x-releases.step-values`)
-      - [ ] Nessuna lettura di `step_definitions` o `field_definitions` in tutto il componente
-      - [ ] Layout a colonna singola sotto 1024 px e a due colonne da 1024 px, senza scorrimento orizzontale a 375 px
-      - [ ] Tutte le stringhe passano da `lang/it/releases.php`
+      - [x] La vista mostra etichetta, progetto, stato, template di origine, autore e istante di avvio
+      - [x] La sequenza degli step segue l'ordine congelato dello snapshot, con lo stato di ciascuno
+      - [x] Ogni step mostra ruolo (`role_name` congelato) e nome del responsabile risolto
+      - [x] Gli step completati mostrano valori, autore e istante di chiusura
+      - [x] Gli step bloccati non mostrano alcun campo compilabile
+      - [x] Il comando di apertura appare solo dove `@can('fill', $step)` lo consente
+      - [x] I campi link sono collegamenti, le conferme un esito affermativo (via `x-releases.step-values`)
+      - [x] Nessuna lettura di `step_definitions` o `field_definitions` in tutto il componente
+      - [x] Layout a colonna singola sotto 1024 px e a due colonne da 1024 px, senza scorrimento orizzontale a 375 px
+      - [x] Tutte le stringhe passano da `lang/it/releases.php`
 
       ## Dati di prova
 
@@ -296,9 +314,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: 5c10a9b9e8ccd7421a9497c6772e6f3c4d5fe016
+      short_sha: 5c10a9b
+      subject: 'feat(US-008): TASK-03 schermata di dettaglio della release'
+      committed_at: '2026-08-13T23:10:52+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Vie di accesso al dettaglio dalle schermate esistenti'
@@ -328,12 +352,12 @@ tasks:
 
       ## Criteri di completamento
 
-      - [ ] Dal blocco "release in attesa" si raggiunge il dettaglio della release
-      - [ ] Dalla schermata di uno step si raggiunge il dettaglio della release, in tutti e tre gli stati
-      - [ ] Dalla conferma di avvio si raggiunge il dettaglio della release appena avviata
-      - [ ] La voce di navigazione "Release" resta marcata in arrivo (e US-009)
-      - [ ] Nessun collegamento annidato dentro un altro collegamento; bersagli tattili di almeno 44x44 px
-      - [ ] Le suite delle tre schermate toccate restano verdi
+      - [x] Dal blocco "release in attesa" si raggiunge il dettaglio della release
+      - [x] Dalla schermata di uno step si raggiunge il dettaglio della release, in tutti e tre gli stati
+      - [x] Dalla conferma di avvio si raggiunge il dettaglio della release appena avviata
+      - [x] La voce di navigazione "Release" resta marcata in arrivo (e US-009)
+      - [x] Nessun collegamento annidato dentro un altro collegamento; bersagli tattili di almeno 44x44 px
+      - [x] Le suite delle tre schermate toccate restano verdi
 
       ## Dati di prova
 
@@ -345,9 +369,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: ff8d0ada250742e5a58f9e3f5496b28fd21dc6a6
+      short_sha: ff8d0ad
+      subject: 'feat(US-008): TASK-04 vie di accesso al dettaglio della release'
+      committed_at: '2026-08-13T23:12:16+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Copertura della schermata di dettaglio'
@@ -382,10 +412,10 @@ tasks:
 
       ## Criteri di completamento
 
-      - [ ] Un test per ciascun criterio di accettazione della spec
-      - [ ] Coperti il percorso felice, il diniego (membro estraneo, ospite) e i casi limite (campo non fornito, link non conforme, release conclusa)
-      - [ ] I nomi dei test descrivono il comportamento atteso, non il metodo invocato
-      - [ ] Suite verde
+      - [x] Un test per ciascun criterio di accettazione della spec
+      - [x] Coperti il percorso felice, il diniego (membro estraneo, ospite) e i casi limite (campo non fornito, link non conforme, release conclusa)
+      - [x] I nomi dei test descrivono il comportamento atteso, non il metodo invocato
+      - [x] Suite verde
 
       ## Dati di prova
 
@@ -397,9 +427,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: ec0bda4741152befc89cd66a62349ce4b754bb6f
+      short_sha: ec0bda4
+      subject: 'test(US-008): TASK-05 copertura della schermata di dettaglio'
+      committed_at: '2026-08-13T23:13:50+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Budget di query del dettaglio della release'
@@ -424,10 +460,10 @@ tasks:
 
       ## Criteri di completamento
 
-      - [ ] Il costo non cresce con il numero di step
-      - [ ] Il costo non cresce con il numero di campi per step
-      - [ ] La lettura degli istanti di attivazione costa zero query
-      - [ ] I messaggi di fallimento dicono **cosa manca** (quale eager loading), non solo che i numeri differiscono
+      - [x] Il costo non cresce con il numero di step
+      - [x] Il costo non cresce con il numero di campi per step
+      - [x] La lettura degli istanti di attivazione costa zero query
+      - [x] I messaggi di fallimento dicono **cosa manca** (quale eager loading), non solo che i numeri differiscono
 
       ## Dati di prova
 
@@ -439,9 +475,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
+    commit:
+      sha: df5bfee0fb807685b0da3787612891000bce8b1c
+      short_sha: df5bfee
+      subject: 'test(US-008): TASK-06 budget di query del dettaglio della release'
+      committed_at: '2026-08-13T23:14:56+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Changelog e nota sulla lettura aperta della release'
@@ -485,4 +527,4 @@ tasks:
       - TASK-04
       - TASK-05
       - TASK-06
-updated_at: '2026-08-13T20:59:05+00:00'
+updated_at: '2026-08-13T21:14:56+00:00'

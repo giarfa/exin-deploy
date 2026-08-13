@@ -117,6 +117,22 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   su quale step e da quanto tempo. E la mitigazione del rischio accettato n.1 del PRD —
   l'assenza di notifiche (FR-025, fuori perimetro) — e non un abbellimento: senza, un
   rilascio fermo resta invisibile finche qualcuno non lo cerca.
+- **Dettaglio di una release** (US-008, FR-014): si apre un rilascio e si vede l'intera
+  catena nell'ordine congelato all'avvio, con lo stato di ogni step, il ruolo e il nome del
+  responsabile, e le informazioni fornite su ciascuno step chiuso — con autore e istante
+  della chiusura. Gli step ancora bloccati non mostrano nulla di cio che verra chiesto:
+  dicono soltanto cosa li sblocca. Accanto alla catena, i dati del rilascio: progetto,
+  etichetta, stato, template di origine, chi lo ha avviato e quando, step completati sul
+  totale.
+- **Il dettaglio e consultabile da ogni membro autenticato** (US-008), anche da chi non e
+  responsabile di alcuno step di quella release: su uno strumento che non invia notifiche,
+  sapere dove un rilascio e fermo e chi si sta aspettando non e un privilegio. Resta una
+  pagina di sola lettura — compilare e chiudere restano riservati al responsabile dello step
+  attivo o a un amministratore — e la catena mostrata e sempre lo **snapshot congelato**, non
+  il template di adesso.
+- **Il dettaglio si raggiunge da dove serve**: dal blocco "release in corso su cui sei
+  coinvolto", che pone la domanda a cui questa pagina risponde; dalla schermata di uno step,
+  in tutti e tre i suoi stati; e dalla conferma di avvio di una release.
 - **Diagrammi del modello e delle transizioni** nel README: entita-relazioni con definizione
   e istanza distinte, e macchina a stati di step e release annotata con gli eventi scritti
   nel registro.

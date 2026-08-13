@@ -113,8 +113,11 @@ class Release extends Model
      * Su una release conclusa `null` e quindi un esito legittimo e non un difetto
      * dei dati — chi la rende deve prevederlo.
      *
-     * Nasce per "i miei step" (US-007) ma e un seam condiviso: il dettaglio della
-     * release (US-008) e l'elenco (US-009) leggono lo stesso stato.
+     * Nasce per "i miei step" (US-007) ma e un seam condiviso: l'elenco delle
+     * release (US-009) leggera lo stesso stato. Il dettaglio della release **non**
+     * la usa, e non per svista: quella schermata carica l'intera catena, e lo step
+     * attivo lo trova fra gli step gia in memoria invece di pagare una seconda
+     * query per un dato che ha gia.
      *
      * `chaperone()` non e una rifinitura: `ReleaseStep::activationInstant()` ripiega
      * su `release->started_at` quando lo step attivo e il primo della catena — cioe

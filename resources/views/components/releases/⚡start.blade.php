@@ -19,8 +19,9 @@ use Livewire\Component;
  * Avvio di una release su un progetto.
  *
  * Deliberatamente minima: qui si indica un'etichetta e si ottiene la conferma
- * visiva che lo snapshot esiste. L'elenco con i filtri e di US-009, il dettaglio
- * completo con valori e registro e di US-008.
+ * visiva che lo snapshot esiste. Da questa conferma si passa al dettaglio della
+ * release, che mostra la catena con lo stato di ogni step e le informazioni
+ * fornite; l'elenco con i filtri e di US-009.
  *
  * Le precondizioni sono mostrate **prima** del tentativo, e quando qualcosa manca
  * il comando e disabilitato con il motivo accanto: portare a una pagina che
