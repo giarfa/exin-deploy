@@ -5,7 +5,7 @@ epic:
   title: 'Fondamenta e accesso'
 priority: HIGH
 points: 2
-status: REVIEW
+status: DONE
 body: |
   #### US-011: Ambiente dimostrativo coerente
 
@@ -23,14 +23,14 @@ body: |
   un template realistico, una release a metà catena e una release conclusa con registro popolato.
 
   **Criteri di accettazione**
-  - [ ] `php artisan migrate:fresh --seed` completa senza errori
-  - [ ] Il dataset comprende un amministratore e almeno quattro membri con ruoli funzionali distinti
-  - [ ] Almeno due progetti attivi con mappatura ruolo→persona completa per il template associato
-  - [ ] Un template "Rilascio standard" con cinque step e campi che coprono tutti e quattro i tipi
-  - [ ] Una release in corso con il primo step completato e valori realistici, e il secondo step attivo
-  - [ ] Una release conclusa con tutti gli step completati e il registro delle transizioni popolato
-  - [ ] I dati sono in italiano e plausibili per il dominio: nessun lorem ipsum, nessun record orfano
-  - [ ] Le factory dei singoli modelli restano di competenza delle rispettive spec: qui si compone lo scenario in `DatabaseSeeder`
+  - [x] `php artisan migrate:fresh --seed` completa senza errori
+  - [x] Il dataset comprende un amministratore e almeno quattro membri con ruoli funzionali distinti
+  - [x] Almeno due progetti attivi con mappatura ruolo→persona completa per il template associato
+  - [x] Un template "Rilascio standard" con cinque step e campi che coprono tutti e quattro i tipi
+  - [x] Una release in corso con il primo step completato e valori realistici, e il secondo step attivo
+  - [x] Una release conclusa con tutti gli step completati e il registro delle transizioni popolato
+  - [x] I dati sono in italiano e plausibili per il dominio: nessun lorem ipsum, nessun record orfano
+  - [x] Le factory dei singoli modelli restano di competenza delle rispettive spec: qui si compone lo scenario in `DatabaseSeeder`
 status_history:
   - status: PLANNED
     at: '2026-08-13T22:41:22+00:00'
@@ -38,4 +38,12 @@ status_history:
     at: '2026-08-13T22:41:22+00:00'
   - status: REVIEW
     at: '2026-08-13T22:51:06+00:00'
+  - status: DONE
+    at: '2026-08-14T09:50:23+00:00'
 rework: false
+merge_commit:
+  sha: 1ac02330b8fab3494e714b42b3fdb785bf142b80
+  short_sha: 1ac0233
+  subject: 'chore(US-011): consuntivo di sessione'
+  committed_at: '2026-08-14T00:51:19+02:00'
+  url: null

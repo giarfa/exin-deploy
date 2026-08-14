@@ -5,7 +5,7 @@ epic:
   title: 'Visibilità e tracciabilità'
 priority: HIGH
 points: 3
-status: REVIEW
+status: DONE
 body: |
   #### US-009: Elenco e storico delle release
 
@@ -23,14 +23,14 @@ body: |
   concluse con data e autore della consegna, e filtro per progetto.
 
   **Criteri di accettazione**
-  - [ ] Elenco delle release con progetto, etichetta, stato, step corrente e responsabile in attesa
-  - [ ] Filtro per stato (in corso / concluse) e per progetto
-  - [ ] Le release concluse mostrano autore e istante della consegna
-  - [ ] Lo storico è consultabile a tempo indeterminato, senza limite implicito di data
-  - [ ] Ordinamento predefinito dalle più recenti alle più vecchie
-  - [ ] Indici su `release.project_id` e `release.status` creati nella stessa migrazione dello schema
-  - [ ] Nessuna query N+1 (verificato)
-  - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/desktop.html`: card impilate sotto 1024 px, tabella da 1024 px, nessuno scroll orizzontale a nessun breakpoint
+  - [x] Elenco delle release con progetto, etichetta, stato, step corrente e responsabile in attesa
+  - [x] Filtro per stato (in corso / concluse) e per progetto
+  - [x] Le release concluse mostrano autore e istante della consegna
+  - [x] Lo storico è consultabile a tempo indeterminato, senza limite implicito di data
+  - [x] Ordinamento predefinito dalle più recenti alle più vecchie
+  - [x] Indici su `release.project_id` e `release.status` creati nella stessa migrazione dello schema
+  - [x] Nessuna query N+1 (verificato)
+  - [x] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/desktop.html`: card impilate sotto 1024 px, tabella da 1024 px, nessuno scroll orizzontale a nessun breakpoint
 status_history:
   - status: PLANNED
     at: '2026-08-13T21:54:44+00:00'
@@ -38,4 +38,12 @@ status_history:
     at: '2026-08-13T21:54:54+00:00'
   - status: REVIEW
     at: '2026-08-13T22:18:42+00:00'
+  - status: DONE
+    at: '2026-08-14T09:40:02+00:00'
 rework: false
+merge_commit:
+  sha: b6b4d8b8f1dd060be6c58dd6301e453c5a8cc659
+  short_sha: b6b4d8b
+  subject: 'fix(US-009): rilievi della revisione Robert e Lars'
+  committed_at: '2026-08-14T00:18:42+02:00'
+  url: null
