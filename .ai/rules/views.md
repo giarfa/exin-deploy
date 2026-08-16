@@ -12,7 +12,7 @@ Il progetto ci e caduto due volte, entrambe corrette da US-012: `wire:click="$se
 
 Le tre forme corrette, in ordine di preferenza:
 1. **Vocabolario chiuso e privo di apici** — interpolazione diretta: `wire:click="$set('campo', '{{ $valore }}')"`.
-2. **Valore arbitrario** — attributo legato, con la stringa costruita in PHP: `:wire:click="'$set(\'campo\', '.Js::from($valore).')'"`.
+2. **Valore arbitrario** — attributo legato, con la stringa costruita in PHP: `:wire:click="'$set(\'campo\', '.\Illuminate\Support\Js::from($valore).')'"`. Il nome pienamente qualificato non e pedanteria: una vista Blade normale non ha un blocco `use`, e il solo `Js::from()` vi fallisce (nei file Volt, che quel blocco ce l'hanno, l'import breve va bene). Gli apici escono come entita HTML, che il browser ridecodifica prima che Livewire legga l'espressione.
 3. **Testo con apici destinato a un'espressione Alpine** — nessuna stringa JavaScript: elementi alternati con `x-show`, come nella sfida 2FA. Inseguire l'escaping di un apice ridecodificato dal browser e la strada che si rompe di nuovo.
 
 `tests/Unit/Views/BladeComponentAttributesTest.php` scandisce tutto `resources/views` e fallisce riportando file e riga. Non disattivarlo: i commenti Blade e gli elementi nativi sono gia esclusi.

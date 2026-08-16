@@ -279,11 +279,11 @@ tasks:
       5. `php artisan larapilot:quality` — Pint e Larastan livello 5 verdi
 
       ## Completion Criteria
-      - [ ] `.ai/rules/views.md` registrata con `record-rule` su glob `resources/views/**`
-      - [ ] Regola con entrambe le forme corrette, le occorrenze reali e il riferimento al test di guardia
-      - [ ] Riga corrispondente in `.ai/rules/index.md`
-      - [ ] Voce `Fixed` in `CHANGELOG.md`
-      - [ ] `larapilot:quality` verde
+      - [x] `.ai/rules/views.md` registrata con `record-rule` su glob `resources/views/**`
+      - [x] Regola con entrambe le forme corrette, le occorrenze reali e il riferimento al test di guardia
+      - [x] Riga corrispondente in `.ai/rules/index.md`
+      - [x] Voce `Fixed` in `CHANGELOG.md`
+      - [x] `larapilot:quality` verde
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -293,7 +293,13 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: completare il corpo locale con l'elenco dei task consegnati
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
-updated_at: '2026-08-16T12:04:03+00:00'
+    commit:
+      sha: 4816836ddfc7321da00ab74901ff95737ace3c3d
+      short_sha: '4816836'
+      subject: 'docs(US-012): TASK-04 regola sulle direttive negli attributi dei componenti e changelog'
+      committed_at: '2026-08-16T14:05:23+02:00'
+      url: null
+updated_at: '2026-08-16T12:05:23+00:00'
