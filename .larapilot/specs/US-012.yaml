@@ -5,7 +5,7 @@ epic:
   title: Manutenzione
 priority: HIGH
 points: 2
-status: REVIEW
+status: DONE
 body: |
   #### US-012: Fix — i filtri di stato dell'elenco rilasci non applicano nulla
 
@@ -42,18 +42,18 @@ body: |
   `resources/views/auth/two-factor-challenge.blade.php` dentro `x-text` su `<flux:link>`.
 
   **Criteri di accettazione**
-  - [ ] Premendo "In corso" resta la sola sezione dei rilasci in corso; premendo "Conclusa" resta il solo storico; premendo "Tutte" tornano entrambe
-  - [ ] Il filtro premuto si riflette nell'indirizzo (`?stato=in_corso` / `?stato=conclusa`) e un indirizzo incollato riapre l'elenco già filtrato
-  - [ ] Il bottone attivo conserva `aria-pressed="true"` e la variante `primary`; gli altri `aria-pressed="false"`
-  - [ ] La pagina `/rilasci` non produce alcun errore JavaScript in console, né al caricamento né al click sui filtri
-  - [ ] Il filtro di stato continua a comporsi con il filtro di progetto: le due scelte si applicano insieme
-  - [ ] Nella sfida 2FA il comando che scambia codice TOTP e codice di recupero mostra la propria etichetta in entrambi gli stati, senza errori Alpine in console
-  - [ ] Nessuna occorrenza residua di `@js()` dentro un attributo di componente Blade nell'intero `resources/views` (verificato)
-  - [ ] Test di regressione (Anne) che asserisce il **markup reso**, non la sola proprietà lato server: l'espressione `wire:click` prodotta deve contenere il valore dello stato e nessun `@js(`
-  - [ ] Test di regressione analogo sul rendering della sfida 2FA
-  - [ ] `ReleaseIndexScreenTest` resta verde, comprese le asserzioni esistenti su `->set('statusFilter', …)`
-  - [ ] Regola registrata in `.ai/rules` — divieto di `@js()` negli attributi dei componenti Blade, con la forma corretta da usare — e riga corrispondente in `.ai/rules/index.md`
-  - [ ] Nessuna nuova azione pubblica invocabile dal browser che scriva nel log applicativo, coerentemente con la nota già presente nel componente
+  - [x] Premendo "In corso" resta la sola sezione dei rilasci in corso; premendo "Conclusa" resta il solo storico; premendo "Tutte" tornano entrambe
+  - [x] Il filtro premuto si riflette nell'indirizzo (`?stato=in_corso` / `?stato=conclusa`) e un indirizzo incollato riapre l'elenco già filtrato
+  - [x] Il bottone attivo conserva `aria-pressed="true"` e la variante `primary`; gli altri `aria-pressed="false"`
+  - [x] La pagina `/rilasci` non produce alcun errore JavaScript in console, né al caricamento né al click sui filtri
+  - [x] Il filtro di stato continua a comporsi con il filtro di progetto: le due scelte si applicano insieme
+  - [x] Nella sfida 2FA il comando che scambia codice TOTP e codice di recupero mostra la propria etichetta in entrambi gli stati, senza errori Alpine in console
+  - [x] Nessuna occorrenza residua di `@js()` dentro un attributo di componente Blade nell'intero `resources/views` (verificato)
+  - [x] Test di regressione (Anne) che asserisce il **markup reso**, non la sola proprietà lato server: l'espressione `wire:click` prodotta deve contenere il valore dello stato e nessun `@js(`
+  - [x] Test di regressione analogo sul rendering della sfida 2FA
+  - [x] `ReleaseIndexScreenTest` resta verde, comprese le asserzioni esistenti su `->set('statusFilter', …)`
+  - [x] Regola registrata in `.ai/rules` — divieto di `@js()` negli attributi dei componenti Blade, con la forma corretta da usare — e riga corrispondente in `.ai/rules/index.md`
+  - [x] Nessuna nuova azione pubblica invocabile dal browser che scriva nel log applicativo, coerentemente con la nota già presente nel componente
 status_history:
   - status: PLANNED
     at: '2026-08-16T10:58:41+00:00'
@@ -61,4 +61,12 @@ status_history:
     at: '2026-08-16T11:57:20+00:00'
   - status: REVIEW
     at: '2026-08-16T12:08:49+00:00'
+  - status: DONE
+    at: '2026-08-16T12:20:22+00:00'
 rework: false
+merge_commit:
+  sha: 3da70c79954e7d40bff62bad49c6a6bcadda20e4
+  short_sha: 3da70c7
+  subject: 'chore(US-012): consuntivo di sessione'
+  committed_at: '2026-08-16T14:08:59+02:00'
+  url: null
