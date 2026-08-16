@@ -545,7 +545,7 @@ specs:
       title: Manutenzione
     priority: HIGH
     points: 2
-    status: 'IN PROGRESS'
+    status: REVIEW
     body: |
       #### US-012: Fix — i filtri di stato dell'elenco rilasci non applicano nulla
 
@@ -597,4 +597,5 @@ specs:
     status_history:
       - { status: PLANNED, at: '2026-08-16T10:58:41+00:00' }
       - { status: 'IN PROGRESS', at: '2026-08-16T11:57:20+00:00' }
+      - { status: REVIEW, at: '2026-08-16T12:08:49+00:00' }
     rework: false
