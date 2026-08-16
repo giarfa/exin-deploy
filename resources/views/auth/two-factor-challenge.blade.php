@@ -33,12 +33,24 @@
             </flux:button>
         </form>
 
+        {{-- Due elementi alternati invece di un `x-text`: l'etichetta contiene un
+             apice ("Usa il codice dell'app di autenticazione") e ogni forma che la
+             porta dentro una stringa JavaScript deve inseguirne l'escaping — con
+             `@js()` fuori gioco, perche nelle attribute bag dei componenti Blade
+             le direttive non vengono compilate (vedi `.ai/rules/views.md`). Qui la
+             stringa JavaScript non esiste: Alpine sceglie quale span mostrare.
+
+             `x-cloak` sul secondo, come sui due blocchi di campo sopra: prima
+             dell'avvio di Alpine deve comparire una sola etichetta, quella dello
+             stato iniziale. --}}
         <flux:link
             as="button"
             type="button"
             class="text-sm"
             x-on:click="recovery = ! recovery"
-            x-text="recovery ? @js(__('auth.two_factor_use_code')) : @js(__('auth.two_factor_use_recovery'))"
-        />
+        >
+            <span x-show="! recovery">{{ __('auth.two_factor_use_recovery') }}</span>
+            <span x-show="recovery" x-cloak>{{ __('auth.two_factor_use_code') }}</span>
+        </flux:link>
     </flux:card>
 </x-layouts.auth>

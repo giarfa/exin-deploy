@@ -141,12 +141,12 @@ tasks:
       7. `vendor/bin/pint --dirty --format agent`
 
       ## Completion Criteria
-      - [ ] Premendo "In corso" resta la sola sezione in corso; "Conclusa" il solo storico; "Tutte" entrambe
-      - [ ] L'indirizzo acquisisce `?stato=in_corso` / `?stato=conclusa` e un indirizzo incollato riapre l'elenco già filtrato
-      - [ ] Il bottone attivo conserva `aria-pressed="true"` e la variante `primary`; gli altri `aria-pressed="false"`
-      - [ ] Stato e progetto si combinano: le due scelte si applicano insieme
-      - [ ] Nessun errore in console su `/rilasci`, né al caricamento né al click
-      - [ ] `ReleaseIndexScreenTest` verde senza modifiche alle asserzioni esistenti
+      - [x] Premendo "In corso" resta la sola sezione in corso; "Conclusa" il solo storico; "Tutte" entrambe
+      - [x] L'indirizzo acquisisce `?stato=in_corso` / `?stato=conclusa` e un indirizzo incollato riapre l'elenco già filtrato
+      - [x] Il bottone attivo conserva `aria-pressed="true"` e la variante `primary`; gli altri `aria-pressed="false"`
+      - [x] Stato e progetto si combinano: le due scelte si applicano insieme
+      - [x] Nessun errore in console su `/rilasci`, né al caricamento né al click
+      - [x] `ReleaseIndexScreenTest` verde senza modifiche alle asserzioni esistenti
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -156,9 +156,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Fix
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
+    commit:
+      sha: 597dcc5abee0c358a8c11af68a99f20fe3fbf4f2
+      short_sha: 597dcc5
+      subject: "fix(US-012): TASK-01 filtri di stato dell'elenco dei rilasci"
+      committed_at: '2026-08-16T13:59:04+02:00'
+      url: null
   -
     id: TASK-02
     title: "Ripristinare l'etichetta del comando di scambio nella sfida 2FA"
@@ -278,4 +284,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-03
-updated_at: '2026-08-16T11:57:40+00:00'
+updated_at: '2026-08-16T11:59:04+00:00'
