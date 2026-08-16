@@ -119,7 +119,7 @@ tasks:
     id: TASK-00
     title: 'Inizializzare il repository git e il branch di lavoro'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
     body: |
       ## Description
@@ -145,11 +145,11 @@ tasks:
       7. Commit di ancoraggio del branch (commit vuoto ammesso)
 
       ## Completion Criteria
-      - [ ] Il repository git esiste, con commit iniziale che include codice e artefatti Larapilot
-      - [ ] `.gitignore` esclude `.env`, `vendor`, `node_modules` e i file del database SQLite
-      - [ ] I branch `main` e `develop` esistono
-      - [ ] Il branch `feature/US-001-accesso-membri-team` esiste in locale e ne deriva da `develop`
-      - [ ] Titolo e corpo della PR interna redatti e tenuti in locale
+      - [x] Il repository git esiste, con commit iniziale che include codice e artefatti Larapilot
+      - [x] `.gitignore` esclude `.env`, `vendor`, `node_modules` e i file del database SQLite
+      - [x] I branch `main` e `develop` esistono
+      - [x] Il branch `feature/US-001-accesso-membri-team` esiste in locale e ne deriva da `develop`
+      - [x] Titolo e corpo della PR interna redatti e tenuti in locale
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -158,11 +158,17 @@ tasks:
       - Commit: `chore(US-001): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
+    commit:
+      sha: 8fe5a685d0c732f1d8b54b3083354095c7cc5702
+      short_sha: 8fe5a68
+      subject: 'chore(US-001): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-12T12:17:50+02:00'
+      url: null
   -
     id: TASK-01
     title: 'Installare Livewire 4, Flux e Fortify'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-00
     body: |
@@ -196,13 +202,13 @@ tasks:
       8. `php artisan test` — la suite di serie resta verde
 
       ## Completion Criteria
-      - [ ] Livewire 4, Flux 2 e Fortify 1.38 installati e risolti senza conflitti
-      - [ ] `larastan/larastan` presente in `vendor/` e `php artisan larapilot:quality` eseguibile
-      - [ ] `config/fortify.php` pubblicato, con `registration` e passkeys disattivate
-      - [ ] `FortifyServiceProvider` registrato
-      - [ ] `npm run build` completa senza errori
-      - [ ] `composer audit` non segnala vulnerabilita
-      - [ ] Nessun componente Flux Pro utilizzato
+      - [x] Livewire 4, Flux 2 e Fortify 1.38 installati e risolti senza conflitti
+      - [x] `larastan/larastan` presente in `vendor/` e `php artisan larapilot:quality` eseguibile
+      - [x] `config/fortify.php` pubblicato, con `registration` e passkeys disattivate
+      - [x] `FortifyServiceProvider` registrato
+      - [x] `npm run build` completa senza errori
+      - [x] `composer audit` non segnala vulnerabilita
+      - [x] Nessun componente Flux Pro utilizzato
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -211,11 +217,17 @@ tasks:
       - Commit: `chore(US-001): TASK-01 installa Livewire 4, Flux e Fortify`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 42fd26dfe1dbf475c5ac374b23d2b7b627ab7bf7
+      short_sha: 42fd26d
+      subject: 'chore(US-001): TASK-01 installa Livewire 4, Flux e Fortify'
+      committed_at: '2026-08-12T12:21:15+02:00'
+      url: null
   -
     id: TASK-02
     title: 'Baseline di sicurezza e configurazione SQLite'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
     body: |
@@ -244,12 +256,12 @@ tasks:
       6. `vendor/bin/pint --dirty --format agent`
 
       ## Completion Criteria
-      - [ ] `HASH_DRIVER=argon2id` attivo e documentato in `.env.example`
-      - [ ] Una password creata dall'applicazione risulta hashata con Argon2id, non con bcrypt
-      - [ ] `Password::defaults()` registrato in `AppServiceProvider::boot()`
-      - [ ] `PRAGMA journal_mode` restituisce `wal`
-      - [ ] `busy_timeout` e `synchronous` configurati e documentati
-      - [ ] Nessuna funzione SQLite-specifica introdotta nel codice applicativo
+      - [x] `HASH_DRIVER=argon2id` attivo e documentato in `.env.example`
+      - [x] Una password creata dall'applicazione risulta hashata con Argon2id, non con bcrypt
+      - [x] `Password::defaults()` registrato in `AppServiceProvider::boot()`
+      - [x] `PRAGMA journal_mode` restituisce `wal`
+      - [x] `busy_timeout` e `synchronous` configurati e documentati
+      - [x] Nessuna funzione SQLite-specifica introdotta nel codice applicativo
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -258,11 +270,17 @@ tasks:
       - Commit: `feat(US-001): TASK-02 baseline di sicurezza Argon2id e SQLite in WAL`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 275b237afee6bf47e707c4ddaae523858ade10d5
+      short_sha: 275b237
+      subject: 'feat(US-001): TASK-02 baseline di sicurezza Argon2id e SQLite in WAL'
+      committed_at: '2026-08-12T12:22:25+02:00'
+      url: null
   -
     id: TASK-03
     title: 'Modello User con UUID, livello applicativo e stato attivo'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
     body: |
@@ -305,28 +323,34 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
 
       ## Completion Criteria
-      - [ ] `users.id` e un UUID e i nuovi record lo ricevono automaticamente
-      - [ ] `sessions.user_id` e una `foreignUuid` e il login mantiene la sessione senza errori
-      - [ ] `App\Enums\UserLevel` esiste con casi `Admin` e `Member`, ed e usato come cast
-      - [ ] `is_active` presente, indicizzato, con default `true`
-      - [ ] `User` usa `HasUuids` e mantiene la convenzione ad attributi `#[Fillable]` / `#[Hidden]`
-      - [ ] `isAdministrator()` restituisce `true` solo per il livello `Admin`
-      - [ ] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
+      - [x] `users.id` e un UUID e i nuovi record lo ricevono automaticamente
+      - [x] `sessions.user_id` e una `foreignUuid` e il login mantiene la sessione senza errori
+      - [x] `App\Enums\UserLevel` esiste con casi `Admin` e `Member`, ed e usato come cast
+      - [x] `is_active` presente, indicizzato, con default `true`
+      - [x] `User` usa `HasUuids` e mantiene la convenzione ad attributi `#[Fillable]` / `#[Hidden]`
+      - [x] `isAdministrator()` restituisce `true` solo per il livello `Admin`
+      - [x] `migrate:fresh --seed` completa senza errori e senza chiavi esterne orfane
 
       ## Test Data
-      - [ ] `database/factories/UserFactory.php` aggiornata con stati `admin()`, `member()`, `inactive()`
-      - [ ] `DatabaseSeeder` crea un amministratore e almeno quattro membri con dati realistici in italiano
-      - [ ] Factory e seeder aggiornati in **questo stesso task** delle modifiche a migrazione e modello
+      - [x] `database/factories/UserFactory.php` aggiornata con stati `admin()`, `member()`, `inactive()`
+      - [x] `DatabaseSeeder` crea un amministratore e almeno quattro membri con dati realistici in italiano
+      - [x] Factory e seeder aggiornati in **questo stesso task** delle modifiche a migrazione e modello
 
       ## Git Deliverables
       - Commit: `feat(US-001): TASK-03 User con UUID, livello applicativo e stato attivo`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 36643991106161d075574e178f9b4458ea420030
+      short_sha: '3664399'
+      subject: 'feat(US-001): TASK-03 User con UUID, livello applicativo e stato attivo'
+      committed_at: '2026-08-12T12:25:37+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Test: modello User, enum, hashing e regole password'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-03
     body: |
@@ -352,19 +376,25 @@ tasks:
       4. `php artisan test --compact --filter=UserTest` e `--filter=PasswordPolicyTest`
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] La copertura corrisponde al bar `NORMAL`: unit sul modello, feature sulla validazione
-      - [ ] Nessuno strumento browser o E2E introdotto
+      - [x] I test passano in locale
+      - [x] La copertura corrisponde al bar `NORMAL`: unit sul modello, feature sulla validazione
+      - [x] Nessuno strumento browser o E2E introdotto
 
       ## Git Deliverables
       - Commit: `test(US-001): TASK-04 copre modello User e regole password`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 1194c93119b5d3c2f8923c5d32efefddbcd24c7d
+      short_sha: 1194c93
+      subject: 'test(US-001): TASK-04 copre modello User e regole password'
+      committed_at: '2026-08-12T12:26:23+02:00'
+      url: null
   -
     id: TASK-05
     title: 'Autenticazione Fortify: login, reset password, 2FA e blocco degli utenti disattivati'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-04
     body: |
@@ -399,15 +429,15 @@ tasks:
       8. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
 
       ## Completion Criteria
-      - [ ] Login con email e password funzionante, con messaggio di errore per credenziali errate
-      - [ ] Un utente con `is_active = false` non accede e riceve un messaggio dedicato
-      - [ ] Reset password funzionante end-to-end (mailer `log` in locale)
-      - [ ] 2FA TOTP attivabile, con QR di enrolment e codici di recupero; challenge richiesto al login
-      - [ ] `/register` restituisce 404: nessuna registrazione pubblica
-      - [ ] Nessuna rotta applicativa raggiungibile senza autenticazione; l'anonimo viene rediretto al login
-      - [ ] Le passkey restano disattivate
-      - [ ] I testi dell'interfaccia vivono in `lang/`
-      - [ ] I tentativi di login falliti sono registrati nel log applicativo
+      - [x] Login con email e password funzionante, con messaggio di errore per credenziali errate
+      - [x] Un utente con `is_active = false` non accede e riceve un messaggio dedicato
+      - [x] Reset password funzionante end-to-end (mailer `log` in locale)
+      - [x] 2FA TOTP attivabile, con QR di enrolment e codici di recupero; challenge richiesto al login
+      - [x] `/register` restituisce 404: nessuna registrazione pubblica
+      - [x] Nessuna rotta applicativa raggiungibile senza autenticazione; l'anonimo viene rediretto al login
+      - [x] Le passkey restano disattivate
+      - [x] I testi dell'interfaccia vivono in `lang/`
+      - [x] I tentativi di login falliti sono registrati nel log applicativo
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -416,11 +446,17 @@ tasks:
       - Commit: `feat(US-001): TASK-05 autenticazione Fortify con 2FA e blocco utenti disattivati`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: b20e08a3715289a366075cadab8b705de468904e
+      short_sha: b20e08a
+      subject: 'feat(US-001): TASK-05 autenticazione Fortify con 2FA e blocco utenti disattivati'
+      committed_at: '2026-08-12T12:34:13+02:00'
+      url: null
   -
     id: TASK-06
     title: 'Test: flussi di autenticazione'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-05
     body: |
@@ -449,19 +485,25 @@ tasks:
       3. `php artisan test --compact --filter=Auth`
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] Ogni percorso di rifiuto e coperto, non solo il percorso felice
-      - [ ] Nessuno strumento browser o E2E introdotto
+      - [x] I test passano in locale
+      - [x] Ogni percorso di rifiuto e coperto, non solo il percorso felice
+      - [x] Nessuno strumento browser o E2E introdotto
 
       ## Git Deliverables
       - Commit: `test(US-001): TASK-06 copre i flussi di autenticazione`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: 3b9393c9b44e0554dcf22a673e6439c271a5fdfc
+      short_sha: 3b9393c
+      subject: 'test(US-001): TASK-06 copre i flussi di autenticazione'
+      committed_at: '2026-08-12T12:39:33+02:00'
+      url: null
   -
     id: TASK-07
     title: 'Shell applicativa Starter Kit e esclusione dagli indici'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-06
     body: |
@@ -508,18 +550,18 @@ tasks:
       12. `npm run build`; `vendor/bin/pint --dirty --format agent`
 
       ## Completion Criteria
-      - [ ] Layout con sidebar conforme al design system Starter Kit, senza componenti Flux Pro
-      - [ ] Sidebar permanente da 1024 px, drawer sotto, con una sola soglia in tutta l'applicazione
-      - [ ] Drawer accessibile: `aria-expanded`, `aria-controls`, focus intrappolato, `Esc` chiude, focus
+      - [x] Layout con sidebar conforme al design system Starter Kit, senza componenti Flux Pro
+      - [x] Sidebar permanente da 1024 px, drawer sotto, con una sola soglia in tutta l'applicazione
+      - [x] Drawer accessibile: `aria-expanded`, `aria-controls`, focus intrappolato, `Esc` chiude, focus
             restituito al trigger
-      - [ ] Skip link presente e raggiungibile con Tab come primo elemento
-      - [ ] Landmark semantici corretti e un solo `h1` per pagina
-      - [ ] Tema chiaro e scuro entrambi funzionanti, con preferenza persistita e contrasto verificato
-      - [ ] Target touch di almeno 44x44 px sotto 1024 px
-      - [ ] `favicon.svg` e `logo.svg` in `public/` e collegati nel layout
-      - [ ] `robots.txt` con `Disallow: /` e meta `noindex, nofollow` nel layout
-      - [ ] Nessuno scroll orizzontale a 320, 375, 768, 1024, 1280 px
-      - [ ] Verifica manuale eseguita e annotata (vedi Test Strategy del piano): il bar `NORMAL` non
+      - [x] Skip link presente e raggiungibile con Tab come primo elemento
+      - [x] Landmark semantici corretti e un solo `h1` per pagina
+      - [x] Tema chiaro e scuro entrambi funzionanti, con preferenza persistita e contrasto verificato
+      - [x] Target touch di almeno 44x44 px sotto 1024 px
+      - [x] `favicon.svg` e `logo.svg` in `public/` e collegati nel layout
+      - [x] `robots.txt` con `Disallow: /` e meta `noindex, nofollow` nel layout
+      - [x] Nessuno scroll orizzontale a 320, 375, 768, 1024, 1280 px
+      - [x] Verifica manuale eseguita e annotata (vedi Test Strategy del piano): il bar `NORMAL` non
             prevede test browser automatici
 
       ## Test Data
@@ -529,11 +571,17 @@ tasks:
       - Commit: `feat(US-001): TASK-07 shell applicativa e esclusione dagli indici`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: a84717c59027a2595f50824b7d30c459d7f318fa
+      short_sha: a84717c
+      subject: 'feat(US-001): TASK-07 shell applicativa e esclusione dagli indici'
+      committed_at: '2026-08-12T12:43:24+02:00'
+      url: null
   -
     id: TASK-08
     title: 'Gestione dei membri del team con autorizzazione lato server'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-07
     body: |
@@ -571,30 +619,36 @@ tasks:
       10. `vendor/bin/pint --dirty --format agent` e Larastan livello 5
 
       ## Completion Criteria
-      - [ ] Un amministratore crea un membro con nome, email e livello
-      - [ ] Un amministratore modifica un membro esistente
-      - [ ] Un amministratore disattiva un membro; nessuna azione di cancellazione e esposta
-      - [ ] Un `Member` che invoca una rotta di gestione riceve 403, anche chiamandola direttamente
-      - [ ] L'email e univoca: il duplicato viene rifiutato in validazione
-      - [ ] La password iniziale rispetta `Password::defaults()`
-      - [ ] Un membro disattivato resta visibile nell'elenco con il proprio stato
-      - [ ] Nessuna query N+1 nell'elenco
-      - [ ] I testi vivono in `lang/`
+      - [x] Un amministratore crea un membro con nome, email e livello
+      - [x] Un amministratore modifica un membro esistente
+      - [x] Un amministratore disattiva un membro; nessuna azione di cancellazione e esposta
+      - [x] Un `Member` che invoca una rotta di gestione riceve 403, anche chiamandola direttamente
+      - [x] L'email e univoca: il duplicato viene rifiutato in validazione
+      - [x] La password iniziale rispetta `Password::defaults()`
+      - [x] Un membro disattivato resta visibile nell'elenco con il proprio stato
+      - [x] Nessuna query N+1 nell'elenco
+      - [x] I testi vivono in `lang/`
 
       ## Test Data
-      - [ ] Nessuna nuova entita: `UserFactory` e `DatabaseSeeder` da TASK-03 restano validi
-      - [ ] Verificare che il seeder produca sia amministratori sia membri, cosi che le schermate di
+      - [x] Nessuna nuova entita: `UserFactory` e `DatabaseSeeder` da TASK-03 restano validi
+      - [x] Verificare che il seeder produca sia amministratori sia membri, cosi che le schermate di
             gestione siano valutabili su dati reali
 
       ## Git Deliverables
       - Commit: `feat(US-001): TASK-08 gestione dei membri del team con Policy`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: ac64c0b8097fb30e8b709e41183683e9e24d807b
+      short_sha: ac64c0b
+      subject: 'feat(US-001): TASK-08 gestione dei membri del team con Policy'
+      committed_at: '2026-08-12T12:47:15+02:00'
+      url: null
   -
     id: TASK-09
     title: 'Test: autorizzazione e gestione dei membri'
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-08
     body: |
@@ -622,20 +676,26 @@ tasks:
       4. `php artisan test --compact` — la suite completa resta verde
 
       ## Completion Criteria
-      - [ ] I test passano in locale
-      - [ ] L'autorizzazione e verificata a livello di rotta, non solo di Policy isolata
-      - [ ] La suite completa e verde
-      - [ ] Nessuno strumento browser o E2E introdotto
+      - [x] I test passano in locale
+      - [x] L'autorizzazione e verificata a livello di rotta, non solo di Policy isolata
+      - [x] La suite completa e verde
+      - [x] Nessuno strumento browser o E2E introdotto
 
       ## Git Deliverables
       - Commit: `test(US-001): TASK-09 copre autorizzazione e gestione dei membri`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
+    commit:
+      sha: b85dfe8fc3f5cc7d12a5ccdc59309539f7bed213
+      short_sha: b85dfe8
+      subject: 'test(US-001): TASK-09 copre autorizzazione e gestione dei membri'
+      committed_at: '2026-08-12T12:48:36+02:00'
+      url: null
   -
     id: TASK-10
     title: 'Documentazione baseline e CHANGELOG'
     type: Impl
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-09
     body: |
@@ -666,13 +726,13 @@ tasks:
       5. Verificare che `.env.example` sia allineato al `.env` reale, senza segreti
 
       ## Completion Criteria
-      - [ ] README sostituito: descrive l'applicazione, non l'installazione di Larapilot
-      - [ ] Avvio locale documentato via Herd, senza istruzioni Sail o Docker
-      - [ ] Variabili d'ambiente e comandi di test e seed documentati
-      - [ ] Nota architetturale su definizione/istanza e regola dello snapshot presente
-      - [ ] Vincoli permanenti annotati (portabilita database, Flux free, nessuna registrazione, passkey off)
-      - [ ] `CHANGELOG.md` creato con sezione `Unreleased`
-      - [ ] `.env.example` allineato e privo di segreti
+      - [x] README sostituito: descrive l'applicazione, non l'installazione di Larapilot
+      - [x] Avvio locale documentato via Herd, senza istruzioni Sail o Docker
+      - [x] Variabili d'ambiente e comandi di test e seed documentati
+      - [x] Nota architetturale su definizione/istanza e regola dello snapshot presente
+      - [x] Vincoli permanenti annotati (portabilita database, Flux free, nessuna registrazione, passkey off)
+      - [x] `CHANGELOG.md` creato con sezione `Unreleased`
+      - [x] `.env.example` allineato e privo di segreti
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli in questo task
@@ -681,4 +741,10 @@ tasks:
       - Commit: `docs(US-001): TASK-10 documentazione baseline e CHANGELOG`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: finalizzare titolo e corpo della PR locale verso `develop`
-updated_at: '2026-08-12T10:11:39+00:00'
+    commit:
+      sha: 6cc55a22eec4dc68b8e69bf34ca28f9c5b5b3e63
+      short_sha: 6cc55a2
+      subject: 'docs(US-001): TASK-10 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-12T12:50:02+02:00'
+      url: null
+updated_at: '2026-08-12T10:50:02+00:00'

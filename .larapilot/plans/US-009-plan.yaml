@@ -1,0 +1,523 @@
+code: US-009
+plan_body: |-
+  ## Soluzione tecnica
+
+  L'elenco delle release e la terza superficie operativa dopo "i miei step" (US-007) e il
+  dettaglio (US-008), e chiude la navigazione: oggi la voce "Release" della sidebar e ancora
+  marcata "in arrivo" e il dettaglio apre le briciole su "i miei step" in deroga dichiarata al
+  mockup. Questa spec sostituisce entrambe le cose.
+
+  **Componente** — `resources/views/components/releases/⚡index.blade.php`, Livewire in file
+  singolo come tutte le altre schermate, sulla rotta `/rilasci` (`releases.index`). Il plurale
+  nomina la collezione, come `/progetti` e `/membri`; `/rilasci/{release}` resta il dettaglio.
+
+  **Autorizzazione** — `ReleasePolicy::viewAny()` passa da `false` a **aperta a ogni utente
+  autenticato**, come gia `view()`. La decisione era esplicitamente rinviata a questa spec
+  (`.ai/rules/policies.md`): ora la schermata esiste, e la sua ragione e la stessa del
+  dettaglio — lo strumento non invia notifiche (rischio accettato n.1 del PRD), quindi sapere
+  dove sono ferme le release non e un privilegio ma la funzione del prodotto. `delete` resta
+  negata a chiunque. La rotta porta il `->can()` sul middleware: qui non c'e alcun tentativo da
+  registrare nel registro, quindi vale la protezione a due livelli e non la deroga di
+  `/step/{releaseStep}` (vincolo permanente 12 del README).
+
+  **Lettura** — due query di dominio, una per sezione, entrambe sullo snapshot:
+
+  - *In corso*: `Release::inProgress()` con `project`, `activeStep.assignedUser` e
+    `withCount('steps')` in eager loading; lo step attivo porta `withActivationInstant()` per
+    dire da quanto il flusso e fermo. Ordinamento `started_at desc`.
+  - *Concluse*: `Release::completed()` con `project` e `completedBy`; ordinamento
+    `completed_at desc`. Nessun limite di data: lo storico e consultabile a tempo indeterminato.
+
+  Le due sezioni hanno **colonne diverse** perche rispondono a domande diverse — la prima "chi
+  stiamo aspettando", la seconda "chi ha consegnato e quando": e la forma del mockup, non una
+  duplicazione.
+
+  **Ordinamento** — "dalle piu recenti alle piu vecchie" ha due letture a seconda della
+  sezione: una release in corso e recente se e stata **avviata** da poco, una conclusa se e
+  stata **consegnata** da poco. Ordinare entrambe su `started_at` metterebbe in cima allo
+  storico un rilascio avviato a marzo e chiuso ieri, sotto uno avviato e chiuso ad aprile.
+
+  **Indici** — `releases.status` e gia indicizzato e `unique(['project_id','label'])` copre il
+  solo `project_id` come prefisso: il criterio di accettazione e soddisfatto dalla migrazione di
+  US-004, che lo dichiara nel proprio commento. Nessuna nuova migrazione; un test di schema
+  verifica la presenza di entrambi gli indici, cosi che una migrazione futura non li tolga in
+  silenzio.
+
+  **Responsive** — tabella semantica unica con `max-lg:` che la impila in card sotto 1024 px
+  (`thead` nascosto, celle a blocco, etichetta resa da `before:content-[attr(data-label)]`),
+  esattamente come `.exd-table` del mockup. Nessuna duplicazione del contenuto in due alberi
+  DOM: una sola tabella, nessuno scroll orizzontale a nessun breakpoint, e la soglia resta
+  l'unica dell'applicazione (vincolo permanente 4).
+
+  ## Decisioni
+
+  **Filtri nella barra dell'indirizzo, non nello stato del componente.** `#[Url]` su `stato` e
+  `progetto`: un elenco filtrato deve essere condivisibile e ricaricabile: e la vista che una
+  persona incolla in chat per dire "guarda qui". Costa due parametri in piu nella query string.
+
+  **Tre valori di stato, non due.** `tutte` (predefinito), `in_corso`, `conclusa`. Il mockup
+  mostra entrambe le sezioni con "In corso" premuto, cioe un filtro che nasconde l'altra
+  sezione e non un interruttore fra due schermate: senza il terzo valore non esisterebbe il
+  ritorno alla vista d'insieme.
+
+  **Nessuna paginazione.** Lo storico cresce di qualche riga a settimana su un team interno, e
+  un paginatore su due sezioni indipendenti nella stessa pagina introdurrebbe due parametri di
+  pagina e due stati vuoti. Il costo di lettura e comunque vincolato da un test a **non
+  dipendere dal numero di release**. Quando lo storico superera l'ordine delle centinaia, la
+  sezione conclusa va paginata: e la stessa soglia oltre la quale l'ordinamento di "i miei
+  step" va spostato in SQL (nota nel piano di US-007).
+
+  **Nessun comando "Avvia una release" in cima.** Il mockup lo mostra, ma l'avvio si decide su
+  un progetto (`/progetti/{project}/rilascio`) e un comando senza progetto non porta da nessuna
+  parte. Deroga dichiarata, come quella che questa spec rimuove dal dettaglio.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` (nessun push automatico)
+  - Precondizione: US-008 e approvata ma non ancora integrata in `develop` — TASK-00 la integra
+    prima di ramificare, altrimenti il ramo di US-009 nascerebbe senza il dettaglio della release
+    che questa spec collega
+  - Branch: `feature/US-009-elenco-storico-release` da `develop`
+  - Un solo commit per task, Conventional Commits con codice spec e task
+  - PR verso `develop` preparata localmente; nessun push finche l'utente non lo chiede
+  - Merge in `develop` solo dopo approvazione umana in `/larapilot-review`
+
+  ## Strategia dei dati di prova
+
+  - Nessuna modifica di schema: nessuna nuova factory. `ReleaseFactory::completed()` gia
+    produce release concluse con autore e istante della consegna; `ReleaseStepFactory` ha gli
+    stati `blocked()` e `completed()`.
+  - Lo scenario dimostrativo (release a meta catena e release conclusa nel seeder) appartiene a
+    US-011 e **non** viene anticipato qui: l'elenco si verifica con le factory nei test.
+  - `php artisan migrate:fresh --seed` deve continuare a completare senza errori.
+
+  ## Strategia di test
+
+  - Bar: `NORMAL` — Pest/PHPUnit feature, unit e policy. Nessun Playwright, Dusk o suite di
+    viewport: la conformita responsive si verifica a mano ai tre breakpoint e si annota nel
+    passaggio in revisione.
+  - `ReleaseIndexScreenTest` — contenuto delle due sezioni, filtri per stato e per progetto,
+    ordinamento predefinito, stati vuoti, accesso di un membro non amministratore, rifiuto
+    all'utente anonimo.
+  - `ReleasePolicyTest` — `viewAny` ora concessa a ogni membro; `delete` resta negata a
+    chiunque, amministratori inclusi.
+  - `ReleaseIndexQueryBudgetTest` — stesso costo con una e con dieci release per sezione.
+  - `ReleaseSchemaConstraintsTest` — presenza degli indici su `status` e `project_id`.
+  - `SnapshotIsolationTest` — l'elenco non legge `step_definitions`, `field_definitions` ne
+    `project_role_assignments`.
+
+  ## Verifica manuale (handoff)
+
+  1. `php artisan migrate:fresh --seed`, accedi come membro non amministratore: la voce
+     "Release" della sidebar non e piu "in arrivo" e apre l'elenco.
+  2. A 375, 768 e 1280 px: sotto 1024 px le righe sono card impilate, sopra una tabella;
+     nessuno scroll orizzontale a nessuna delle tre larghezze.
+  3. Filtra per stato e per progetto, ricarica la pagina: i filtri sopravvivono perche vivono
+     nell'indirizzo.
+tasks:
+  -
+    id: TASK-00
+    title: "Ramo di lavoro per l'elenco delle release"
+    type: Impl
+    status: DONE
+    dependencies: {}
+    body: |-
+      ## Description
+      Prepara il ramo di lavoro. US-008 e approvata ma i suoi commit sono ancora solo sul proprio
+      ramo: `develop` si ferma all'integrazione di US-007. Ramificare da `develop` cosi com'e
+      farebbe nascere US-009 senza il dettaglio della release, che questa spec collega dall'elenco e
+      di cui riscrive le briciole. L'integrazione va quindi fatta prima, ed e legittima: il gate
+      umano su US-008 e gia passato (stato `DONE`).
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+
+      ## Steps
+      1. `git checkout develop`
+      2. `git merge --no-ff feature/US-008-dettaglio-release -m "merge: integra US-008 dettaglio della release"`
+      3. `git checkout -b feature/US-009-elenco-storico-release`
+      4. Prepara titolo e corpo della PR interna verso `develop` (solo in locale)
+      5. Commit di ancoraggio del ramo
+
+      ## Completion Criteria
+      - [x] `develop` contiene i commit di US-008
+      - [x] Il ramo `feature/US-009-elenco-storico-release` esiste in locale
+      - [x] Descrizione della PR verso `develop` preparata in locale
+
+      ## Test Data
+      - N/A — nessuna modifica di modelli o schema
+
+      ## Git Deliverables
+      - Commit: `chore(US-009): TASK-00 ramo di lavoro per l'elenco delle release`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: preparata in locale, aperta da remoto solo su richiesta
+    commit:
+      sha: d6a4d8abc1a8033246292f4adbe4f3fcd76322b2
+      short_sha: d6a4d8a
+      subject: "chore(US-009): TASK-00 ramo di lavoro per l'elenco delle release"
+      committed_at: '2026-08-13T23:55:17+02:00'
+      url: null
+  -
+    id: TASK-01
+    title: "Apre l'elenco alle persone e registra la rotta"
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-00
+    body: |-
+      ## Description
+      Apre `ReleasePolicy::viewAny()` a ogni membro autenticato, registra la rotta `/rilasci` e
+      promuove la voce di navigazione da "in arrivo" a collegamento reale. La decisione su `viewAny`
+      era esplicitamente rinviata a questa spec da `.ai/rules/policies.md`: la ragione e la stessa
+      gia scritta per `view()` — senza notifiche, sapere dove sono ferme le release e la funzione
+      dello strumento, non un privilegio.
+
+      Il componente nasce qui nella sua forma minima (intestazione e contenitore) perche la rotta
+      non puo puntare al nulla; contenuto e filtri arrivano in TASK-03.
+
+      ## Files Involved
+      - app/Policies/ReleasePolicy.php
+      - routes/web.php
+      - resources/views/components/releases/⚡index.blade.php (nuovo)
+      - resources/views/components/layouts/app.blade.php
+      - resources/views/components/nav/planned.blade.php (rimozione, se non piu usato)
+      - lang/it/releases.php
+
+      ## Steps
+      1. `viewAny()` torna `true`; riscrivi il blocco di documentazione: la domanda a cui l'elenco
+         risponde, perche e aperta come `view()`, e cosa **resta** chiuso (`create` ai soli
+         amministratori tramite il filtro `before()`, `delete` a nessuno).
+      2. Registra `Route::livewire('/rilasci', 'releases.index')->can('viewAny', Release::class)->name('releases.index')`
+         **prima** di `/rilasci/{release}`, con il commento che spiega perche qui il `->can()` c'e —
+         nessun tentativo da registrare, quindi vale la protezione a due livelli.
+      3. Componente minimo con `Gate::authorize('viewAny', Release::class)` al montaggio: secondo
+         livello dopo il middleware, come su tutte le altre schermate.
+      4. Sostituisci `<x-nav.planned icon="rocket-launch">` con una `flux:navlist.item` verso
+         `releases.index`, con `:current="request()->routeIs('releases.index')"` — **non**
+         `releases.*`, altrimenti il dettaglio di una release marcherebbe la voce come corrente
+         mentre l'elenco non e aperto.
+      5. `grep -rn "nav.planned" resources/` — se non resta alcun uso, elimina il componente:
+         nessuna sezione del prodotto e piu "in arrivo", e un componente senza chiamanti e codice
+         morto. Se un uso resta, lascialo e annotalo.
+      6. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=Release`
+
+      ## Completion Criteria
+      - [x] Un membro non amministratore raggiunge `/rilasci`; un utente anonimo viene rediretto al login
+      - [x] La voce "Release" della sidebar non e piu marcata "in arrivo"
+      - [x] `delete` resta negata a chiunque
+      - [x] Pint e Larastan (livello 5) passano
+
+      ## Test Data
+      - N/A — nessuna modifica di modelli o schema
+
+      ## Git Deliverables
+      - Commit: `feat(US-009): TASK-01 apre l'elenco delle release e registra la rotta`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+    commit:
+      sha: 1f14ad4e93f6b72d8e5f2f3f8614aa43d8beed2a
+      short_sha: 1f14ad4
+      subject: "feat(US-009): TASK-01 apre l'elenco delle release e registra la rotta"
+      committed_at: '2026-08-13T23:58:07+02:00'
+      url: null
+  -
+    id: TASK-02
+    title: "Scope di lettura per l'elenco e per lo storico"
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-01
+    body: |-
+      ## Description
+      Aggiunge a `Release` gli scope che l'elenco interroga, accanto a `inProgress()` e
+      `involving()` che gia esistono: `completed()` per lo storico e `forProject()` per il filtro.
+      Cosa significhi "conclusa" resta deciso in un posto solo, come gia per "in corso".
+
+      Nessuna migrazione: `releases.status` e gia indicizzato e `unique(['project_id','label'])`
+      copre il solo `project_id` come suo prefisso — la migrazione di US-004 lo dichiara nel proprio
+      commento, citando proprio gli elenchi filtrati di questa spec. Il criterio di accettazione e
+      gia soddisfatto; qui si aggiunge la verifica che nessuna migrazione futura lo tolga in
+      silenzio.
+
+      ## Files Involved
+      - app/Models/Release.php
+      - tests/Feature/Releases/ReleaseSchemaConstraintsTest.php
+
+      ## Steps
+      1. `#[Scope] completed(Builder $query)` — simmetrico a `inProgress()`, con il commento che
+         dice perche non e una condizione scritta a mano nella schermata.
+      2. `#[Scope] forProject(Builder $query, ?string $projectId)` — filtro inerte quando l'argomento
+         e `null`, cosi che la schermata non debba costruire la query in due rami.
+      3. Estendi `ReleaseSchemaConstraintsTest` con l'asserzione sulla presenza degli indici
+         `releases.status` e del prefisso `project_id`, letta da `Schema::getIndexes('releases')` —
+         nessuna funzione specifica di SQLite (vincolo permanente 1).
+      4. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=ReleaseSchemaConstraints`
+
+      ## Completion Criteria
+      - [x] `Release::completed()` e `forProject()` disponibili e documentati
+      - [x] Il test di schema verifica entrambi gli indici richiesti dal criterio di accettazione
+      - [x] Pint e Larastan (livello 5) passano
+
+      ## Test Data
+      - N/A — nessuna modifica di schema. `ReleaseFactory::completed()` copre gia lo stato concluso.
+
+      ## Git Deliverables
+      - Commit: `feat(US-009): TASK-02 scope di lettura dell'elenco e verifica degli indici`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+    commit:
+      sha: 3534d8267139b5770d03985c55f624266b4a263b
+      short_sha: 3534d82
+      subject: "feat(US-009): TASK-02 scope di lettura dell'elenco e verifica degli indici"
+      committed_at: '2026-08-13T23:59:24+02:00'
+      url: null
+  -
+    id: TASK-03
+    title: "Schermata dell'elenco con filtri per stato e progetto"
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-02
+    body: |-
+      ## Description
+      Il contenuto della schermata: due sezioni — in corso e concluse — con filtri per stato e per
+      progetto persistiti nell'indirizzo, e una tabella che sotto 1024 px diventa card impilate.
+
+      ## Files Involved
+      - resources/views/components/releases/⚡index.blade.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. Proprieta `#[Url] public string $stato = 'tutte'` e `#[Url] public ?string $progetto = null`;
+         `updated*` che non richiedono altro stato da azzerare (nessuna paginazione).
+      2. Proprieta calcolata *in corso*: `Release::inProgress()->forProject($this->progetto)` con
+         `with(['project', 'activeStep' => fn ($q) => $q->withActivationInstant()->with('assignedUser')])`
+         e `withCount('steps')`, ordinata `started_at desc`. **Attenzione all'ordine delle
+         aggiunte**: `withActivationInstant()` ridefinisce la select (vedi
+         `.ai/rules/components-releases.md`), quindi va applicato prima di ogni altra addizione sullo
+         step; il `withCount` sta sulla release e non sullo step.
+      3. Proprieta calcolata *concluse*: `Release::completed()->forProject(...)` con `project` e
+         `completedBy`, ordinata `completed_at desc`.
+      4. Una release in corso senza step attivo e un dato incoerente: rendi la riga **senza**
+         nascondere la release e scrivi una riga di `Log::warning`, come fa "i miei step" — su uno
+         strumento che esiste perche nulla resti fermo in silenzio, una release sparita dall'elenco
+         senza traccia sarebbe il difetto peggiore.
+      5. Filtro progetto: `flux:select` con i soli progetti che hanno almeno una release (una query
+         distinta, non l'anagrafica intera: un progetto senza rilasci filtrerebbe verso il vuoto).
+      6. Tabella semantica unica per sezione: `<caption class="sr-only">`, `<th scope="col">`,
+         `data-label` su ogni cella e utility `max-lg:` che impilano (`max-lg:block` su
+         `table/tbody/tr/td`, `max-lg:hidden` su `thead`, `max-lg:before:content-[attr(data-label)]`).
+         Nessun `overflow-x`: niente deve poter scorrere in orizzontale.
+      7. Stato reso con **icona e parola**, mai dal solo colore. Colonne: in corso — progetto,
+         etichetta, stato, step corrente (`n di m`), in attesa di (con da quanto), avviata;
+         concluse — progetto, etichetta, stato, consegnata da, conclusa, durata
+         (`started_at->diffForHumans($completed_at, absolute)`).
+      8. Stati vuoti espliciti e distinti per sezione e per filtro attivo: dire "nessun risultato"
+         senza dire quale filtro lo produce lascia senza sapere cosa cambiare.
+      9. Il progetto della riga e il collegamento al dettaglio; sotto 1024 px il bersaglio deve
+         essere di almeno 44x44 px.
+      10. Testi in `lang/it/releases.php` con prefisso `index_`. Verifica a 375, 768 e 1280 px.
+      11. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=Release`
+
+      ## Completion Criteria
+      - [x] Le due sezioni mostrano quanto chiede il criterio di accettazione
+      - [x] Filtri per stato e per progetto funzionanti e persistiti nell'indirizzo
+      - [x] Ordinamento dalle piu recenti alle piu vecchie in entrambe le sezioni
+      - [x] Card impilate sotto 1024 px, tabella sopra, nessuno scroll orizzontale a 375/768/1280 px
+      - [x] Pint e Larastan (livello 5) passano
+
+      ## Test Data
+      - N/A — nessuna modifica di modelli o schema
+
+      ## Git Deliverables
+      - Commit: `feat(US-009): TASK-03 schermata dell'elenco delle release con filtri`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+    commit:
+      sha: 990ad160f4b05364fc9bb02db9a9a56b97a7f8cc
+      short_sha: 990ad16
+      subject: "feat(US-009): TASK-03 schermata dell'elenco delle release con filtri"
+      committed_at: '2026-08-14T00:05:59+02:00'
+      url: null
+  -
+    id: TASK-04
+    title: "Riporta le briciole del dettaglio all'elenco"
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-03
+    body: |-
+      ## Description
+      US-008 apre le briciole del dettaglio su "i miei step" in **deroga dichiarata** al mockup,
+      motivata dal fatto che l'elenco non esisteva ancora e che la pagina dei progetti e riservata
+      agli amministratori. Ora l'elenco esiste ed e aperto a ogni membro: la deroga cade, e va
+      rimosso anche il commento che la annunciava — un commento che promette un cambiamento gia
+      avvenuto e peggio di nessun commento.
+
+      ## Files Involved
+      - resources/views/components/releases/⚡show.blade.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. Prima briciola verso `releases.index`, etichetta "Release"; sostituisci la chiave
+         `detail_breadcrumb_my_steps` con `detail_breadcrumb_releases` (rimuovendo la vecchia: una
+         chiave senza chiamanti e testo morto).
+      2. Riscrivi il commento sopra le briciole: non piu la deroga, ma il percorso ora completo.
+      3. Verifica che il ritorno dopo l'avvio di una release (`⚡start.blade.php`) non resti un
+         vicolo cieco per un amministratore; se manca il rientro all'elenco, aggiungilo.
+      4. `php artisan larapilot:quality --fix`, poi `php artisan test --filter=ReleaseDetail`
+
+      ## Completion Criteria
+      - [x] Il dettaglio apre le briciole sull'elenco, come il mockup
+      - [x] Nessuna chiave di traduzione orfana
+      - [x] I test del dettaglio restano verdi
+
+      ## Test Data
+      - N/A — nessuna modifica di modelli o schema
+
+      ## Git Deliverables
+      - Commit: `refactor(US-009): TASK-04 riporta le briciole del dettaglio all'elenco`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+    commit:
+      sha: 484ab9b1a10663d06138b082ba4d3a762ec0d614
+      short_sha: 484ab9b
+      subject: "refactor(US-009): TASK-04 riporta le briciole del dettaglio all'elenco"
+      committed_at: '2026-08-14T00:07:01+02:00'
+      url: null
+  -
+    id: TASK-05
+    title: 'Copertura della schermata e delle autorizzazioni'
+    type: Test
+    status: DONE
+    dependencies:
+      - TASK-04
+    body: |-
+      ## Description
+      Copertura funzionale dell'elenco e della Policy che lo apre.
+
+      ## Files Involved
+      - tests/Feature/Releases/ReleaseIndexScreenTest.php (nuovo)
+      - tests/Feature/Releases/ReleasePolicyTest.php
+      - tests/Feature/Releases/SnapshotIsolationTest.php
+
+      ## Steps
+      1. Usa le factory esistenti (`ReleaseFactory`, `ReleaseStepFactory`) — nessuna definizione
+         duplicata nel test. Ricorda che `completed_at`/`completed_by` **non** sono assegnabili in
+         massa: negli scenari a mano serve `forceFill()`, oppure gli stati di factory
+         (`.ai/rules/tests.md`).
+      2. Casi: sezione in corso con step corrente e responsabile in attesa; sezione conclusa con
+         autore e istante della consegna; filtro per stato nei tre valori; filtro per progetto;
+         ordinamento dalle piu recenti; stato vuoto; accesso concesso a un membro non
+         amministratore; utente anonimo rediretto al login.
+      3. Nessun limite implicito di data: una release conclusa con `completed_at` di due anni fa
+         compare comunque nello storico. E il criterio piu facile da rompere con un `where` di
+         comodo, e il piu difficile da accorgersi che si e rotto.
+      4. `ReleasePolicyTest`: `viewAny` ora concessa a un membro; `delete` resta negata anche a un
+         amministratore.
+      5. `SnapshotIsolationTest`: la resa dell'elenco non interroga `step_definitions`,
+         `field_definitions` ne `project_role_assignments` — asserzione sulla pagina resa, non su una
+         query scritta nel test.
+      6. `php artisan test --filter=ReleaseIndexScreen` e `--filter=ReleasePolicy`
+
+      ## Completion Criteria
+      - [x] Tutti i criteri di accettazione funzionali hanno un test
+      - [x] I test passano
+
+      ## Git Deliverables
+      - Commit: `test(US-009): TASK-05 copertura dell'elenco delle release`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+    commit:
+      sha: 9357adf4a3f835ff532dd7d9de11ec23acf88d5f
+      short_sha: 9357adf
+      subject: "test(US-009): TASK-05 copertura dell'elenco delle release"
+      committed_at: '2026-08-14T00:10:00+02:00'
+      url: null
+  -
+    id: TASK-06
+    title: "Budget di query dell'elenco"
+    type: Test
+    status: DONE
+    dependencies:
+      - TASK-05
+    body: |-
+      ## Description
+      L'elenco carica per ogni riga il progetto, lo step corrente, il suo responsabile, la lunghezza
+      della catena e — nello storico — chi ha consegnato: e la forma esatta in cui l'N+1 rientra. Il
+      test non fissa un numero assoluto, che ogni ottimizzazione legittima cambierebbe, ma
+      l'invariante: **stesso costo con una e con dieci**.
+
+      ## Files Involved
+      - tests/Feature/Releases/ReleaseIndexQueryBudgetTest.php (nuovo)
+
+      ## Steps
+      1. Stessa forma di `ReleaseDetailQueryBudgetTest` e `MyStepsQueryBudgetTest`: contatore su
+         `DB::listen`, confronto fra un insieme da uno e uno da dieci, per entrambe le sezioni.
+      2. **Alterna le forme** nell'insieme di prova: release appena avviate (step attivo in prima
+         posizione, dove `activationInstant()` ripiega su `release->started_at`) e release a meta
+         catena. Un insieme che chiude sempre uno step precedente misurerebbe solo il percorso gia
+         sicuro.
+      3. Verifica che leggere l'istante di attivazione non costi query: arriva dalla sottoquery gia
+         risolta.
+      4. `php artisan test --filter=ReleaseIndexQueryBudget`
+
+      ## Completion Criteria
+      - [x] Il costo non dipende dal numero di release, in entrambe le sezioni
+      - [x] Il test passa
+
+      ## Git Deliverables
+      - Commit: `test(US-009): TASK-06 budget di query dell'elenco delle release`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+    commit:
+      sha: 23107f5e9e4f30f71e142bee5bc50c69d89531d2
+      short_sha: 23107f5
+      subject: "test(US-009): TASK-06 budget di query dell'elenco delle release"
+      committed_at: '2026-08-14T00:11:09+02:00'
+      url: null
+  -
+    id: TASK-07
+    title: 'Changelog, README e regole di progetto'
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-06
+    body: |-
+      ## Description
+      Documentazione di baseline della spec: cosa cambia per chi usa lo strumento, cosa deve sapere
+      chi tocchera questo codice.
+
+      ## Files Involved
+      - CHANGELOG.md
+      - README.md
+      - .ai/rules/policies.md (tramite `record-rule`)
+
+      ## Steps
+      1. `CHANGELOG.md` sezione Unreleased: elenco e storico delle release (US-009, FR-015), voce di
+         navigazione non piu "in arrivo", briciole del dettaglio riportate all'elenco.
+      2. `README.md`: la superficie operativa e ora completa — descrivi l'elenco, i suoi filtri e
+         perche non e paginato, con la soglia oltre la quale andra fatto.
+      3. Aggiorna `.ai/rules/policies.md` con `record-rule`: `viewAny` non e piu il "rinviato a
+         US-009" ma una decisione presa, con la sua ragione. Chi legge la regola vecchia cercherebbe
+         una decisione ancora aperta.
+      4. Se in TASK-01 il componente `x-nav.planned` e stato rimosso, registralo nel changelog.
+
+      ## Completion Criteria
+      - [x] Changelog e README aggiornati
+      - [x] `.ai/rules/policies.md` non contiene piu un rinvio gia risolto
+
+      ## Test Data
+      - N/A — nessuna modifica di modelli o schema
+
+      ## Git Deliverables
+      - Commit: `docs(US-009): TASK-07 changelog, README e regola sull'elenco delle release`
+      - Push: **saltato** (`git_mode: GITFLOW`)
+      - PR: aggiornata in locale
+    commit:
+      sha: ef99c2bc28ded533989871cf1bef5df2206785f0
+      short_sha: ef99c2b
+      subject: "docs(US-009): TASK-07 changelog, README e regole sull'elenco delle release"
+      committed_at: '2026-08-14T00:14:08+02:00'
+      url: null
+updated_at: '2026-08-13T22:14:08+00:00'

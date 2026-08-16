@@ -5,7 +5,7 @@ epic:
   title: 'Esecuzione del rilascio'
 priority: HIGH
 points: 5
-status: TODO
+status: DONE
 body: |
   #### US-004: Avvio di una release con snapshot congelato del workflow
 
@@ -24,14 +24,30 @@ body: |
   altri bloccati. Modifico poi il template e la release avviata non cambia forma.
 
   **Criteri di accettazione**
-  - [ ] Un amministratore avvia una release indicando progetto ed etichetta
-  - [ ] All'avvio step e campi del template sono copiati nelle tabelle di istanza (snapshot)
-  - [ ] Ogni step di istanza memorizza il responsabile risolto dalla mappatura ruolo→persona del progetto
-  - [ ] Il primo step risulta attivo e tutti gli altri bloccati; la release è in stato "in corso"
-  - [ ] Modificare, riordinare o disattivare il template dopo l'avvio non altera step, ordine, campi né responsabili della release avviata (verificato da test)
-  - [ ] Il codice di esecuzione della release non legge le tabelle di definizione (verificato da test)
-  - [ ] L'avvio è impedito con messaggio esplicito quando un ruolo previsto dal template non è assegnato sul progetto
-  - [ ] L'avvio è impedito quando il progetto non ha un template associato o il template non ha step
-  - [ ] L'etichetta è obbligatoria e univoca per progetto: il duplicato è rifiutato
-  - [ ] L'avvio è registrato nel registro delle transizioni con attore e istante
-  - [ ] Un `member` non avvia release (Policy lato server)
+  - [x] Un amministratore avvia una release indicando progetto ed etichetta
+  - [x] All'avvio step e campi del template sono copiati nelle tabelle di istanza (snapshot)
+  - [x] Ogni step di istanza memorizza il responsabile risolto dalla mappatura ruolo→persona del progetto
+  - [x] Il primo step risulta attivo e tutti gli altri bloccati; la release è in stato "in corso"
+  - [x] Modificare, riordinare o disattivare il template dopo l'avvio non altera step, ordine, campi né responsabili della release avviata (verificato da test)
+  - [x] Il codice di esecuzione della release non legge le tabelle di definizione (verificato da test)
+  - [x] L'avvio è impedito con messaggio esplicito quando un ruolo previsto dal template non è assegnato sul progetto
+  - [x] L'avvio è impedito quando il progetto non ha un template associato o il template non ha step
+  - [x] L'etichetta è obbligatoria e univoca per progetto: il duplicato è rifiutato
+  - [x] L'avvio è registrato nel registro delle transizioni con attore e istante
+  - [x] Un `member` non avvia release (Policy lato server)
+status_history:
+  - status: PLANNED
+    at: '2026-08-12T22:09:39+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-12T22:12:48+00:00'
+  - status: REVIEW
+    at: '2026-08-12T22:52:07+00:00'
+  - status: DONE
+    at: '2026-08-13T08:38:00+00:00'
+rework: false
+merge_commit:
+  sha: 6f3caed8726182172f1e194a536d89c103eb71a1
+  short_sha: 6f3caed
+  subject: 'docs(US-004): registra consuntivo'
+  committed_at: '2026-08-13T00:52:20+02:00'
+  url: null

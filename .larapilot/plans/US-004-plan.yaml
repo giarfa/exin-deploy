@@ -1,0 +1,893 @@
+code: US-004
+plan_body: |-
+  ## Technical Solution
+
+  Prima spec di **esecuzione**: fin qui il repo conteneva solo configurazione. Questa spec introduce le tabelle
+  di **istanza** e la Action che le riempie congelando la definizione, cioe il punto su cui poggia tutto il resto
+  dell'epica EP-003.
+
+  Valgono da subito le due regole gia scritte in `.ai/rules/app.md`: la release legge solo il proprio snapshot, e
+  l'avanzamento vive in una sola transazione. Qui si consegna la prima meta della prima regola (la copia) e la
+  prima transizione (il primo step attivo); chiusura e avanzamento sono di US-005.
+
+  **Entita introdotte**
+
+  | Entita | Tabella | Contenuto |
+  | --- | --- | --- |
+  | `Release` | `releases` | progetto, etichetta, stato, template di origine, autore e istante di avvio |
+  | `ReleaseStep` | `release_steps` | copia dello step: posizione, nome, istruzioni, ruolo congelato, responsabile risolto, stato |
+  | `ReleaseStepField` | `release_step_fields` | copia del campo: etichetta, tipo, obbligatorieta, posizione, aiuto, valore |
+  | `ReleaseEvent` | `release_events` | registro in sola aggiunta: release, step, attore, azione, dati, istante |
+
+  Tutte con chiave primaria UUID (`HasUuids`), `#[Fillable]` con le sole colonne previste, cast dichiarati anche in
+  PHPDoc perche Larastan deduce il tipo dalla colonna e non dal cast — stessa disciplina di `User` e `Project`.
+
+  **Cosa viene congelato, e cosa resta un riferimento vivo.** La distinzione e il cuore della spec e va decisa una
+  volta sola, non caso per caso in US-005 e US-008:
+
+  - **Congelato in colonna** — tutto cio che descrive la *forma* del processo: nome dello step, istruzioni,
+    posizione, etichetta / tipo / obbligatorieta / testo di aiuto di ogni campo, e il **nome del ruolo**
+    (`release_steps.role_name`). Rinominare o disattivare un ruolo dopo l'avvio non deve cambiare come si legge
+    una release gia partita.
+  - **Riferimento vivo** — l'*identita* delle persone e del progetto: `assigned_user_id`, `started_by`,
+    `project_id`. Un membro che cambia cognome deve comparire con il nome corrente anche sulle release passate;
+    i membri non si cancellano mai, quindi il riferimento non si rompe.
+  - `release_steps.role_id` resta come chiave esterna **accanto** al nome congelato, e non in sua sostituzione:
+    serve solo a rendere il ruolo non cancellabile (`restrictOnDelete` piu `Role::REFERENCING_RELATIONS`, che il
+    PHPDoc di `Role` indica gia come punto di estensione di questa spec). Nessun percorso di esecuzione lo
+    dereferenzia per leggere il nome.
+  - `releases.workflow_template_id` e provenienza, non dipendenza: serve a dire da quale processo la release
+    deriva (FR-022 lo mostrera, Should, fuori MVP). Nessuna lettura di `step_definitions` o `field_definitions`
+    dopo l'avvio.
+
+  Il criterio "il codice di esecuzione non legge le tabelle di definizione" e verificato da un test che ascolta le
+  query e fallisce se ne compare una su `workflow_templates`, `step_definitions`, `field_definitions` o
+  `project_role_assignments`.
+
+  **Lo snapshot non si riordina.** `release_steps.position` e `release_step_fields.position` sono
+  `unsignedInteger` e **non** usano `App\Models\Concerns\OrderedByPosition`: quel concern esiste per rinumerare
+  una sequenza modificabile, e le posizioni negative temporanee servivano solo a quello. Qui la sequenza e
+  immutabile per definizione, e la differenza di tipo rispetto a `step_definitions.position` e il segnale che lo
+  dice a chi legge lo schema. L'unicita `(release_id, position)` e `(release_step_id, position)` resta applicata
+  dallo schema.
+
+  **Colonne create ora e riempite dopo.** `release_steps.completed_by` / `completed_at`,
+  `releases.completed_by` / `completed_at` e `release_step_fields.value` nascono qui, nullable e non scritte.
+  Scelta dichiarata: l'entita e definita una volta sola nel PRD (`## Modello dati`), e crearla monca costringerebbe
+  US-005 e US-006 a una migrazione di sola aggiunta di colonne su tabelle appena create. Il PHPDoc di ciascun
+  modello dice quale spec da significato a quelle colonne.
+
+  `value` e **una** colonna `text` nullable per tutti e quattro i tipi di campo, non quattro colonne tipizzate: la
+  semantica di lettura e scrittura per tipo (URL valido, conferma spuntata) e di US-005, come gia dichiarato nel
+  PHPDoc di `App\Enums\FieldType`.
+
+  **Enum di stato.** Due enum nativi con chiavi TitleCase e valori italiani stabili in colonna, sulla convenzione di
+  `UserLevel` e `FieldType`:
+
+  | Enum | Casi | Valore in colonna |
+  | --- | --- | --- |
+  | `ReleaseStatus` | `InProgress`, `Completed` | `in_corso`, `conclusa` |
+  | `ReleaseStepStatus` | `Blocked`, `Active`, `Completed` | `bloccato`, `attivo`, `completato` |
+  | `ReleaseEventAction` | `ReleaseStarted`, `StepCompleted`, `StepActivated`, `ReleaseCompleted`, `UnauthorizedAttempt` | `release_avviata`, `step_completato`, `step_attivato`, `release_conclusa`, `tentativo_non_autorizzato` |
+
+  `ReleaseEventAction` nasce con il vocabolario **completo** di FR-016 anche se questa spec scrive solo
+  `release_avviata`: sono i valori che finiscono in colonna e sopravvivono nello storico, quindi vanno decisi una
+  volta, non rinominati in US-005 quando esistono gia righe scritte. Colonne `string` con cast, mai `$table->enum`:
+  lo stesso motivo di portabilita di US-003.
+
+  **Action `App\Actions\Releases\StartRelease`.** Unico percorso di avvio, invocato dal componente Livewire e dai
+  test. Firma `handle(Project $project, string $label, User $actor): Release`, tutto dentro una `DB::transaction`:
+
+  1. Precondizioni, nell'ordine, ciascuna con la propria eccezione di dominio e un messaggio che dice **cosa**
+     manca (mai un generico "impossibile avviare"):
+     - progetto disattivato — `Project::active()` dichiara gia nel suo PHPDoc di essere il filtro dei progetti su
+       cui si avviano release;
+     - nessun template associato, template disattivato o senza step — decisi da `WorkflowTemplate::isUsable()` e
+       `unusableReason()`, scritti in US-003 **proprio** per essere invocati qui: la regola non viene riscritta;
+     - ruoli previsti dagli step senza responsabile sul progetto — da `Project::uncoveredRoles()`, che nomina i
+       ruoli scoperti;
+     - responsabile disattivato. **Estensione dichiarata oltre la lettera del criterio di accettazione**: un
+       membro disattivato non accede allo strumento, quindi il suo step non sarebbe chiudibile da nessuno tranne
+       un amministratore e la release nascerebbe ferma. Stessa logica con cui `CreateProject` gia salta le
+       predefinite disattivate e con cui la regola `AssignableUser` rifiuta l'assegnazione.
+  2. Creazione della `Release` (`in_corso`, `started_by`, `started_at`).
+  3. Copia degli step: un solo `insert()` di massa con UUID generati in PHP (`Str::uuid7()`, come `CreateProject`),
+     posizione e nome dal template, `role_name` congelato, `assigned_user_id` risolto dalla mappatura del
+     progetto, primo step `attivo` e tutti gli altri `bloccato`.
+  4. Copia dei campi: un solo `insert()` di massa, che riusa gli UUID degli step gia generati.
+  5. Scrittura dell'evento `release_avviata` con attore, istante e dati (etichetta, template di origine, numero di
+     step congelati).
+
+  Costo in query **costante** rispetto al numero di step e di campi: circa sei letture (progetto, template, step,
+  campi, mappature, responsabili, precaricati con `with`) e quattro scritture. Un test lo verifica confrontando un
+  template da due step con uno da cinque.
+
+  **Concorrenza.** L'avvio non ha bisogno del lock pessimistico che `.ai/rules/app.md` impone all'avanzamento:
+  non esiste stato preesistente da leggere e riscrivere. Il doppio invio e chiuso dall'unicita
+  `(project_id, label)` a livello di schema; il secondo tentativo viola l'indice, la transazione torna indietro
+  e il componente rende lo stesso messaggio della validazione, come `setAsDefault()` gia fa con la propria
+  eccezione TOCTOU dopo la revisione di US-003.
+
+  **Registro in sola aggiunta.** `ReleaseEvent` ha `const UPDATED_AT = null` (la tabella ha il solo `created_at`) e
+  un guardiano sugli eventi `updating` / `deleting` che solleva `ReleaseEventIsAppendOnly`. La consultazione del
+  registro, l'immutabilita verificata dall'interfaccia e la visibilita dei tentativi non autorizzati restano di
+  **US-010**: qui si consegna la scrittura del primo evento e la garanzia strutturale che non sia modificabile.
+
+  **Indici.** `unique(project_id, label)` — che serve anche da indice sui filtri per progetto, quindi un secondo
+  indice su `project_id` sarebbe ridondante e il commento della migrazione lo dice, cosi che la revisione di US-009
+  non lo legga come mancante — piu `index(status)` (US-009), `unique(release_id, position)`,
+  `index(assigned_user_id, status)` per la vista "i miei step" (US-007), `index(role_id)` per il conteggio dei
+  riferimenti di un ruolo, `index(release_id, created_at)` per la lettura cronologica del registro (US-010). Sono
+  gli indici prescritti dall'invariante 5 del PRD, creati nella stessa migrazione dello schema.
+
+  **Autorizzazione.** `ReleasePolicy` nuova, con il filtro `before()` per l'amministratore e `delete` fuori dal
+  filtro (`NOT_FILTERED`) come `ProjectPolicy` e `WorkflowTemplatePolicy`: una release non si cancella per nessuno,
+  e il PHPDoc spiega che portarsi via una release significa portarsi via lo storico. L'ability e
+  `create(User $user, Project $project)` — l'oggetto della decisione e il progetto, perche la release non esiste
+  ancora — autorizzata sulla rotta (`->can('create', [Release::class, 'project'])`) e di nuovo dentro l'azione
+  Livewire, che non ripassa dal middleware.
+
+  **Schermata.** Una sola, deliberatamente minima:
+
+  | Rotta | Componente | Contenuto |
+  | --- | --- | --- |
+  | `/progetti/{project}/rilascio` | `releases.start` | etichetta, riepilogo delle precondizioni, avvio, conferma con la catena congelata |
+
+  Il comando "Avvia una release" compare come azione di riga sull'elenco progetti, dove l'amministratore gia vede
+  template associato e ruoli scoperti; quando il progetto non e avviabile il comando e disabilitato e accanto
+  compare il motivo, invece di portare a una pagina che rifiuta. Dopo l'avvio la stessa pagina mostra in sola
+  lettura la catena appena congelata — posizione, nome, ruolo, responsabile, stato — con stati resi da **icona e
+  parola** e mai dal solo colore, secondo il contratto del mockup. E la prova visiva del criterio "primo step
+  attivo, gli altri bloccati", non l'anticipazione del dettaglio release: elenco, filtri e storico sono di US-009,
+  il dettaglio completo con valori e registro di US-008.
+
+  La voce di navigazione **Release** resta `x-nav.planned`: la pagina che promette e l'elenco, che arriva con
+  US-009. Trasformarla ora in un collegamento a una schermata di solo avvio direbbe il falso.
+
+  **Fuori perimetro.** Compilazione e chiusura degli step, avanzamento e lock pessimistico (US-005); conclusione
+  della release (US-006); "i miei step" (US-007); dettaglio release (US-008); elenco e storico (US-009);
+  consultazione del registro (US-010); scenario dimostrativo con release a meta catena e conclusa (US-011, che si
+  dichiara proprietario della composizione in `DatabaseSeeder`). Annullamento (FR-020) e riapertura (FR-019) sono
+  Should rinviati dal PRD: nessuno stato `annullata` in `ReleaseStatus`, e nessun messaggio che lo lasci intendere.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` (da `data.settings.git_mode`) — **nessun push automatico**
+  - Branch: `feature/US-004-avvio-release-snapshot` da `develop`
+  - TASK-00: bootstrap. `develop` e fermo al merge di US-002: i 22 commit di US-003, approvata in revisione umana,
+    non sono ancora integrati, e questa spec copia proprio le tabelle che US-003 introduce. TASK-00 li integra con
+    un merge esplicito e poi crea il branch
+  - Per task: un solo commit atomico in Conventional Commits (`type(US-004): TASK-NN sommario`)
+  - PR interna verso `develop`: titolo e corpo redatti e **tenuti in locale**; apertura remota e push solo su
+    richiesta esplicita dell'utente in sessione
+  - Merge in `develop` solo dopo approvazione umana in `/larapilot-review`
+  - Prima di ogni `task-done`: `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`
+    (Larastan livello 5) e suite verde
+
+  ## Test Data Strategy
+
+  - Factory per i quattro modelli introdotti, scritte **nello stesso task** di migrazione e modello:
+    - `ReleaseFactory` — etichette di dominio (`v2.4.0`, `2026.08.1`), stati `completed()` e `for(Project)`;
+    - `ReleaseStepFactory` — stati `active()`, `blocked()`, `completed()`, posizione progressiva coerente per
+      release, `role_name` coerente con il ruolo collegato;
+    - `ReleaseStepFieldFactory` — uno stato per ciascuno dei quattro tipi piu `optional()`, riusando le etichette
+      di dominio gia adottate da `FieldDefinitionFactory`;
+    - `ReleaseEventFactory` — azione `release_avviata` come predefinita, `payload` plausibile.
+  - Nessun `lorem`: nomi di step, etichette e valori devono somigliare a un rilascio reale, come il catalogo di
+    `RoleFactory` e `StepDefinitionFactory`.
+  - **Seeder: nessuna modifica in questa spec.** Lo scenario dimostrativo di esecuzione — release a meta catena e
+    release conclusa con registro popolato — e il perimetro esplicito di **US-011** ("qui si compone lo scenario in
+    `DatabaseSeeder`"). Comporlo ora significherebbe scriverlo due volte, e senza la chiusura degli step (US-005)
+    sarebbe comunque incompleto. Il dataset attuale basta a dimostrare questa spec: i due progetti seminati hanno
+    template predefinito e mappatura completa, quindi una release si avvia dall'interfaccia subito dopo
+    `migrate:fresh --seed`.
+  - `php artisan migrate:fresh --seed` deve chiudere senza errori prima di ogni `task-done` che tocchi schema o
+    modelli.
+
+  ## Test Strategy
+
+  - Bar: `NORMAL` (da `data.settings.testing`) — PHPUnit 12.5, nessun test browser, Dusk, Playwright o matrice di
+    viewport. La verifica dell'interfaccia e consegnata come nota di handoff manuale
+  - Test interlacciati con l'implementazione (TASK-04, TASK-06, TASK-07, TASK-10), non tutti alla fine
+  - Percorsi coperti obbligatoriamente:
+    1. **Vincoli di schema** scritti con `DB::table()`, aggirando modelli e validazione: unicita di
+       `(project_id, label)` e di `(release_id, position)`, `restrict` su `role_id`, `assigned_user_id`,
+       `project_id`, `cascade` da release a step e da step a campi
+    2. **Registro in sola aggiunta**: `update()` e `delete()` sollevano; la tabella non ha `updated_at`
+    3. **Snapshot congelato** (criterio esplicito): avviata la release si rinomina uno step, se ne riordinano due,
+       se ne cancella uno, si cambia un campo, si disattiva il template — la release conserva step, ordine, campi,
+       testi e responsabili
+    4. **Isolamento dalle definizioni** (criterio esplicito): con `DB::listen`, nessuna query su
+       `workflow_templates`, `step_definitions`, `field_definitions`, `project_role_assignments` mentre si legge
+       una release avviata con la sua catena
+    5. **Stato iniziale**: primo step `attivo`, tutti gli altri `bloccato`, release `in_corso`; esattamente uno
+       step attivo per release
+    6. **Precondizioni rifiutate**, una per criterio, ciascuna con messaggio esplicito e **nessuna scrittura
+       parziale** (la transazione torna indietro): progetto senza template, template senza step, template
+       disattivato, ruolo scoperto, responsabile disattivato, progetto disattivato
+    7. **Etichetta**: obbligatoria, univoca per progetto (il duplicato e rifiutato in validazione **e** dallo
+       schema), ammessa uguale su un altro progetto
+    8. **Registro**: l'avvio scrive un evento `release_avviata` con attore, istante e riferimento alla release
+    9. **Autorizzazione a due livelli**: un `member` riceve 403 sulla rotta e sull'azione Livewire di avvio;
+       l'amministratore avvia
+    10. **Query costanti**: avviare una release da un template con cinque step e quattordici campi non costa piu
+        query di una da due step; la lettura della catena congelata non e proporzionale al numero di step
+  - Nessuna API pubblica introdotta: nessun test di contratto, nessun OpenAPI (coerente con il PRD)
+
+  ## Quality gate
+
+  `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality` (Pint + Larastan livello 5) prima di
+  ogni `task-done`, piu `php artisan test --compact`. Gli attributi con cast — stati, `payload`, istanti — vanno
+  annotati in PHPDoc sui modelli: l'analisi statica non li deduce dalla colonna.
+tasks:
+  -
+    id: TASK-00
+    title: 'Integrare US-003 in develop e creare il branch di lavoro'
+    body: |-
+      ## Description
+      Preparare Gitflow per questa spec. Il branch non puo essere creato dallo stato attuale di `develop`: US-003 e
+      stata approvata in revisione umana ma i suoi 22 commit non sono mai stati integrati, quindi `develop` e fermo al
+      merge di US-002 e non contiene template, step e campi — cioe esattamente le tabelle che questa spec deve copiare.
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+
+      ## Steps
+      1. Verificare che l'albero di lavoro sia pulito (`git status --short`); committare il ledger Larapilot se presente
+      2. `git checkout develop`
+      3. `git merge --no-ff feature/US-003-template-workflow-step-campi -m "merge: integra US-003 template di workflow, step e campi richiesti"`
+      4. `php artisan test --compact` su `develop` dopo il merge: l'integrazione non deve rompere la suite
+      5. `git checkout -b feature/US-004-avvio-release-snapshot`
+      6. Commit di ancoraggio del branch: `chore(US-004): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+      7. Redigere titolo e corpo della PR interna verso `develop` e **tenerli in locale**: nessun push
+
+      ## Completion Criteria
+      - [x] `develop` contiene i commit di US-003 e la suite e verde su `develop`
+      - [x] Il branch `feature/US-004-avvio-release-snapshot` esiste in locale e parte da `develop`
+      - [x] Descrizione della PR interna redatta e tenuta in locale
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `chore(US-004): TASK-00 bootstrap feature branch` (piu il commit di merge su `develop`)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale verso `develop`, apertura remota solo su richiesta esplicita
+    type: Impl
+    status: DONE
+    dependencies: {}
+    commit:
+      sha: 749415753599bdfeac1f56a97a06f54d8b756160
+      short_sha: '7494157'
+      subject: 'chore(US-004): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-13T00:13:21+02:00'
+      url: null
+  -
+    id: TASK-01
+    title: 'Enum di stato e modello Release con migrazione e factory'
+    body: |-
+      ## Description
+      Introdurre l'entita di istanza radice e il vocabolario dei suoi stati. La release e il contenitore dello
+      snapshot: nasce `in_corso` con autore e istante di avvio, e porta gia le colonne di conclusione che US-006
+      riempira.
+
+      ## Files Involved
+      - app/Enums/ReleaseStatus.php
+      - app/Models/Release.php
+      - database/migrations/xxxx_create_releases_table.php
+      - database/factories/ReleaseFactory.php
+      - app/Models/Project.php (relazione `releases()`)
+
+      ## Steps
+      1. `php artisan make:enum` non esiste: creare `App\Enums\ReleaseStatus` a mano sul modello di `App\Enums\UserLevel`
+         — casi `InProgress` (`in_corso`) e `Completed` (`conclusa`), metodo `label()` in italiano. **Nessun caso
+         `Annullata`**: FR-020 e Should rinviato dal PRD
+      2. `php artisan make:model Release -mf --no-interaction`
+      3. Migrazione: `uuid('id')->primary()`, `foreignUuid('project_id')->constrained()->restrictOnDelete()`,
+         `foreignUuid('workflow_template_id')->constrained()->restrictOnDelete()`, `string('label')`,
+         `string('status')->index()`, `foreignUuid('started_by')->constrained('users')->restrictOnDelete()`,
+         `timestamp('started_at')`, `foreignUuid('completed_by')->nullable()->constrained('users')->restrictOnDelete()`,
+         `timestamp('completed_at')->nullable()`, `timestamps()`
+      4. Vincoli e indici nella stessa migrazione: `unique(['project_id', 'label'])` e `index('status')`. Commentare
+         che l'unicita composta serve anche da indice sui filtri per progetto, quindi un secondo `index('project_id')`
+         sarebbe ridondante — la nota vale per la revisione di US-009, che quegli indici li richiede
+      5. Modello: `HasUuids`, `#[Fillable]` con le sole colonne scritte dalla Action, cast `status` a `ReleaseStatus` e
+         `started_at` / `completed_at` a `datetime`, PHPDoc dei tipi effettivi per Larastan. Relazioni `project()`,
+         `workflowTemplate()`, `startedBy()`. PHPDoc: la provenienza del template non e una dipendenza, e le colonne di
+         conclusione ricevono significato in US-006
+      6. `Project::releases()` come `HasMany`, con PHPDoc che ricorda che il progetto non si cancella proprio perche
+         contiene lo storico
+      7. `ReleaseFactory`: etichette di dominio (`v2.4.0`, `2026.08.1`), `for(Project)` coerente con il template del
+         progetto, stato `completed()` che valorizza autore e istante di conclusione
+      8. `php artisan migrate:fresh --seed`, `vendor/bin/pint --dirty --format agent`, `php artisan larapilot:quality`,
+         `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] `ReleaseStatus` con due soli casi ed etichette italiane
+      - [x] Tabella `releases` con unicita `(project_id, label)` e indice su `status` creati nella stessa migrazione
+      - [x] Modello con cast dichiarati anche in PHPDoc e relazioni verso progetto, template e autore
+      - [x] `ReleaseFactory` produce etichette plausibili e uno stato `completed()`
+      - [x] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+
+      ## Test Data
+      - [x] `database/factories/ReleaseFactory.php` creata nello stesso task della migrazione
+      - [x] Seeder non toccato: lo scenario di esecuzione e perimetro dichiarato di US-011
+
+      ## Git Deliverables
+      - Commit: `feat(US-004): TASK-01 modello della release e stato del rilascio`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-00
+    commit:
+      sha: dcb065aa99e3015404d3f87af237b59148ff9b2a
+      short_sha: dcb065a
+      subject: 'feat(US-004): TASK-01 modello della release e stato del rilascio'
+      committed_at: '2026-08-13T00:16:29+02:00'
+      url: null
+  -
+    id: TASK-02
+    title: 'Snapshot della catena: ReleaseStep e ReleaseStepField'
+    body: |-
+      ## Description
+      Le due tabelle che rendono possibile il congelamento. Copiano forma e testi della definizione e vi aggiungono cio
+      che la definizione non sa: chi e il responsabile e a che punto e lo step.
+
+      Il ruolo viene congelato **per nome** accanto alla chiave esterna: l'esecuzione legge `role_name`, mentre
+      `role_id` serve solo a rendere il ruolo non cancellabile. `Role::REFERENCING_RELATIONS` indica gia questa spec
+      come punto di estensione, e il suo PHPDoc avverte che chi la estende deve aggiungere la relazione anche ai
+      `withCount()` degli elenchi che chiamano `usageLabel()` per riga, altrimenti il conteggio mancante diventa un N+1.
+
+      ## Files Involved
+      - app/Enums/ReleaseStepStatus.php
+      - app/Models/ReleaseStep.php
+      - app/Models/ReleaseStepField.php
+      - database/migrations/xxxx_create_release_steps_table.php
+      - database/migrations/xxxx_create_release_step_fields_table.php
+      - database/factories/ReleaseStepFactory.php
+      - database/factories/ReleaseStepFieldFactory.php
+      - app/Models/Role.php
+      - resources/views/components/roles/⚡index.blade.php
+
+      ## Steps
+      1. `App\Enums\ReleaseStepStatus`: `Blocked` (`bloccato`), `Active` (`attivo`), `Completed` (`completato`), con
+         `label()` in italiano
+      2. Migrazione `release_steps`: `foreignUuid('release_id')->constrained()->cascadeOnDelete()`,
+         `unsignedInteger('position')`, `string('name')`, `text('instructions')->nullable()`,
+         `foreignUuid('role_id')->constrained()->restrictOnDelete()`, `string('role_name')`,
+         `foreignUuid('assigned_user_id')->constrained('users')->restrictOnDelete()`, `string('status')`,
+         `foreignUuid('completed_by')->nullable()->constrained('users')->restrictOnDelete()`,
+         `timestamp('completed_at')->nullable()`, `timestamps()`
+      3. Vincoli e indici: `unique(['release_id', 'position'])`, `index(['assigned_user_id', 'status'])` per la vista
+         "i miei step" (US-007), `index('role_id')`. Commentare perche `position` e `unsignedInteger` e non `integer`
+         come in `step_definitions`: lo snapshot non si riordina, quindi non servono posizioni temporanee negative
+      4. Migrazione `release_step_fields`: `foreignUuid('release_step_id')->constrained()->cascadeOnDelete()`,
+         `unsignedInteger('position')`, `string('label')`, `string('type')`, `boolean('is_required')->default(false)`,
+         `string('help_text')->nullable()`, `text('value')->nullable()`, `timestamps()`,
+         `unique(['release_step_id', 'position'])`. Commentare che `value` e una sola colonna per tutti e quattro i
+         tipi e che la semantica per tipo e di US-005
+      5. Modelli: `HasUuids`, `#[Fillable]`, cast (`status`, `type` a `FieldType`, `is_required`, `position`,
+         `completed_at`), PHPDoc dei tipi effettivi. **Nessun uso di `OrderedByPosition`**, con il motivo scritto nel
+         PHPDoc. Relazioni `release()`, `role()`, `assignedUser()`, `fields()` ordinata per posizione,
+         `releaseStep()`
+      6. `Role`: relazione `releaseSteps()` e aggiunta di `'releaseSteps'` a `REFERENCING_RELATIONS`
+      7. `roles.index`: aggiungere `releaseSteps` ai `withCount()` dell'elenco, come prescritto dal PHPDoc di `Role`;
+         verificare che l'etichetta di utilizzo nomini anche le release
+      8. Factory: `ReleaseStepFactory` con stati `active()`, `blocked()`, `completed()` e `role_name` coerente con il
+         ruolo collegato; `ReleaseStepFieldFactory` con uno stato per tipo (`shortText()`, `longText()`, `link()`,
+         `confirmation()`) e `optional()`
+      9. `php artisan migrate:fresh --seed`, Pint, `larapilot:quality`, `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] Le due tabelle esistono con unicita di posizione e indici di lettura previsti dal PRD
+      - [x] `role_name` congelato accanto a `role_id`, con il motivo nel PHPDoc
+      - [x] I modelli non usano `OrderedByPosition` e ne spiegano il perche
+      - [x] Un ruolo referenziato da uno step di release non e cancellabile, e l'elenco ruoli non introduce N+1
+      - [x] Factory con gli stati previsti per step e per i quattro tipi di campo
+      - [x] `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+
+      ## Test Data
+      - [x] `ReleaseStepFactory` e `ReleaseStepFieldFactory` create nello stesso task delle migrazioni
+      - [x] Seeder non toccato: composizione dello scenario di esecuzione in US-011
+
+      ## Git Deliverables
+      - Commit: `feat(US-004): TASK-02 snapshot degli step e dei campi di una release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-01
+    commit:
+      sha: 37a7990eb4f34332e68321f294fdc96878bb889e
+      short_sha: 37a7990
+      subject: 'feat(US-004): TASK-02 snapshot degli step e dei campi di una release'
+      committed_at: '2026-08-13T00:19:25+02:00'
+      url: null
+  -
+    id: TASK-03
+    title: 'Registro delle transizioni in sola aggiunta'
+    body: |-
+      ## Description
+      La tabella su cui poggia FR-016. Questa spec vi scrive un solo tipo di evento — l'avvio — ma ne fissa da subito
+      il vocabolario e la garanzia strutturale: una riga scritta non si modifica e non si cancella.
+
+      Il vocabolario nasce completo di proposito: i valori finiscono in colonna e sopravvivono nello storico, quindi
+      rinominarli in US-005 quando esistono gia righe scritte sarebbe una migrazione di dati evitabile.
+
+      ## Files Involved
+      - app/Enums/ReleaseEventAction.php
+      - app/Models/ReleaseEvent.php
+      - app/Exceptions/ReleaseEventIsAppendOnly.php
+      - database/migrations/xxxx_create_release_events_table.php
+      - database/factories/ReleaseEventFactory.php
+
+      ## Steps
+      1. `App\Enums\ReleaseEventAction` con i cinque casi di FR-016: `ReleaseStarted` (`release_avviata`),
+         `StepCompleted` (`step_completato`), `StepActivated` (`step_attivato`), `ReleaseCompleted`
+         (`release_conclusa`), `UnauthorizedAttempt` (`tentativo_non_autorizzato`), con `label()` in italiano. PHPDoc:
+         questa spec scrive solo il primo, gli altri sono di US-005 / US-006 / US-010
+      2. Migrazione `release_events`: `foreignUuid('release_id')->constrained()->cascadeOnDelete()`,
+         `foreignUuid('release_step_id')->nullable()->constrained('release_steps')->cascadeOnDelete()`,
+         `foreignUuid('user_id')->constrained('users')->restrictOnDelete()`, `string('action')->index()`,
+         `json('payload')->nullable()`, `timestamp('created_at')` **senza** `updated_at`, con il motivo a commento;
+         `index(['release_id', 'created_at'])` per la lettura cronologica di US-010
+      3. Modello: `const UPDATED_AT = null`, cast `action` e `payload` (`array`), relazioni `release()`, `releaseStep()`,
+         `user()`. PHPDoc: registro in sola aggiunta, la consultazione e di US-010
+      4. Guardiano in `booted()`: sugli eventi `updating` e `deleting` sollevare `ReleaseEventIsAppendOnly`, con
+         costruttore nominato sul modello di `InactiveTemplateCannotBeDefault::for()`. E la garanzia strutturale che
+         US-010 verifichera anche a livello di interfaccia
+      5. `ReleaseEventFactory` con `action` predefinita `release_avviata` e `payload` plausibile
+      6. `php artisan migrate:fresh --seed`, Pint, `larapilot:quality`, `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] Tabella senza `updated_at`, con indice cronologico per release
+      - [x] Enum con il vocabolario completo di FR-016 e il PHPDoc che dice quale spec scrive cosa
+      - [x] `update()` e `delete()` sul modello sollevano `ReleaseEventIsAppendOnly`
+      - [x] Factory creata; `migrate:fresh --seed` senza errori, Pint e Larastan verdi, suite verde
+
+      ## Test Data
+      - [x] `ReleaseEventFactory` creata nello stesso task della migrazione
+      - [x] Seeder non toccato: registro popolato dallo scenario di US-011
+
+      ## Git Deliverables
+      - Commit: `feat(US-004): TASK-03 registro delle transizioni in sola aggiunta`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-02
+    commit:
+      sha: 88b58dccd96462dbd7af22744be2bd11f9c5080a
+      short_sha: 88b58dc
+      subject: 'feat(US-004): TASK-03 registro delle transizioni in sola aggiunta'
+      committed_at: '2026-08-13T00:20:45+02:00'
+      url: null
+  -
+    id: TASK-04
+    title: 'Test: modelli, vincoli di schema e sola aggiunta del registro'
+    body: |-
+      ## Description
+      Copertura della fondazione dati prima che la Action vi si appoggi. I vincoli si verificano scrivendo con
+      `DB::table()`, aggirando modelli e validazione: e il modo in cui US-002 e US-003 hanno dimostrato che il vincolo
+      vive nello schema e non nel solo codice applicativo.
+
+      ## Files Involved
+      - tests/Feature/Releases/ReleaseSchemaConstraintsTest.php
+      - tests/Unit/Models/ReleaseTest.php
+      - tests/Unit/Models/ReleaseStepTest.php
+      - tests/Feature/Releases/ReleaseEventAppendOnlyTest.php
+      - tests/Unit/Enums/ReleaseStatusTest.php
+
+      ## Steps
+      1. Usare le factory di TASK-01/02/03: nessuna definizione di dati duplicata nei test
+      2. Vincoli di schema, scritti con `DB::table()`: due release con la stessa etichetta sullo stesso progetto sono
+         rifiutate; la stessa etichetta su un altro progetto e ammessa; due step con la stessa posizione nella stessa
+         release sono rifiutati; idem per due campi nello stesso step
+      3. Integrita referenziale: cancellare un ruolo o un membro referenziato da uno step di release e rifiutato
+         (`restrict`); cancellare una release porta via step, campi ed eventi (`cascade`); cancellare uno step porta
+         via i suoi campi
+      4. Cast ed enum: uno stato fuori dai casi previsti, scritto a mano in colonna, solleva in lettura; `label()`
+         restituisce le etichette italiane
+      5. Relazioni: `Release::steps()` ordinata per posizione, `ReleaseStep::fields()` ordinata per posizione,
+         `Role::releaseSteps()` conteggiata dall'elenco ruoli
+      6. Registro: `update()` e `delete()` su un `ReleaseEvent` sollevano `ReleaseEventIsAppendOnly`; la tabella non ha
+         `updated_at`
+      7. `php artisan test --compact --filter=Release`
+
+      ## Completion Criteria
+      - [x] I vincoli di unicita e di integrita sono verificati aggirando i modelli
+      - [x] Enum e cast coperti su lettura e su etichetta
+      - [x] Il registro rifiuta modifica e cancellazione
+      - [x] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-004): TASK-04 copre modelli, vincoli di schema e registro`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-03
+    commit:
+      sha: fa27be8276db7c5c235772e1727bbd34d9b3dc14
+      short_sha: fa27be8
+      subject: 'test(US-004): TASK-04 copre modelli, vincoli di schema e registro'
+      committed_at: '2026-08-13T00:22:47+02:00'
+      url: null
+  -
+    id: TASK-05
+    title: 'Action StartRelease: snapshot, responsabili risolti ed eccezioni di dominio'
+    body: |-
+      ## Description
+      Il cuore della spec: unico percorso di avvio, una sola transazione, nessuna lettura della definizione dopo la
+      copia. Le precondizioni riusano le regole gia scritte invece di riscriverle — `WorkflowTemplate::isUsable()` e
+      `unusableReason()` sono stati introdotti in US-003 dichiarando esplicitamente che sarebbero serviti qui, e
+      `Project::uncoveredRoles()` e la segnalazione che questa Action trasforma in rifiuto.
+
+      ## Files Involved
+      - app/Actions/Releases/StartRelease.php
+      - app/Exceptions/ProjectWithoutUsableTemplate.php
+      - app/Exceptions/RolesWithoutResponsible.php
+      - app/Exceptions/InactiveResponsibleOnProject.php
+      - app/Exceptions/InactiveProjectCannotStartRelease.php
+
+      ## Steps
+      1. Eccezioni di dominio con costruttori nominati sul modello di `InactiveTemplateCannotBeDefault::for()`, ognuna
+         con un messaggio che dice **cosa** manca: il template mancante, disattivato o senza step; i ruoli scoperti,
+         nominati; i responsabili disattivati, nominati; il progetto disattivato
+      2. `StartRelease::handle(Project $project, string $label, User $actor): Release`, tutto dentro `DB::transaction`
+      3. Eager loading unico in apertura:
+         `loadMissing(['workflowTemplate.stepDefinitions.role', 'workflowTemplate.stepDefinitions.fieldDefinitions', 'assignments.user'])`
+         — da qui in poi nessuna query per step o per campo
+      4. Precondizioni nell'ordine: progetto attivo; template presente e `isUsable()` (motivo da `unusableReason()`);
+         `uncoveredRoles()` vuota; nessun responsabile disattivato fra quelli risolti. Ogni rifiuto solleva prima di
+         qualsiasi scrittura
+      5. Creazione della release: stato `in_corso`, `started_by`, `started_at`
+      6. Copia degli step in **un solo** `insert()`: UUID generati in PHP con `Str::uuid7()`, posizione / nome /
+         istruzioni dalla definizione, `role_name` congelato dal ruolo, `assigned_user_id` dalla mappatura del
+         progetto, primo step `attivo` e restanti `bloccato`
+      7. Copia dei campi in **un solo** `insert()`, riusando gli UUID degli step gia generati
+      8. Scrittura dell'evento `release_avviata` con attore, istante e `payload` (etichetta, template di origine,
+         numero di step congelati)
+      9. PHPDoc dell'Action: perche non serve il lock pessimistico richiesto da `.ai/rules/app.md` per l'avanzamento
+         (nessuno stato preesistente da leggere e riscrivere) e come il doppio invio e chiuso dall'unicita di schema
+      10. Pint, `larapilot:quality`, `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] Unico percorso di avvio, con tutte le precondizioni prima di qualsiasi scrittura
+      - [x] Snapshot completo di step e campi in due sole scritture di massa
+      - [x] Responsabile risolto e nome del ruolo congelato su ogni step
+      - [x] Primo step attivo, gli altri bloccati, release `in_corso`, evento di avvio registrato
+      - [x] Numero di query indipendente dal numero di step e di campi
+      - [x] Pint e Larastan verdi, suite verde
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-004): TASK-05 avvio della release con snapshot congelato`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-04
+    commit:
+      sha: 0520080dfc2657c59b1006d7d7d80697c9faf81b
+      short_sha: '0520080'
+      subject: 'feat(US-004): TASK-05 avvio della release con snapshot congelato'
+      committed_at: '2026-08-13T00:24:50+02:00'
+      url: null
+  -
+    id: TASK-06
+    title: 'Test: snapshot congelato, precondizioni rifiutate ed evento di avvio'
+    body: |-
+      ## Description
+      Copertura dei criteri di accettazione dell'avvio. Il test dello snapshot e quello che vale la spec: dimostra che
+      modificare il template dopo l'avvio non tocca la release, che e il motivo per cui esistono tabelle separate.
+
+      ## Files Involved
+      - tests/Feature/Releases/StartReleaseTest.php
+      - tests/Feature/Releases/SnapshotIsolationTest.php
+
+      ## Steps
+      1. Usare le factory esistenti di template, step, campi, progetti e mappature: nessun dato costruito a mano
+      2. Avvio riuscito: step e campi copiati uno a uno (posizione, nome, istruzioni, etichetta, tipo, obbligatorieta,
+         testo di aiuto), responsabile risolto su ogni step, primo step `attivo` e tutti gli altri `bloccato`, release
+         `in_corso`; **esattamente uno** step attivo
+      3. Snapshot congelato: dopo l'avvio rinominare uno step, riordinarne due, cancellarne uno, cambiare etichetta e
+         obbligatorieta di un campo, rinominare il ruolo e disattivare il template — la release conserva numero,
+         ordine, testi, campi e responsabili
+      4. Precondizioni, un test per criterio, ciascuna con messaggio esplicito e **nessuna riga scritta** (release,
+         step, campi ed eventi restano a zero): progetto senza template, template senza step, template disattivato,
+         ruolo previsto senza responsabile, responsabile disattivato, progetto disattivato
+      5. Etichetta: obbligatoria; duplicata sullo stesso progetto rifiutata; uguale su un altro progetto ammessa
+      6. Registro: l'avvio scrive un solo evento `release_avviata` con attore, istante e riferimento alla release
+      7. `php artisan test --compact --filter=Release`
+
+      ## Completion Criteria
+      - [x] Copia verificata campo per campo, non solo per conteggio
+      - [x] Modifiche al template dopo l'avvio non alterano la release
+      - [x] Ogni precondizione ha il proprio test, con rifiuto esplicito e nessuna scrittura parziale
+      - [x] Unicita dell'etichetta per progetto coperta su entrambi i versanti
+      - [x] Evento di avvio verificato; suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-004): TASK-06 copre snapshot congelato e precondizioni di avvio`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-05
+    commit:
+      sha: 22f6a2aeaf6379881567dc680ba873812c8f49be
+      short_sha: 22f6a2a
+      subject: 'test(US-004): TASK-06 copre snapshot congelato e precondizioni di avvio'
+      committed_at: '2026-08-13T00:27:02+02:00'
+      url: null
+  -
+    id: TASK-07
+    title: 'Test: isolamento dalle tabelle di definizione e query costanti'
+    body: |-
+      ## Description
+      I due criteri che non si dimostrano guardando il codice. Il primo — "il codice di esecuzione non legge le tabelle
+      di definizione" — e la regola numero uno di `.ai/rules/app.md` e va vincolata da un test, altrimenti la prima
+      lettura comoda di `stepDefinitions` la aggira senza che nessuno se ne accorga. Il secondo protegge il percorso
+      dall'N+1 che il PRD indica come rischio strutturale delle catene annidate.
+
+      ## Files Involved
+      - tests/Feature/Releases/SnapshotIsolationTest.php
+      - tests/Feature/Releases/StartReleaseQueryBudgetTest.php
+
+      ## Steps
+      1. Con `DB::listen`, raccogliere le query eseguite mentre si legge una release avviata con catena, campi e
+         responsabili in eager loading; il test fallisce se compare una query su `workflow_templates`,
+         `step_definitions`, `field_definitions` o `project_role_assignments`
+      2. Ripetere la lettura dopo aver cancellato gli step di definizione: la release resta leggibile per intero
+      3. Budget di query sull'avvio: avviare da un template con due step e da uno con cinque step e quattordici campi
+         costa lo stesso numero di query
+      4. Budget di query in lettura: caricare la catena congelata di una release non produce query proporzionali al
+         numero di step
+      5. `php artisan test --compact --filter=Release`
+
+      ## Completion Criteria
+      - [x] Un test fallisce se l'esecuzione tocca una tabella di definizione
+      - [x] La release resta leggibile dopo la cancellazione degli step di definizione
+      - [x] Query di avvio e di lettura costanti rispetto alla lunghezza della catena
+      - [x] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-004): TASK-07 copre isolamento dalle definizioni e costo delle query`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-06
+    commit:
+      sha: c365a68336257c646fea54c1a2ba9b8e44a436b1
+      short_sha: c365a68
+      subject: 'test(US-004): TASK-07 copre isolamento dalle definizioni e costo delle query'
+      committed_at: '2026-08-13T00:29:10+02:00'
+      url: null
+  -
+    id: TASK-08
+    title: 'Policy delle release, rotta di avvio e autorizzazione'
+    body: |-
+      ## Description
+      Autorizzazione lato server prima dell'interfaccia, come nelle spec precedenti: il comando nascosto non e
+      autorizzazione. L'oggetto della decisione e il **progetto**, perche al momento del controllo la release non
+      esiste ancora.
+
+      ## Files Involved
+      - app/Policies/ReleasePolicy.php
+      - routes/web.php
+
+      ## Steps
+      1. `php artisan make:policy ReleasePolicy --model=Release --no-interaction`
+      2. Struttura come `ProjectPolicy` e `WorkflowTemplatePolicy`: filtro `before()` che concede
+         all'amministratore, costante `NOT_FILTERED` con `delete` fuori dal filtro. Ability `create(User $user,
+         Project $project)`; i metodi di consultazione (`viewAny`, `view`) restano negati e verranno aperti da US-008 e
+         US-009, con il PHPDoc che lo dice
+      3. PHPDoc su `delete()`: una release non si cancella per nessuno, amministratori inclusi — portarsela via
+         significa portarsi via lo storico che lo strumento accumula, cioe il valore del prodotto
+      4. Rotta `/progetti/{project}/rilascio`, nome `releases.start`, componente `releases.start`, protetta con
+         `->can('create', [Release::class, 'project'])`; commento sul doppio livello, come sulle rotte esistenti
+      5. Nessuna modifica alla navigazione: la voce **Release** resta `x-nav.planned` perche la pagina che promette e
+         l'elenco (US-009); annotarlo a commento accanto alla voce cosi che non sembri una dimenticanza
+      6. Pint, `larapilot:quality`, `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] `ReleasePolicy` con filtro amministratore e `delete` negato a tutti
+      - [x] Rotta di avvio protetta dal middleware di autorizzazione
+      - [x] La navigazione non promette pagine inesistenti, e il motivo e scritto
+      - [x] Pint e Larastan verdi, suite verde
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-004): TASK-08 autorizzazione e rotta di avvio della release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-07
+    commit:
+      sha: 4821257bd61232f875426ec560f01deba15c6a5a
+      short_sha: '4821257'
+      subject: 'feat(US-004): TASK-08 autorizzazione e rotta di avvio della release'
+      committed_at: '2026-08-13T00:30:16+02:00'
+      url: null
+  -
+    id: TASK-09
+    title: 'Schermata di avvio con conferma della catena congelata'
+    body: |-
+      ## Description
+      L'unica interfaccia della spec: un amministratore indica progetto ed etichetta e ottiene la conferma visiva che
+      lo snapshot esiste. Deliberatamente minima — elenco e filtri sono di US-009, il dettaglio completo con valori e
+      registro e di US-008.
+
+      Il comando di ingresso vive sull'elenco progetti, dove l'amministratore gia vede template associato e ruoli
+      scoperti: quando il progetto non e avviabile il comando e disabilitato e accanto compare il motivo, invece di
+      portare a una pagina che rifiuta.
+
+      ## Files Involved
+      - resources/views/components/releases/⚡start.blade.php
+      - resources/views/components/projects/⚡index.blade.php
+      - lang/it/releases.php
+
+      ## Steps
+      1. Componente Livewire a file singolo sulla struttura dei componenti esistenti: proprieta `label`, `rules()` con
+         `required`, `max:255` e `Rule::unique('releases', 'label')->where('project_id', ...)`,
+         `validationAttributes()` con le etichette italiane
+      2. `Gate::authorize('create', [Release::class, $this->project])` **dentro** l'azione di avvio, non solo sulla
+         rotta: le azioni Livewire non ripassano dal middleware
+      3. Riepilogo delle precondizioni prima dell'avvio: template associato, numero di step, ruoli scoperti,
+         responsabili disattivati. Quando qualcosa manca, il pulsante e disabilitato e il motivo e esplicito
+      4. L'azione invoca `StartRelease` e cattura le eccezioni di dominio rendendole come messaggio tradotto — stesso
+         trattamento TOCTOU adottato da `setAsDefault()` dopo la revisione di US-003: un rifiuto e un messaggio, mai un
+         500. Catturare anche la violazione di unicita sull'etichetta e renderla con il messaggio della validazione
+      5. Dopo l'avvio, pannello di conferma in sola lettura con la catena congelata: `<ol>` con posizione, nome, ruolo
+         congelato, responsabile e stato. Stati resi con **icona e parola**, mai dal solo colore, secondo il contratto
+         del mockup `.larapilot/mockups/superficie-operativa/README.md`
+      6. Elenco progetti: azione di riga "Avvia una release", visibile ai soli amministratori, disabilitata con motivo
+         quando il progetto non e avviabile; riusare le relazioni gia precaricate dall'elenco, senza aggiungere query
+         per riga
+      7. `lang/it/releases.php` con tutti i testi, condizioni plurali esplicite (`{0}`, `{1}`, `[2,*]`) dove c'e un
+         conteggio — il rilievo di revisione di US-003 su `projects_count` vale identico qui
+      8. Implementazione **mobile first**: verifica manuale a 375, 768 e 1280 px, nessuno scorrimento orizzontale
+      9. Pint, `larapilot:quality`, `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] Un amministratore avvia una release indicando progetto ed etichetta
+      - [x] Le precondizioni non soddisfatte sono spiegate prima del tentativo, e ogni rifiuto e un messaggio e non un errore
+      - [x] La conferma mostra la catena congelata con responsabile e stato, resi da icona e parola
+      - [x] Il comando compare sull'elenco progetti senza introdurre query per riga
+      - [x] Interfaccia usabile a 375, 768 e 1280 px
+      - [x] Pint e Larastan verdi, suite verde
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-004): TASK-09 schermata di avvio della release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-08
+    commit:
+      sha: 8bd36fa49e2449bc7705f824576b02ecfdfd9281
+      short_sha: 8bd36fa
+      subject: 'feat(US-004): TASK-09 schermata di avvio della release'
+      committed_at: '2026-08-13T00:35:53+02:00'
+      url: null
+  -
+    id: TASK-10
+    title: "Test: autorizzazione a due livelli e flusso di avvio dall'interfaccia"
+    body: |-
+      ## Description
+      Chiusura dei criteri sull'interfaccia e sull'autorizzazione. Il criterio dice "Policy lato server": va verificato
+      che un `member` sia respinto **anche** invocando direttamente l'azione Livewire, che non ripassa dal middleware.
+
+      ## Files Involved
+      - tests/Feature/Releases/StartReleaseScreenTest.php
+      - tests/Feature/Releases/ReleasePolicyTest.php
+
+      ## Steps
+      1. Usare le factory esistenti; `actingAs` con amministratore e con `member`, come nei test di configurazione
+      2. Un `member` riceve 403 sulla rotta di avvio e 403 sull'azione Livewire invocata direttamente; un
+         amministratore avvia
+      3. Flusso completo dall'interfaccia: etichetta valida, release creata, conferma che mostra la catena congelata
+         con responsabili e stati
+      4. Etichetta mancante e duplicata rifiutate in validazione, senza release create
+      5. Progetto non avviabile: il comando e disabilitato e il motivo compare; l'azione invocata comunque rifiuta con
+         messaggio e non con un errore non gestito
+      6. `ReleasePolicy`: `delete` negato anche all'amministratore
+      7. `php artisan test --compact --filter=Release`
+
+      ## Completion Criteria
+      - [x] Autorizzazione verificata su rotta **e** su azione Livewire
+      - [x] Flusso di avvio e messaggi di rifiuto coperti
+      - [x] Validazione dell'etichetta coperta su obbligatorieta e unicita
+      - [x] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-004): TASK-10 copre autorizzazione e flusso di avvio`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione locale aggiornata
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-09
+    commit:
+      sha: acf758618706257d05b7153a918f3d8e0afd0b4e
+      short_sha: acf7586
+      subject: 'test(US-004): TASK-10 copre autorizzazione e flusso di avvio'
+      committed_at: '2026-08-13T00:36:00+02:00'
+      url: null
+  -
+    id: TASK-11
+    title: 'Documentazione baseline e CHANGELOG'
+    body: |-
+      ## Description
+      Aggiornare il set baseline nello stesso ciclo in cui il codice cambia. Nessuna documentazione estesa: diagrammi,
+      runbook e manuali non sono previsti, e non esiste OpenAPI perche non esiste superficie API. Il diagramma della
+      macchina a stati e dell'ER e esplicitamente un criterio di **US-005**, non di questa spec.
+
+      La sezione da riscrivere e quella che un nuovo arrivato fraintende: fino a ieri "definizione e istanza sono
+      separate" era una promessa, da oggi e uno schema con quattro tabelle.
+
+      ## Files Involved
+      - README.md
+      - CHANGELOG.md
+
+      ## Steps
+      1. README, `### Definizione e istanza sono separate`: aggiungere la tabella delle entita di istanza e la regola
+         operativa — l'esecuzione legge solo lo snapshot, e cosa e congelato (forma, testi, nome del ruolo) contro cosa
+         resta riferimento vivo (identita di persone e progetto)
+      2. README, nuova sezione `### Avvio di una release`: le precondizioni, l'ordine in cui vengono verificate e il
+         fatto che l'avvio e una sola transazione con l'evento nel registro
+      3. README, `### Vincoli permanenti`: annotare le scelte che vanno rispettate da chi verra dopo — `role_name`
+         congelato accanto a `role_id`, posizioni dello snapshot non riordinabili (e quindi senza
+         `OrderedByPosition`), una sola colonna `value` per tutti i tipi, registro senza `updated_at`, colonne di
+         conclusione create ora e riempite da US-006
+      4. README: aggiornare l'elenco delle schermate con la pagina di avvio
+      5. CHANGELOG, `## [Unreleased] / ### Added`: voci per FR-009 e per la prima attivazione di FR-010, nello stile
+         delle voci esistenti — cosa cambia per chi usa lo strumento, non l'elenco dei file
+      6. Verificare che i comandi citati nel README funzionino davvero come scritti
+      7. Pint (nessun PHP toccato, ma il gate resta), `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] README descrive le tabelle di istanza e la regola dello snapshot con esempi concreti
+      - [x] Le scelte permanenti di questa spec sono annotate fra i vincoli
+      - [x] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
+      - [x] I comandi documentati sono stati eseguiti come scritti
+      - [x] Suite verde
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `docs(US-004): TASK-11 documentazione baseline e CHANGELOG`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione finale della PR interna verso `develop`, tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-10
+    commit:
+      sha: b30f5fb0e0e702dbcd39ded884daf32ffc96145e
+      short_sha: b30f5fb
+      subject: 'docs(US-004): TASK-11 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-13T00:38:05+02:00'
+      url: null
+updated_at: '2026-08-12T22:38:05+00:00'

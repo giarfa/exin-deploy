@@ -11,8 +11,11 @@
     "require": {
         "php": "^8.3",
         "andreapollastri/larapilot": "^2.3",
+        "laravel/fortify": "^1.38",
         "laravel/framework": "^13.8",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "livewire/flux": "^2.16",
+        "livewire/livewire": "^4.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

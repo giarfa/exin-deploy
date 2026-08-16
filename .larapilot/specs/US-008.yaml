@@ -5,7 +5,7 @@ epic:
   title: 'Visibilità e tracciabilità'
 priority: HIGH
 points: 5
-status: TODO
+status: DONE
 body: |
   #### US-008: Dettaglio della release con catena e informazioni fornite
 
@@ -23,13 +23,29 @@ body: |
   ruolo e nome del responsabile, valori e istanti degli step chiusi, e il template da cui deriva.
 
   **Criteri di accettazione**
-  - [ ] La vista mostra etichetta, progetto, stato, template di origine, autore e istante di avvio
-  - [ ] Mostra la sequenza completa degli step nell'ordine congelato dallo snapshot, con lo stato di ciascuno
-  - [ ] Ogni step mostra il ruolo e il nome del responsabile risolto
-  - [ ] Gli step completati mostrano i valori forniti, l'autore e l'istante di chiusura
-  - [ ] Gli step bloccati non mostrano alcun campo compilabile
-  - [ ] Il comando di apertura dello step attivo appare solo al responsabile o a un amministratore, e l'autorizzazione resta applicata lato server
-  - [ ] I campi di tipo link sono resi come collegamenti; i campi di tipo conferma come esito affermativo o negativo
-  - [ ] Ogni membro autenticato può consultare il dettaglio in sola lettura, anche senza essere responsabile di alcuno step
-  - [ ] Nessuna query N+1 su catena, campi e responsabili (verificato)
-  - [ ] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/dettaglio-release.html`: colonna singola su mobile, due colonne da 1024 px
+  - [x] La vista mostra etichetta, progetto, stato, template di origine, autore e istante di avvio
+  - [x] Mostra la sequenza completa degli step nell'ordine congelato dallo snapshot, con lo stato di ciascuno
+  - [x] Ogni step mostra il ruolo e il nome del responsabile risolto
+  - [x] Gli step completati mostrano i valori forniti, l'autore e l'istante di chiusura
+  - [x] Gli step bloccati non mostrano alcun campo compilabile
+  - [x] Il comando di apertura dello step attivo appare solo al responsabile o a un amministratore, e l'autorizzazione resta applicata lato server
+  - [x] I campi di tipo link sono resi come collegamenti; i campi di tipo conferma come esito affermativo o negativo
+  - [x] Ogni membro autenticato può consultare il dettaglio in sola lettura, anche senza essere responsabile di alcuno step
+  - [x] Nessuna query N+1 su catena, campi e responsabili (verificato)
+  - [x] Layout conforme al mockup `.larapilot/mockups/superficie-operativa/dettaglio-release.html`: colonna singola su mobile, due colonne da 1024 px
+status_history:
+  - status: PLANNED
+    at: '2026-08-13T20:59:05+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-13T21:04:43+00:00'
+  - status: REVIEW
+    at: '2026-08-13T21:25:36+00:00'
+  - status: DONE
+    at: '2026-08-13T21:39:39+00:00'
+rework: false
+merge_commit:
+  sha: f5822e19237ea3a84e32586ddb67874a120afda4
+  short_sha: f5822e1
+  subject: 'test(US-008): asserzioni sulle vie di accesso e elisione della copia'
+  committed_at: '2026-08-13T23:39:35+02:00'
+  url: null

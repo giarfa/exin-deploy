@@ -1,0 +1,1247 @@
+code: US-003
+plan_body: |-
+  ## Technical Solution
+
+  Ultima spec di configurazione: introduce la **definizione** del processo di rilascio — template, step ordinati,
+  campi richiesti — e chiude i due punti di FR-004 rimasti aperti in US-002 perche il template non esisteva
+  ancora (associazione progetto -> template e segnalazione dei ruoli previsti ma non assegnati).
+
+  Vale la separazione portante del PRD fra **definizione** e **istanza**: tutto cio che questa spec introduce e
+  definizione. All'avvio di una release (US-004) queste righe vengono **copiate** in `release_steps` /
+  `release_step_fields`, e da quel momento l'esecuzione legge solo il proprio snapshot. Nessun codice scritto in
+  questa spec va invocato dal percorso di esecuzione di una release.
+
+  **Entita introdotte**
+
+  | Entita | Tabella | Contenuto |
+  | --- | --- | --- |
+  | `WorkflowTemplate` | `workflow_templates` | nome, descrizione, attivo, predefinito |
+  | `StepDefinition` | `step_definitions` | template, posizione, nome, istruzioni, ruolo responsabile |
+  | `FieldDefinition` | `field_definitions` | step, posizione, etichetta, tipo, obbligatorieta, testo di aiuto |
+
+  Piu una colonna su una tabella esistente: `projects.workflow_template_id` (nullable, `restrictOnDelete`).
+
+  Tutte con chiave primaria UUID (`HasUuids`), `#[Fillable]` con le sole colonne previste, cast dichiarati per
+  Larastan come su `User` / `Project` / `Role`.
+
+  **Tipo di campo come enum PHP nativo.** `App\Enums\FieldType` con esattamente quattro casi e chiavi TitleCase,
+  valori tecnici stabili in colonna e etichette italiane in `label()`, sulla convenzione gia adottata da
+  `App\Enums\UserLevel`:
+
+  | Caso | Valore in colonna | Etichetta |
+  | --- | --- | --- |
+  | `ShortText` | `short_text` | Testo breve |
+  | `LongText` | `long_text` | Testo lungo |
+  | `Link` | `link` | Link |
+  | `Confirmation` | `confirmation` | Conferma |
+
+  La colonna e `string` con cast a enum, **non** `$table->enum`: aggiungere un quinto tipo con un vincolo di
+  check costringerebbe SQLite a ricostruire la tabella, mentre il cast Eloquent rifiuta comunque un valore
+  sconosciuto in lettura (`ValueError`) e `Rule::enum(FieldType::class)` lo rifiuta in scrittura. Il criterio di
+  accettazione chiede l'enum nativo e il rifiuto, non il vincolo di schema — ed e verificato da test su entrambi
+  i percorsi. La semantica di validazione dei valori forniti (URL valido sul tipo link, conferma spuntata) e di
+  **US-005/US-006**: qui l'enum descrive solo la forma del campo.
+
+  **Ordinamento: posizioni contigue e senza duplicati.** E il punto tecnicamente delicato della spec e ha un
+  criterio di accettazione dedicato. Impianto:
+
+  - Unicita a livello di **schema** su `(workflow_template_id, position)` e `(step_definition_id, position)`: il
+    divieto di duplicati non vive nella sola validazione, come per i vincoli di US-002.
+  - Colonna `position` di tipo `integer` **con segno** (non `unsignedInteger`): la rinumerazione ha bisogno di
+    posizioni temporanee negative per non collidere con l'indice unico durante la scrittura.
+  - Concern condiviso `App\Models\Concerns\OrderedByPosition`, usato sia da `StepDefinition` sia da
+    `FieldDefinition`: `nextPosition()`, `moveUp()`, `moveDown()`, `deleteAndResequence()` e la rinumerazione a
+    due passaggi (prima tutte le righe a `-(indice+1)`, poi il valore assoluto) dentro **una** transazione.
+  - Il riordino e reso da comandi **sposta su / sposta giu** e non da trascinamento: e accessibile da tastiera,
+    funziona a 375 px e non richiede test browser, che a bar `NORMAL` non sono previsti.
+  - Ogni cancellazione passa da `deleteAndResequence()`: la contiguita non e una responsabilita del chiamante.
+
+  2N piccole `update` per riordino, con N pari al numero di step o campi (unita): stessa scelta consapevole
+  accettata in revisione di US-002 per il salvataggio della mappatura, preferita a un upsert di massa.
+
+  **Un solo template predefinito.** Invariante applicata da una Action esplicita
+  `App\Actions\Workflows\SetDefaultWorkflowTemplate`: dentro una transazione azzera `is_default` su tutti gli
+  altri e lo imposta su quello scelto. **Trade-off dichiarato:** l'invariante non e applicata dallo schema. Un
+  indice unico parziale non e portabile fra SQLite, MySQL e PostgreSQL con migrazioni Laravel, e il trucco della
+  colonna nullable con indice unico renderebbe `is_default` ambigua (`null` invece di `false`) proprio dove il
+  codice la legge come booleana. Contropartite: unico percorso di scrittura del flag, transazione, e un test che
+  verifica l'assenza di due predefiniti dopo una sequenza di operazioni. Se in futuro il flag venisse scritto da
+  un secondo percorso, l'indice parziale va rivalutato con Mike.
+
+  **Template utilizzabile.** `WorkflowTemplate::isUsable()` (attivo e con almeno uno step) e
+  `unusableReason()` per il messaggio esplicito. Qui il metodo serve alle segnalazioni nelle schermate di
+  configurazione; **US-004** lo invochera come precondizione dell'avvio di una release. Definire il metodo qui
+  evita che US-004 duplichi la regola.
+
+  **Associazione progetto -> template (chiusura di FR-004).** `projects.workflow_template_id` nullable, perche i
+  due progetti dimostrativi esistono gia e un progetto senza template resta uno stato legittimo (semplicemente
+  non ci si avviano release). `CreateProject` propone il template predefinito come valore iniziale; il form lo
+  lascia sostituibile con qualunque template attivo, e la modifica del progetto pure. Il predefinito e una
+  **proposta al momento della creazione**, non un legame permanente: stessa semantica della mappatura
+  predefinita di US-002, coerente per chi usa lo strumento.
+
+  **Ruoli previsti dal template e non assegnati.** `Project::uncoveredRoles()` restituisce i ruoli richiesti
+  dagli step del template associato che non hanno un responsabile su quel progetto. Percorso a rischio N+1 per
+  costruzione: la segnalazione compare sia nell'elenco progetti sia nella pagina responsabili. Eager load
+  obbligatorio (`workflowTemplate.stepDefinitions:id,workflow_template_id,role_id` piu `assignments:id,project_id,role_id`)
+  e calcolo in PHP; l'elenco progetti deve restare a numero di query costante rispetto al numero di progetti, e
+  un test conta le query.
+
+  **Rifinitura rinviata da US-002.** La pagina responsabili segnala quando una persona ricopre piu ruoli sullo
+  stesso progetto, cosi che la ripetizione si legga come intenzionale e non come difetto: e il punto 1 delle
+  rifiniture rinviate nella revisione di US-002, e questa spec tocca gia quella schermata. Il vincolo resta su
+  `(project_id, role_id)` — nessun vincolo su `(project_id, user_id)`, come registrato in `.ai/rules/models.md`.
+
+  **Punto di estensione del ruolo non cancellabile.** `Role::REFERENCING_RELATIONS` era stato scritto in US-002
+  proprio per questo: si aggiunge `stepDefinitions`, e la regola vale in elenco, nel rifiuto della cancellazione
+  e nell'etichetta di utilizzo senza altre modifiche. `step_definitions.role_id` e `restrictOnDelete` come
+  ultima difesa.
+
+  **Autorizzazione.** Una sola Policy nuova, `WorkflowTemplatePolicy`, con il filtro `before()` per
+  l'amministratore e `delete` fuori dal filtro (`NOT_FILTERED`), come `RolePolicy` e `ProjectPolicy`. Step e
+  campi **non** hanno Policy proprie: non esistono fuori dal contesto di un template, quindi sono decisi da
+  `manageSteps`. Autorizzazione a due livelli come nelle spec precedenti: middleware `can` sulle rotte e
+  `Gate::authorize` su **ogni** azione Livewire, perche le azioni non ripassano dal middleware.
+
+  **Schermate** (Livewire 4 a file singolo con Flux gratuito, sulla struttura di US-002):
+
+  | Rotta | Componente | Contenuto |
+  | --- | --- | --- |
+  | `/template` | `templates.index` | elenco, creazione, modifica, disattivazione, impostazione del predefinito, avviso "senza step" |
+  | `/template/{template}/step` | `templates.steps` | step ordinati, riordino, ruolo responsabile, istruzioni |
+  | `/template/{template}/step/{step}/campi` | `templates.fields` | campi dello step nei quattro tipi, obbligatorieta, aiuto, riordino |
+
+  Tre schermate e non una annidata: la configurazione di step e campi in un unico componente diventerebbe un
+  componente grande con tre livelli di form, difficile da leggere a 375 px e da testare. Binding di rotta con
+  `scopeBindings()` sulle rotte annidate, cosi che uno step di un altro template non sia raggiungibile
+  cambiando identificativo nell'indirizzo. La voce di navigazione "Template di workflow" passa da
+  `x-nav.planned` a voce reale.
+
+  **Fuori perimetro.** Avvio della release e snapshot (US-004), compilazione e chiusura degli step (US-005/006),
+  duplicazione del template (FR-023, Could, non in MVP), versionamento visibile dello snapshot (FR-022, Should),
+  scenario dimostrativo con release in corso e conclusa (US-011). La cancellazione di un **template** non e
+  prevista da nessun criterio di accettazione: come i progetti, un template si disattiva —
+  `WorkflowTemplatePolicy::delete()` nega a tutti, amministratori inclusi, e il motivo e nel PHPDoc.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` (da `data.settings.git_mode`) — **nessun push automatico**
+  - Branch: `feature/US-003-template-workflow-step-campi` da `develop`
+  - TASK-00: bootstrap. `develop` e fermo al merge di US-001: i 15 commit di US-002, approvata in revisione
+    umana, non sono ancora integrati. TASK-00 li integra con un merge esplicito e poi crea il branch
+  - Per task: un solo commit atomico in Conventional Commits (`type(US-003): TASK-NN sommario`)
+  - PR interna verso `develop`: titolo e corpo redatti e **tenuti in locale**; apertura remota e push solo su
+    richiesta esplicita dell'utente in sessione
+  - Merge in `develop` solo dopo approvazione umana in `/larapilot-review`
+  - Prima di ogni `task-done`: `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+    (Larastan livello 5), suite verde
+
+  ## Test Data Strategy
+
+  - Factory per ogni modello introdotto, aggiornate **nello stesso task** di migrazione e modello:
+    `WorkflowTemplateFactory` (stati `inactive()`, `isDefault()`, `withSteps(int $count)`),
+    `StepDefinitionFactory` (posizione progressiva coerente per template), `FieldDefinitionFactory` (uno stato
+    per ciascuno dei quattro tipi, piu `optional()`)
+  - Nomi di dominio e non `lorem`: gli step e i campi generati devono somigliare a un processo di rilascio reale,
+    come il catalogo di `RoleFactory`
+  - Seeder: template **"Rilascio standard"**, attivo e predefinito, con cinque step ordinati
+    (Preparazione del codice / Dev Lead, Verifica funzionale / QA, Valutazione di sicurezza / Security,
+    Preparazione dell'ambiente / DevOps, Consegna in produzione / DevOps) e i relativi campi, con tutti e
+    quattro i tipi rappresentati e un misto di obbligatori e opzionali. I due progetti dimostrativi vengono
+    associati al template
+  - Volumi dimostrativi: 1 template predefinito con 5 step e 12-14 campi, 1 template secondario disattivato
+    (dimostra il filtro sull'elenco e la sostituibilita), 2 progetti associati
+  - `php artisan migrate:fresh --seed` deve chiudere senza errori prima di ogni `task-done` che tocchi schema,
+    modelli o seeder
+  - Lo scenario di **esecuzione** (release a meta catena, release conclusa) resta di US-011
+
+  ## Test Strategy
+
+  - Bar: `NORMAL` (da `data.settings.testing`) — PHPUnit 12.5, nessun test browser, Dusk, Playwright o matrice
+    di viewport. Verifica manuale dell'interfaccia consegnata come nota di handoff
+  - Test interlacciati con l'implementazione (TASK-04, TASK-05, TASK-08, TASK-15), non tutti alla fine
+  - Percorsi coperti obbligatoriamente:
+    1. **Vincoli di schema** verificati scrivendo con `DB::table()`, aggirando modelli e validazione: unicita di
+       `(template, posizione)` e `(step, posizione)`, `restrict` su `step_definitions.role_id` e su
+       `projects.workflow_template_id`
+    2. **Enum**: un valore fuori dai quattro casi e rifiutato in validazione, e la lettura di un valore invalido
+       scritto a mano solleva `ValueError`
+    3. **Ordinamento** (criterio di accettazione esplicito): dopo una sequenza di aggiunte, spostamenti e
+       cancellazioni le posizioni sono `1..N` senza duplicati e senza salti, su step e su campi
+    4. **Template predefinito unico**: impostarne uno nuovo azzera il precedente; dopo N operazioni esiste al
+       massimo un predefinito
+    5. **Template senza step non utilizzabile**, con messaggio esplicito
+    6. **Ruolo referenziato da uno step non cancellabile**, con messaggio che nomina il template
+    7. **Autorizzazione a due livelli**: un `member` riceve 403 sulle tre rotte e su ogni azione Livewire
+       (creazione, modifica, disattivazione, impostazione del predefinito, aggiunta/riordino/cancellazione di
+       step e campi); nessun aggiramento per identificativo fra template diversi grazie a `scopeBindings`
+    8. **Proposta del template predefinito** alla creazione di un progetto e sua sostituibilita
+    9. **Segnalazione dei ruoli scoperti** sul progetto associato
+    10. **N+1**: elenco template e elenco progetti a numero di query costante rispetto al numero di righe, con
+        test che contano le query come in US-002
+  - Nessuna API pubblica introdotta: nessun test di contratto, nessun OpenAPI (coerente con il PRD)
+
+  ## Quality gate
+
+  `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality` (Pint + Larastan livello 5) prima di
+  ogni `task-done`, piu `php artisan test --compact`. Gli attributi con cast vanno annotati in PHPDoc sui modelli:
+  l'analisi statica non li deduce dalla colonna.
+tasks:
+  -
+    id: TASK-00
+    title: 'Integrare US-002 in develop e creare il branch di lavoro'
+    body: |-
+      ## Description
+      Preparare Gitflow per questa spec. Il branch non puo essere creato dallo stato attuale di `develop`: US-002 e
+      stata approvata in revisione umana (`spec-approve`, commit `3dd9485`) ma i suoi commit non sono mai stati
+      integrati, quindi `develop` e fermo al merge di US-001 e non contiene ruoli, progetti e mappature — su cui
+      questa spec si appoggia direttamente. L'albero di lavoro ha inoltre il ledger Larapilot non committato,
+      prodotto dalla chiusura di US-002.
+
+      ## Files Involved
+      - (git e artefatti `.larapilot/` — nessun file applicativo)
+
+      ## Steps
+      1. Committare gli artefatti pendenti sul branch di US-002 (`.larapilot/usage/ledger.jsonl` e ogni altro file
+         di workflow modificato): `docs(US-002): registra consuntivo`
+      2. `git checkout develop`
+      3. `git merge --no-ff feature/US-002-ruoli-progetti-responsabili` — merge esplicito, la storia deve mostrare
+         US-002 entrata come unita approvata
+      4. Verificare che `develop` contenga la configurazione di processo: `php artisan test --compact` verde
+      5. `git checkout -b feature/US-003-template-workflow-step-campi`
+      6. Redigere titolo e corpo della PR interna verso `develop` e **tenerli in locale**: titolo
+         `US-003: Template di workflow con step ordinati e campi richiesti`; corpo con link al piano e l'elenco dei task
+      7. Commit di ancoraggio del branch (commit vuoto ammesso)
+
+      ## Completion Criteria
+      - [x] Nessuna modifica pendente nell'albero di lavoro prima del merge
+      - [x] `develop` contiene i commit di US-002 e la suite di test e verde su `develop`
+      - [x] Il branch `feature/US-003-template-workflow-step-campi` esiste in locale e deriva da `develop`
+      - [x] Titolo e corpo della PR interna redatti e tenuti in locale
+      - [x] Nessun push eseguito
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli
+
+      ## Git Deliverables
+      - Commit: `chore(US-003): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
+    type: Impl
+    status: DONE
+    dependencies: {}
+    commit:
+      sha: 6aacedc68e946728a2337d7d137987788cd7fdb4
+      short_sha: 6aacedc
+      subject: 'chore(US-003): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-12T18:02:35+02:00'
+      url: null
+  -
+    id: TASK-01
+    title: 'Enum FieldType e modello WorkflowTemplate con migrazione, factory e seeder'
+    body: |-
+      ## Description
+      Introdurre il tipo di campo come enum PHP nativo e il modello del template (FR-006, FR-008 per la sola parte
+      di enum). L'enum arriva in questo task e non con `FieldDefinition` perche e il vocabolario del dominio: la
+      factory dei campi, la validazione e l'interfaccia lo useranno tutti, e definirlo prima evita di riscriverlo.
+
+      `FieldType` ha esattamente quattro casi con chiavi TitleCase, valori tecnici stabili in colonna ed etichette
+      italiane in `label()`, sulla convenzione di `App\Enums\UserLevel`: `ShortText` = `short_text` (Testo breve),
+      `LongText` = `long_text` (Testo lungo), `Link` = `link` (Link), `Confirmation` = `confirmation` (Conferma).
+      Nessun metodo di validazione dei valori forniti: quella semantica appartiene alla chiusura dello step
+      (US-005/US-006).
+
+      `WorkflowTemplate`: nome univoco, descrizione, `is_active`, `is_default`. Il flag `is_default` in questo task e
+      solo una colonna con cast: l'invariante "un solo predefinito" arriva in TASK-06 con la Action che lo scrive.
+
+      ## Files Involved
+      - app/Enums/FieldType.php
+      - app/Models/WorkflowTemplate.php
+      - database/migrations/xxxx_create_workflow_templates_table.php
+      - database/factories/WorkflowTemplateFactory.php
+
+      ## Steps
+      1. `php artisan make:enum FieldType --string` (o `make:class`) — quattro casi e `label()`
+      2. `php artisan make:model WorkflowTemplate -mf`
+      3. Migrazione: `uuid('id')->primary()`, `string('name')->unique()`, `text('description')->nullable()`,
+         `boolean('is_active')->default(true)->index()`, `boolean('is_default')->default(false)->index()`,
+         `timestamps()`. Solo tipi portabili, nessuna funzione specifica di SQLite
+      4. Modello: `HasUuids`, `#[Fillable(['name', 'description', 'is_active', 'is_default'])]`, cast booleani,
+         `#[Scope] active()`, PHPDoc con `@property bool $is_active` e `@property bool $is_default` per Larastan
+      5. Factory: nomi di dominio plausibili da un catalogo (Rilascio standard, Rilascio urgente, Rilascio
+         infrastrutturale, ...) con progressivo deterministico come `RoleFactory`, perche il nome e univoco a livello
+         di schema; stati `inactive()` e `isDefault()`
+      6. `php artisan migrate:fresh --seed` e `php artisan test --compact`
+      7. `vendor/bin/pint --dirty --format agent` e `php artisan larapilot:quality`
+
+      ## Completion Criteria
+      - [x] `FieldType` ha esattamente quattro casi, chiavi TitleCase ed `label()` in italiano
+      - [x] Migrazione con nome univoco e flag indicizzati, reversibile
+      - [x] `WorkflowTemplateFactory` produce nomi non collidenti e ha gli stati `inactive()` e `isDefault()`
+      - [x] `migrate:fresh --seed` chiude senza errori e la suite resta verde
+      - [x] Pint e Larastan livello 5 verdi
+
+      ## Test Data
+      - [x] `database/factories/WorkflowTemplateFactory.php` creata, con stati `inactive()` e `isDefault()`
+      - [x] Seeder non ancora toccato: il dataset dimostrativo del template arriva in TASK-14, quando esistono step
+            e campi da comporre in uno scenario coerente
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-01 enum del tipo di campo e modello del template`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-00
+    commit:
+      sha: 23aa4ea390f6e7f86ce1f52035fe07f0fd207cb3
+      short_sha: 23aa4ea
+      subject: 'feat(US-003): TASK-01 enum del tipo di campo e modello del template'
+      committed_at: '2026-08-12T18:03:59+02:00'
+      url: null
+  -
+    id: TASK-02
+    title: 'Concern OrderedByPosition e modello StepDefinition con migrazione e factory'
+    body: |-
+      ## Description
+      Introdurre gli step del template (FR-007) e, con essi, il meccanismo di ordinamento condiviso che anche i campi
+      useranno. E il cuore tecnico della spec: il criterio di accettazione chiede posizioni **contigue e senza
+      duplicati** dopo riordini e cancellazioni, verificato da test.
+
+      `App\Models\Concerns\OrderedByPosition` espone:
+
+      - `sequence(): Builder` — dichiarato dal modello che usa il concern, restituisce i fratelli (stesso template /
+        stesso step)
+      - `nextPosition(): int` — ultima posizione + 1, per l'inserimento in coda
+      - `moveUp(): void` / `moveDown(): void` — scambio con il vicino
+      - `deleteAndResequence(): void` — cancellazione e rinumerazione, cosi che la contiguita non sia responsabilita
+        del chiamante
+      - rinumerazione **a due passaggi** dentro una sola transazione: prima tutte le righe interessate a
+        `-(indice + 1)`, poi al valore assoluto. Il passaggio intermedio negativo serve a non violare l'indice unico
+        durante la scrittura, ed e il motivo per cui `position` e `integer` **con segno** e non `unsignedInteger`
+
+      Il concern e un concern di modello e non una Action perche opera su una sola tabella entro un solo padre; le
+      Action del progetto restano riservate alle operazioni che coordinano piu entita (`CreateProject`).
+
+      ## Files Involved
+      - app/Models/Concerns/OrderedByPosition.php
+      - app/Models/StepDefinition.php
+      - app/Models/WorkflowTemplate.php (relazione `stepDefinitions`)
+      - database/migrations/xxxx_create_step_definitions_table.php
+      - database/factories/StepDefinitionFactory.php
+
+      ## Steps
+      1. `php artisan make:class Models/Concerns/OrderedByPosition` e implementare i metodi sopra, con PHPDoc che
+         spieghi il passaggio negativo intermedio
+      2. `php artisan make:model StepDefinition -mf`
+      3. Migrazione: `uuid('id')->primary()`, `foreignUuid('workflow_template_id')->constrained()->cascadeOnDelete()`
+         (gli step non sopravvivono al proprio template), `integer('position')`, `string('name')`,
+         `text('instructions')->nullable()`, `foreignUuid('role_id')->constrained()->restrictOnDelete()`,
+         `timestamps()`, `unique(['workflow_template_id', 'position'])`, `index('role_id')`
+      4. Modello `StepDefinition`: `HasUuids`, `OrderedByPosition`, `#[Fillable([...])]`, relazioni
+         `workflowTemplate()` (BelongsTo), `role()` (BelongsTo), `fieldDefinitions()` arrivera in TASK-03,
+         `#[Scope] ordered()` su `position`
+      5. `WorkflowTemplate::stepDefinitions()` come `HasMany` **ordinata per posizione**: l'ordine e parte del
+         significato della relazione, non una scelta del chiamante
+      6. Factory: nomi e istruzioni di dominio da un catalogo di step di rilascio, `role_id` risolto con
+         `Role::factory()`, `position` assegnata in coda al template (`afterMaking`/`afterCreating` o closure sul
+         template) per non collidere con l'indice unico; stato `withoutInstructions()`
+      7. `php artisan migrate:fresh --seed`, `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Il concern rinumera senza violare l'indice unico e dentro una sola transazione
+      - [x] `position` e `integer` con segno, e il PHPDoc spiega perche
+      - [x] Vincolo unico `(workflow_template_id, position)` a livello di schema
+      - [x] `role_id` in `restrictOnDelete`
+      - [x] `WorkflowTemplate::stepDefinitions()` restituisce gli step gia ordinati per posizione
+      - [x] `StepDefinitionFactory` genera step consecutivi sullo stesso template senza collisioni
+      - [x] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
+
+      ## Test Data
+      - [x] `database/factories/StepDefinitionFactory.php` creata, con posizionamento in coda e nomi di dominio
+      - [x] Seeder aggiornato in TASK-14, dove template, step e campi formano uno scenario coerente
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-02 step del template con ordinamento condiviso`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-01
+    commit:
+      sha: 449272a983e8f0f8c9df4e5daa09d506571656f7
+      short_sha: 449272a
+      subject: 'feat(US-003): TASK-02 step del template con ordinamento condiviso'
+      committed_at: '2026-08-12T18:08:06+02:00'
+      url: null
+  -
+    id: TASK-03
+    title: 'Modello FieldDefinition con migrazione, factory e punto di estensione del ruolo'
+    body: |-
+      ## Description
+      Introdurre i campi informativi richiesti da ciascuno step (FR-008) e chiudere il punto di estensione lasciato
+      aperto da US-002 sulla non cancellabilita del ruolo.
+
+      `FieldDefinition` riusa `OrderedByPosition`: e la prova che il concern di TASK-02 non era sovradimensionato.
+      Il tipo e la colonna `type` (string) con cast a `FieldType::class`.
+
+      `Role::REFERENCING_RELATIONS` era stato scritto in US-002 come punto di estensione unico: si aggiunge
+      `stepDefinitions` e la regola vale automaticamente in elenco, nel rifiuto della cancellazione e in
+      `usageLabel()`. Serve la relazione `Role::stepDefinitions()` e una nuova chiave di traduzione per l'etichetta
+      di utilizzo (`roles.used_templates`).
+
+      ## Files Involved
+      - app/Models/FieldDefinition.php
+      - app/Models/StepDefinition.php (relazione `fieldDefinitions`)
+      - app/Models/Role.php (relazione `stepDefinitions` e `REFERENCING_RELATIONS`)
+      - database/migrations/xxxx_create_field_definitions_table.php
+      - database/factories/FieldDefinitionFactory.php
+      - lang/it/roles.php
+
+      ## Steps
+      1. `php artisan make:model FieldDefinition -mf`
+      2. Migrazione: `uuid('id')->primary()`, `foreignUuid('step_definition_id')->constrained()->cascadeOnDelete()`,
+         `integer('position')`, `string('label')`, `string('type')`, `boolean('is_required')->default(false)`,
+         `string('help_text')->nullable()`, `timestamps()`, `unique(['step_definition_id', 'position'])`.
+         Colonna `type` come `string` e non `enum`: motivazione nel commento della migrazione e nel piano
+      3. Modello: `HasUuids`, `OrderedByPosition`, `#[Fillable([...])]`, cast `'type' => FieldType::class` e
+         `'is_required' => 'boolean'`, relazione `stepDefinition()`, `#[Scope] ordered()`
+      4. `StepDefinition::fieldDefinitions()` come `HasMany` ordinata per posizione
+      5. `Role::stepDefinitions()` (HasMany) e `stepDefinitions` aggiunta a `REFERENCING_RELATIONS`; estendere
+         `usageLabel()` con `trans_choice('roles.used_templates', ...)` che nomina il numero di step che lo usano
+      6. Factory: `label` e `help_text` di dominio, uno stato per ciascun tipo (`shortText()`, `longText()`,
+         `link()`, `confirmation()`) piu `optional()` per `is_required = false`; posizione in coda allo step
+      7. `php artisan migrate:fresh --seed`, `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] `FieldDefinition` usa `OrderedByPosition` senza duplicare logica di ordinamento
+      - [x] `type` castato a `FieldType` e `is_required` a booleano, entrambi annotati in PHPDoc
+      - [x] Vincolo unico `(step_definition_id, position)` a livello di schema
+      - [x] `Role::REFERENCING_RELATIONS` include `stepDefinitions` e `usageLabel()` nomina l'uso nei template
+      - [x] `FieldDefinitionFactory` ha uno stato per ciascuno dei quattro tipi piu `optional()`
+      - [x] `migrate:fresh --seed` verde, suite verde, Pint e Larastan verdi
+
+      ## Test Data
+      - [x] `database/factories/FieldDefinitionFactory.php` creata con i quattro stati di tipo
+      - [x] Nessuna factory esistente resta stantia: `RoleFactory` non cambia, ma la relazione aggiunta e coperta
+            dai test di TASK-04
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-03 campi richiesti degli step e ruolo referenziato dai template`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-02
+    commit:
+      sha: c5b9c43147ab9d6fc8d1e378fe6ca9e48740284d
+      short_sha: c5b9c43
+      subject: 'feat(US-003): TASK-03 campi richiesti degli step e ruolo referenziato dai template'
+      committed_at: '2026-08-12T18:10:00+02:00'
+      url: null
+  -
+    id: TASK-04
+    title: 'Test: modelli, vincoli di schema, enum del tipo di campo e ruolo referenziato'
+    body: |-
+      ## Description
+      Coprire la fondazione dati prima di costruirvi sopra l'interfaccia. I vincoli dichiarati a livello di schema
+      vanno verificati **scrivendo direttamente sul database** con `DB::table()`, aggirando modelli e validazione:
+      un test che passa dalla validazione non dimostra nulla sullo schema. E la convenzione di
+      `tests/Feature/Configuration/SchemaConstraintsTest.php` introdotta in US-002.
+
+      ## Files Involved
+      - tests/Feature/Configuration/WorkflowSchemaConstraintsTest.php
+      - tests/Unit/Models/WorkflowTemplateTest.php
+      - tests/Unit/Models/StepDefinitionTest.php
+      - tests/Unit/Enums/FieldTypeTest.php
+      - tests/Unit/Models/RoleTest.php (estensione)
+
+      ## Steps
+      1. Usare le factory esistenti; nessuna definizione di dati duplicata nei test
+      2. Vincoli di schema, con scrittura diretta: due step con la stessa posizione sullo stesso template sono
+         rifiutati; due campi con la stessa posizione sullo stesso step sono rifiutati; la stessa posizione su
+         template (o step) **diversi** e ammessa; cancellare un ruolo referenziato da uno step e rifiutato
+         (`restrict`); cancellare un template cancella i suoi step e, a cascata, i campi
+      3. Verificare il prerequisito del punto precedente: `foreign_key_constraints` attivo sulla connessione di test,
+         altrimenti il test su `restrict` passerebbe per il motivo sbagliato
+      4. Enum: i casi sono esattamente quattro; `FieldType::from()` su un valore fuori enum solleva `ValueError`;
+         leggere via Eloquent un `type` invalido scritto con `DB::table()` solleva; `label()` copre tutti i casi
+      5. Relazioni ordinate: `stepDefinitions` e `fieldDefinitions` restituiscono le righe per posizione crescente
+         anche quando sono state create in ordine sparso
+      6. `Role`: `isReferenced()` e vera per un ruolo usato da uno step; `usageLabel()` nomina l'uso nei template
+      7. `php artisan test --compact --filter='WorkflowSchemaConstraints|WorkflowTemplateTest|StepDefinitionTest|FieldTypeTest|RoleTest'`
+      8. Nessun test browser, Dusk o Playwright: il bar e `NORMAL`
+
+      ## Completion Criteria
+      - [x] I vincoli unici sulle posizioni sono verificati aggirando la validazione
+      - [x] `restrict` su `step_definitions.role_id` verificato, con il prerequisito sulle chiavi esterne accertato
+      - [x] Un valore fuori dai quattro tipi e rifiutato sia da `from()` sia in lettura Eloquent
+      - [x] Le relazioni di step e campi sono ordinate per posizione
+      - [x] Il ruolo usato da uno step non e cancellabile e l'etichetta di utilizzo lo dice
+      - [x] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-003): TASK-04 copre modelli, vincoli di schema e tipo di campo`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Test
+    status: DONE
+    dependencies:
+      - TASK-03
+    commit:
+      sha: e43f9fa721a18b86f88008e2a8f3df4ed01bb746
+      short_sha: e43f9fa
+      subject: 'test(US-003): TASK-04 copre modelli, vincoli di schema e tipo di campo'
+      committed_at: '2026-08-12T18:11:47+02:00'
+      url: null
+  -
+    id: TASK-05
+    title: 'Test: contiguita e unicita delle posizioni dopo riordini e cancellazioni'
+    body: |-
+      ## Description
+      Criterio di accettazione esplicitamente verificato da test: "dopo un riordino o una cancellazione le posizioni
+      restano contigue e senza duplicati". Un test dedicato e non una asserzione dentro un test piu grande, perche e
+      la regola che rompendosi rende incomprensibile il processo configurato.
+
+      ## Files Involved
+      - tests/Unit/Models/OrderedByPositionTest.php
+
+      ## Steps
+      1. Helper locale che asserisce l'invariante su una sequenza: le posizioni sono esattamente `1..N`, senza
+         duplicati e senza salti
+      2. Step: creare cinque step, poi eseguire una sequenza di operazioni (sposta su, sposta giu, sposta il primo su
+         — nessun effetto, sposta l'ultimo giu — nessun effetto, cancella un elemento centrale, cancella il primo,
+         aggiungi in coda) verificando l'invariante **dopo ogni operazione** e l'ordine relativo atteso
+      3. Campi: la stessa sequenza su un altro modello, per dimostrare che il concern e riusabile e non tarato sugli
+         step
+      4. Isolamento fra fratelli: riordinare gli step di un template non tocca le posizioni di un altro template;
+         riordinare i campi di uno step non tocca quelli di un altro step
+      5. Cancellazione del padre: cancellare uno step porta via i suoi campi senza lasciare posizioni orfane sugli
+         altri step
+      6. `php artisan test --compact --filter=OrderedByPosition`
+
+      ## Completion Criteria
+      - [x] L'invariante `1..N` e verificata dopo ogni operazione, non solo alla fine
+      - [x] Coperti gli estremi: primo elemento verso l'alto e ultimo verso il basso non cambiano nulla
+      - [x] Verificato l'isolamento fra sequenze di padri diversi
+      - [x] Lo stesso test copre step e campi
+      - [x] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-003): TASK-05 copre contiguita e unicita delle posizioni`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Test
+    status: DONE
+    dependencies:
+      - TASK-04
+    commit:
+      sha: e3cbe4ca5031850131a4fc6142c25c3e1b671ff7
+      short_sha: e3cbe4c
+      subject: 'test(US-003): TASK-05 copre contiguita e unicita delle posizioni'
+      committed_at: '2026-08-12T18:12:50+02:00'
+      url: null
+  -
+    id: TASK-06
+    title: 'Action del template predefinito unico e utilizzabilita del template'
+    body: |-
+      ## Description
+      Due regole di dominio del template, entrambe destinate a essere lette da spec successive.
+
+      **Un solo predefinito** (`App\Actions\Workflows\SetDefaultWorkflowTemplate`): dentro una transazione azzera
+      `is_default` su tutti gli altri template e lo imposta su quello scelto. Unico percorso di scrittura del flag,
+      invocato dalla schermata dei template e dai test. Un template **disattivato** non puo diventare predefinito:
+      proporre ai nuovi progetti un template inutilizzabile sarebbe un errore silenzioso, e il rifiuto e esplicito.
+      Se il template predefinito viene disattivato, il flag viene rimosso nella stessa operazione.
+
+      **Utilizzabilita** (`WorkflowTemplate::isUsable()` e `unusableReason()`): un template e utilizzabile quando e
+      attivo e ha almeno uno step. Qui il metodo alimenta le segnalazioni nelle schermate di configurazione;
+      **US-004** lo invochera come precondizione dell'avvio di una release. Definirlo qui evita che la regola venga
+      riscritta in due posti. `unusableReason()` restituisce la chiave di traduzione del motivo (disattivato /
+      senza step), cosi che il messaggio sia esplicito e non generico.
+
+      Trade-off dichiarato: l'invariante del predefinito unico non e applicata dallo schema. Un indice unico parziale
+      non e portabile fra SQLite, MySQL e PostgreSQL con migrazioni Laravel, e la variante con colonna nullable
+      renderebbe `is_default` ambigua dove il codice la legge come booleana. Contropartite: percorso di scrittura
+      unico, transazione e test dedicato (TASK-08).
+
+      ## Files Involved
+      - app/Actions/Workflows/SetDefaultWorkflowTemplate.php
+      - app/Models/WorkflowTemplate.php
+      - lang/it/templates.php (nuovo file di traduzioni)
+
+      ## Steps
+      1. `php artisan make:class Actions/Workflows/SetDefaultWorkflowTemplate`
+      2. `handle(WorkflowTemplate $template): void` — rifiuta un template disattivato con un'eccezione di dominio
+         esplicita; dentro `DB::transaction`: `WorkflowTemplate::whereKeyNot(...)->where('is_default', true)->update([...])`
+         e poi imposta il flag sul template scelto. Una sola `update` di massa per l'azzeramento, non un ciclo
+      3. Metodo o Action per la disattivazione che rimuove il flag di predefinito nella stessa transazione
+      4. `WorkflowTemplate::isUsable(): bool` e `unusableReason(): ?string`, che riusano un conteggio degli step gia
+         caricato con `withCount('stepDefinitions')` quando presente — stessa lezione di `Role::referenceCounts()`:
+         un metodo chiamato per riga in elenco non deve produrre una query per riga
+      5. Creare `lang/it/templates.php` con le chiavi dei messaggi di utilizzabilita e dell'esito delle operazioni
+      6. `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Impostare un predefinito azzera il precedente dentro una sola transazione
+      - [x] Un template disattivato non puo diventare predefinito, con rifiuto esplicito
+      - [x] Disattivare il template predefinito ne rimuove il flag
+      - [x] `isUsable()` / `unusableReason()` non producono una query per riga quando il conteggio e precaricato
+      - [x] `lang/it/templates.php` creato: nessun testo incastonato nelle viste
+      - [x] Pint e Larastan verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o relazioni; la copertura arriva in TASK-08
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-06 template predefinito unico e utilizzabilita`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-03
+    commit:
+      sha: b92cd98fe2e1525092294cd84dd25fca946201b3
+      short_sha: b92cd98
+      subject: 'feat(US-003): TASK-06 template predefinito unico e utilizzabilita'
+      committed_at: '2026-08-12T18:15:21+02:00'
+      url: null
+  -
+    id: TASK-07
+    title: 'Associazione progetto-template, proposta del predefinito e ruoli scoperti'
+    body: |-
+      ## Description
+      Chiudere i due punti di FR-004 rinviati da US-002 perche il template non esisteva: l'associazione del progetto
+      al template di workflow e la segnalazione dei ruoli previsti dal template ma non ancora assegnati sul progetto.
+
+      `projects.workflow_template_id` e **nullable**: i progetti dimostrativi esistono gia, e un progetto senza
+      template resta uno stato legittimo — semplicemente non ci si avviano release, cosa che US-004 fara rispettare.
+      `restrictOnDelete` verso `workflow_templates`, coerente con il fatto che un template non si cancella.
+
+      `CreateProject` viene esteso per **proporre** il template predefinito quando il chiamante non ne indica uno.
+      Proposta e non legame: il form la mostra come valore iniziale sostituibile, come la mappatura predefinita di
+      US-002. L'Action resta l'unico posto in cui la precompilazione avviene, e continua a restituire il numero di
+      ruoli non precompilati.
+
+      `Project::uncoveredRoles()` restituisce i ruoli richiesti dagli step del template associato che non hanno un
+      responsabile sul progetto. E un percorso a rischio N+1 per costruzione, perche compare in elenco: il metodo
+      deve riusare le relazioni precaricate e non interrogare per riga.
+
+      ## Files Involved
+      - database/migrations/xxxx_add_workflow_template_id_to_projects_table.php
+      - app/Models/Project.php
+      - app/Models/WorkflowTemplate.php (relazione `projects`)
+      - app/Actions/Projects/CreateProject.php
+      - database/factories/ProjectFactory.php
+
+      ## Steps
+      1. `php artisan make:migration add_workflow_template_id_to_projects_table` —
+         `foreignUuid('workflow_template_id')->nullable()->constrained()->restrictOnDelete()`, con indice implicito
+         dalla chiave esterna; `down()` che rimuove vincolo e colonna
+      2. `Project`: aggiungere `workflow_template_id` a `#[Fillable]`, relazione `workflowTemplate()` (BelongsTo),
+         `uncoveredRoles()` che legge `workflowTemplate.stepDefinitions.role` e `assignments` **gia precaricate**
+         (`relationLoaded()` / `loadMissing`), restituendo una collezione di ruoli distinti ordinati per nome
+      3. `WorkflowTemplate::projects()` (HasMany) — serve per dire in elenco quanti progetti usano il template
+      4. `CreateProject`: se `workflow_template_id` non e passato, risolvere il template predefinito **attivo** e
+         usarlo; se non esiste un predefinito, lasciare `null` e riportarlo nell'esito. Estendere il valore di
+         ritorno con l'indicazione del template applicato, senza rompere la chiave `skipped` esistente
+      5. `ProjectFactory`: nessun template per impostazione predefinita (i test esistenti non devono cambiare
+         comportamento), piu uno stato `withTemplate()` che ne collega uno
+      6. `php artisan migrate:fresh --seed`, `php artisan test --compact` — verificare che i test di US-002 su
+         `CreateProject` restino verdi, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Colonna nullable con `restrict` verso `workflow_templates`, migrazione reversibile
+      - [x] `CreateProject` propone il template predefinito attivo e accetta una scelta diversa
+      - [x] Senza alcun predefinito il progetto viene creato senza template, senza errori
+      - [x] `uncoveredRoles()` non esegue query quando le relazioni sono precaricate
+      - [x] `ProjectFactory` ha lo stato `withTemplate()` e il comportamento predefinito e invariato
+      - [x] I test di US-002 sulla precompilazione della mappatura restano verdi
+      - [x] `migrate:fresh --seed` verde, Pint e Larastan verdi
+
+      ## Test Data
+      - [x] `database/factories/ProjectFactory.php` aggiornata nello stesso task della migrazione, con
+            `withTemplate()`
+      - [x] Seeder: l'associazione dei progetti dimostrativi al template arriva in TASK-14, insieme al template stesso
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-07 associazione progetto-template e ruoli scoperti`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-06
+    commit:
+      sha: f4df3eced86b4fa0971164443500447a56c8ee06
+      short_sha: f4df3ec
+      subject: 'feat(US-003): TASK-07 associazione progetto-template e ruoli scoperti'
+      committed_at: '2026-08-12T18:17:44+02:00'
+      url: null
+  -
+    id: TASK-08
+    title: 'Test: predefinito unico, proposta alla creazione, utilizzabilita e ruoli scoperti'
+    body: |-
+      ## Description
+      Coprire le regole di dominio di TASK-06 e TASK-07 prima che l'interfaccia le usi. Sono le regole che, sbagliate,
+      si manifestano solo in US-004 come release avviata su un processo incoerente.
+
+      ## Files Involved
+      - tests/Feature/Configuration/DefaultWorkflowTemplateTest.php
+      - tests/Feature/Configuration/TemplateUsabilityTest.php
+      - tests/Feature/Configuration/ProjectTemplateAssociationTest.php
+
+      ## Steps
+      1. Predefinito unico: impostarne uno nuovo azzera il precedente; dopo una sequenza di operazioni
+         (impostazioni ripetute, disattivazioni, creazioni) esiste **al massimo** un predefinito; un template
+         disattivato non puo diventare predefinito; disattivare il predefinito ne rimuove il flag
+      2. Utilizzabilita: un template attivo senza step non e utilizzabile e `unusableReason()` distingue "senza step"
+         da "disattivato"; con almeno uno step diventa utilizzabile; cancellare l'ultimo step lo rende di nuovo
+         inutilizzabile
+      3. Associazione: creare un progetto senza indicare il template applica il predefinito attivo; indicandone uno
+         diverso viene rispettato; senza alcun predefinito il progetto nasce senza template; modificare il progetto
+         permette di sostituire il template
+      4. Indipendenza: cambiare il template predefinito **non** modifica i progetti gia creati — stessa semantica
+         della mappatura predefinita di US-002, e stesso rischio di regressione
+      5. Ruoli scoperti: con un template i cui step richiedono cinque ruoli e un progetto con quattro assegnati,
+         `uncoveredRoles()` restituisce esattamente il ruolo mancante; con la mappatura completa restituisce una
+         collezione vuota; un ruolo **disattivato** ma assegnato non risulta scoperto
+      6. Contare le query di `uncoveredRoles()` su un elenco di progetti precaricato: numero costante rispetto al
+         numero di progetti
+      7. `php artisan test --compact --filter='DefaultWorkflowTemplate|TemplateUsability|ProjectTemplateAssociation'`
+
+      ## Completion Criteria
+      - [x] Non esistono due predefiniti in nessuna sequenza di operazioni provata
+      - [x] Il rifiuto sul template disattivato e coperto
+      - [x] Le tre situazioni di utilizzabilita sono distinte da messaggi diversi
+      - [x] Proposta, sostituzione e assenza di predefinito coperte alla creazione del progetto
+      - [x] `uncoveredRoles()` corretta e a query costanti
+      - [x] Suite verde
+
+      ## Git Deliverables
+      - Commit: `test(US-003): TASK-08 copre predefinito, utilizzabilita e associazione al progetto`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Test
+    status: DONE
+    dependencies:
+      - TASK-07
+    commit:
+      sha: b4a032bde1b21234e0b02997195f70a64639aa94
+      short_sha: b4a032b
+      subject: 'test(US-003): TASK-08 copre predefinito, utilizzabilita e associazione al progetto'
+      committed_at: '2026-08-12T18:19:54+02:00'
+      url: null
+  -
+    id: TASK-09
+    title: 'Policy dei template, rotte annidate e navigazione'
+    body: |-
+      ## Description
+      Aprire la superficie di configurazione dei template con autorizzazione a due livelli, come nelle spec
+      precedenti: middleware `can` sulle rotte e `Gate::authorize` su ogni azione Livewire, perche le azioni
+      Livewire non ripassano dal middleware. Nascondere un comando nell'interfaccia non e autorizzazione.
+
+      Una sola Policy nuova. Step e campi non hanno Policy proprie: non esistono fuori dal contesto di un template,
+      quindi sono decisi da `manageSteps`, come le assegnazioni di progetto sono decise da `manageAssignments`.
+
+      `WorkflowTemplatePolicy::delete()` nega a **tutti**, amministratori inclusi, e sta fuori dal filtro `before()`
+      (`NOT_FILTERED`): un template e la forma di processo a cui si appoggiano progetti e release, quindi si
+      disattiva. Il PHPDoc lo motiva, come in `ProjectPolicy`.
+
+      ## Files Involved
+      - app/Policies/WorkflowTemplatePolicy.php
+      - routes/web.php
+      - resources/views/components/layouts/app.blade.php
+      - lang/it/app.php
+
+      ## Steps
+      1. `php artisan make:policy WorkflowTemplatePolicy --model=WorkflowTemplate`
+      2. Ability: `viewAny`, `view`, `create`, `update`, `toggleActivation`, `setDefault`, `manageSteps`,
+         `delete` (fuori dal filtro, nega sempre). Ogni ability usata deve esistere come metodo: `before()` non viene
+         invocato per ability senza metodo corrispondente — lezione registrata in US-001
+      3. Rotte dentro il gruppo `auth` esistente, con percorsi in italiano e nomi in inglese come le rotte attuali:
+         - `Route::livewire('/template', 'templates.index')->can('viewAny', WorkflowTemplate::class)->name('templates.index')`
+         - `Route::livewire('/template/{template}/step', 'templates.steps')->can('manageSteps', 'template')->name('templates.steps')`
+         - `Route::livewire('/template/{template}/step/{step}/campi', 'templates.fields')->can('manageSteps', 'template')->scopeBindings()->name('templates.fields')`
+         `scopeBindings()` non e cosmetico: senza di esso uno step di un altro template sarebbe raggiungibile
+         cambiando identificativo nell'indirizzo
+      4. Navigazione: sostituire `<x-nav.planned icon="queue-list">` con una voce reale verso `templates.index`,
+         marcata corrente su `templates.*`. La chiave `app.nav_templates` esiste gia
+      5. Commenti nelle rotte nello stile del file: spiegare il doppio livello di autorizzazione e il motivo di
+         `scopeBindings`
+      6. `php artisan route:list --except-vendor`, `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Tre rotte registrate, tutte con middleware `can` e binding sull'identificativo
+      - [x] `scopeBindings()` sulla rotta annidata dei campi
+      - [x] Ogni ability usata esiste come metodo nella Policy
+      - [x] `delete()` nega a tutti ed e fuori dal filtro `before()`
+      - [x] La voce di navigazione "Template di workflow" non e piu marcata "in arrivo"
+      - [x] Pint e Larastan verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-09 autorizzazione, rotte e navigazione dei template`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-07
+    commit:
+      sha: b0fa14bf4dcc8e5f8515eec62bc06f4862fb17f3
+      short_sha: b0fa14b
+      subject: 'feat(US-003): TASK-09 autorizzazione, rotte e navigazione dei template'
+      committed_at: '2026-08-12T18:21:07+02:00'
+      url: null
+  -
+    id: TASK-10
+    title: 'Schermata di elenco e configurazione dei template'
+    body: |-
+      ## Description
+      Prima delle tre schermate: creazione, modifica, disattivazione e impostazione del predefinito (FR-006). Mostra
+      anche quando un template non e utilizzabile, con messaggio esplicito, e quanti progetti lo usano.
+
+      Struttura sulla schermata dei ruoli di US-002: componente Livewire 4 a file singolo, form in linea per
+      creazione e modifica, `Gate::authorize` in ogni azione, stato reso con **icona e parola** e mai col solo
+      colore, testi da `lang/it/templates.php`.
+
+      ## Files Involved
+      - resources/views/components/templates/⚡index.blade.php
+      - lang/it/templates.php
+
+      ## Steps
+      1. `php artisan make:livewire templates.index`
+      2. Proprieta del form: `editingId`, `showingForm`, `name`, `description`. Regole: nome obbligatorio e univoco
+         con `Rule::unique('workflow_templates', 'name')->ignore($this->editingId)`, descrizione facoltativa;
+         `validationAttributes()` in italiano
+      3. Elenco come proprieta `#[Computed]` con `withCount(['stepDefinitions', 'projects'])`: il conteggio degli
+         step serve a `isUsable()` e quello dei progetti a spiegare l'impatto di una disattivazione. Una sola query
+         per l'elenco — nessun conteggio per riga
+      4. Azioni: `openCreateForm`, `openEditForm`, `closeForm`, `save`, `toggleActivation`, `setAsDefault`. Ognuna
+         apre con `Gate::authorize`; `setAsDefault` delega a `SetDefaultWorkflowTemplate` e non scrive il flag da se
+      5. Disattivare il template predefinito rimuove il flag: la conferma lo dice prima di procedere, non dopo
+      6. Avvisi espliciti: template senza step ("non e utilizzabile per avviare una release: aggiungi almeno uno
+         step"), template predefinito marcato in modo evidente, nota sul fatto che i template non si cancellano
+      7. Ogni riga ha il comando verso `templates.steps`, con il numero di step
+      8. Implementazione **mobile first**: a 375 px la tabella non deve richiedere scorrimento orizzontale —
+         colonne essenziali e comandi impilati, come la pagina responsabili di US-002. Verifica a 375 / 768 / 1280 px
+      9. `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Creazione, modifica e disattivazione funzionanti, con nome univoco validato
+      - [x] Impostazione del predefinito passa dalla Action e il precedente perde il flag
+      - [x] Un template senza step e segnalato con messaggio esplicito
+      - [x] Elenco a query costanti rispetto al numero di template
+      - [x] Stato leggibile senza affidarsi al colore
+      - [x] Nessun testo incastonato nella vista: tutto da `lang/it/templates.php`
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px senza scorrimento orizzontale
+      - [x] Pint e Larastan verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-10 schermata dei template di workflow`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-09
+    commit:
+      sha: 334fe698b1b5885194747c732c456f3c98f43348
+      short_sha: 334fe69
+      subject: 'feat(US-003): TASK-10 schermata dei template di workflow'
+      committed_at: '2026-08-12T18:22:37+02:00'
+      url: null
+  -
+    id: TASK-11
+    title: 'Schermata degli step di un template con riordino'
+    body: |-
+      ## Description
+      Seconda schermata: aggiunta, modifica, cancellazione e **riordino** degli step di un template (FR-007). Ogni
+      step ha nome, istruzioni per chi lo esegue e ruolo responsabile scelto fra i ruoli attivi.
+
+      Le istruzioni sono il punto in cui il processo diventa autoesplicativo per chi lo eredita: il campo e in
+      evidenza e non un dettaglio nascosto, con testo di aiuto che spiega a chi sono rivolte.
+
+      Riordino con comandi **sposta su / sposta giu** e non con trascinamento: accessibile da tastiera, utilizzabile
+      a 375 px, verificabile senza test browser (che a bar `NORMAL` non sono previsti). I comandi delegano a
+      `OrderedByPosition`; la cancellazione passa da `deleteAndResequence()`.
+
+      ## Files Involved
+      - resources/views/components/templates/⚡steps.blade.php
+      - lang/it/templates.php
+
+      ## Steps
+      1. `php artisan make:livewire templates.steps`
+      2. `public WorkflowTemplate $template` dal binding di rotta; elenco step come `#[Computed]` con
+         `with('role:id,name')` e `withCount('fieldDefinitions')` — la colonna "campi richiesti" non deve costare una
+         query per riga
+      3. Form in linea: `name` obbligatorio, `instructions` facoltativo (textarea), `roleId` obbligatorio fra i
+         **ruoli attivi**, piu i ruoli disattivati gia usati da uno step di questo template — nasconderli renderebbe
+         invisibile una responsabilita che esiste, come nella pagina responsabili di US-002
+      4. Validazione della chiave del ruolo contro le sole opzioni realmente in elenco (`Rule::in`), non contro
+         l'intera tabella: e la difesa contro l'indicazione per identificativo che US-002 ha adottato con
+         `->only($allowedRoles)`
+      5. Azioni: `openCreateForm`, `openEditForm`, `closeForm`, `save` (assegna `nextPosition()` in coda alla
+         creazione), `moveUp`, `moveDown`, `delete` (con conferma che avvisa della perdita dei campi definiti).
+         Ognuna apre con `Gate::authorize('manageSteps', $this->template)`
+      6. Stato vuoto esplicito: "nessuno step: un template senza step non e utilizzabile per avviare una release"
+      7. Ogni step ha il comando verso `templates.fields` con il numero di campi
+      8. Riordino accessibile: comandi disabilitati sugli estremi con `aria-disabled`, etichette che nominano lo step
+         spostato (non solo una freccia), messaggio `aria-live` che conferma lo spostamento
+      9. Implementazione mobile first: elenco di schede a 375 px, non tabella compressa. Verifica a 375 / 768 / 1280 px
+      10. `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Aggiunta, modifica e cancellazione degli step funzionanti, con ruolo responsabile obbligatorio
+      - [x] Le istruzioni sono modificabili e mostrate a chi configura
+      - [x] Riordino con sposta su / sposta giu, accessibile da tastiera e annunciato
+      - [x] Dopo cancellazione e riordino le posizioni restano contigue (regola nel concern, non nel componente)
+      - [x] Un ruolo indicato per identificativo ma fuori dalle opzioni in elenco e rifiutato
+      - [x] Elenco a query costanti rispetto al numero di step
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px
+      - [x] Pint e Larastan verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-11 schermata degli step con riordino`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-10
+    commit:
+      sha: 2819c5d0e5d4ccd96886f289061078b5e2414b21
+      short_sha: 2819c5d
+      subject: 'feat(US-003): TASK-11 schermata degli step con riordino'
+      committed_at: '2026-08-12T18:24:59+02:00'
+      url: null
+  -
+    id: TASK-12
+    title: 'Schermata dei campi richiesti di uno step'
+    body: |-
+      ## Description
+      Terza schermata: i campi informativi che il responsabile dovra fornire per chiudere lo step (FR-008) —
+      etichetta, tipo fra i quattro previsti, obbligatorieta, posizione e testo di aiuto facoltativo.
+
+      E la schermata in cui l'enum diventa visibile: le opzioni del tipo sono generate da `FieldType::cases()` e le
+      etichette da `label()`, cosi che un quinto tipo non richieda modifiche alla vista. La validazione usa
+      `Rule::enum(FieldType::class)`: un valore fuori dall'enum e rifiutato lato server, non solo assente dal menu.
+
+      ## Files Involved
+      - resources/views/components/templates/⚡fields.blade.php
+      - lang/it/templates.php
+
+      ## Steps
+      1. `php artisan make:livewire templates.fields`
+      2. `public WorkflowTemplate $template` e `public StepDefinition $step` dal binding con `scopeBindings`; briciole
+         di navigazione verso template e step, perche e la pagina piu profonda del prodotto
+      3. Elenco campi come `#[Computed]` ordinato per posizione — una sola query
+      4. Form in linea: `label` obbligatorio (max 255), `type` obbligatorio con `Rule::enum(FieldType::class)`,
+         `isRequired` booleano (`flux:switch`), `helpText` facoltativo con aiuto che spiega a chi e rivolto
+      5. Azioni: `openCreateForm`, `openEditForm`, `closeForm`, `save` (posizione in coda), `moveUp`, `moveDown`,
+         `delete`, ognuna con `Gate::authorize('manageSteps', $this->template)`
+      6. Ogni riga mostra tipo (etichetta dall'enum) e obbligatorieta con **icona e parola**, mai col solo colore
+      7. Nota esplicita per chi configura: un campo obbligatorio non compilato impedira la chiusura dello step, uno
+         facoltativo no. E la frase che rende comprensibile la scelta di obbligatorieta
+      8. Stato vuoto: "nessun campo: il responsabile potra chiudere lo step senza fornire informazioni" — e una
+         configurazione lecita ma va detta, altrimenti sembra un difetto
+      9. Implementazione mobile first: schede a 375 px. Verifica a 375 / 768 / 1280 px
+      10. `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Aggiunta, modifica, cancellazione e riordino dei campi funzionanti
+      - [x] Le opzioni del tipo derivano da `FieldType::cases()`: nessun elenco duplicato nella vista
+      - [x] Un tipo fuori dall'enum e rifiutato lato server
+      - [x] Obbligatorieta e tipo leggibili senza affidarsi al colore
+      - [x] Uno step di un altro template non e raggiungibile cambiando identificativo nell'indirizzo
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px
+      - [x] Pint e Larastan verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-12 schermata dei campi richiesti`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-11
+    commit:
+      sha: 7d69de72ecb0d770ed1fe802abf5cdd0a4e49b86
+      short_sha: 7d69de7
+      subject: 'feat(US-003): TASK-12 schermata dei campi richiesti'
+      committed_at: '2026-08-12T18:28:36+02:00'
+      url: null
+  -
+    id: TASK-13
+    title: 'Progetti: scelta del template e segnalazioni sulla mappatura dei responsabili'
+    body: |-
+      ## Description
+      Portare il template dentro le schermate dei progetti e chiudere le due segnalazioni che FR-004 chiede e che
+      US-002 ha dovuto rinviare.
+
+      1. **Scelta del template** nel form del progetto: il predefinito e il valore proposto in creazione, ma resta
+         sostituibile con qualunque template attivo, e modificabile dopo. L'elenco progetti mostra il template
+         associato.
+      2. **Ruoli previsti dal template e non assegnati**: segnalati sia in elenco progetti sia nella pagina
+         responsabili, nominando i ruoli scoperti e spiegando la conseguenza — una release avviata con ruoli scoperti
+         si bloccherebbe.
+      3. **Rifinitura rinviata da US-002**: la pagina responsabili segnala quando una persona ricopre piu ruoli sullo
+         stesso progetto (es. "Davide Rossi ricopre 2 ruoli su questo progetto"), cosi che la ripetizione si legga
+         come intenzionale. Il vincolo resta su `(project_id, role_id)`: nessun vincolo su `(project_id, user_id)`,
+         come registrato in `.ai/rules/models.md`.
+      4. Segnalazione quando il template associato **non e utilizzabile** (disattivato o senza step), con il motivo.
+
+      ## Files Involved
+      - resources/views/components/projects/⚡index.blade.php
+      - resources/views/components/projects/⚡assignments.blade.php
+      - lang/it/projects.php
+
+      ## Steps
+      1. Form progetto: `flux:select` sui template **attivi**, piu il template attualmente associato anche se
+         disattivato (nasconderlo mostrerebbe un'associazione diversa da quella reale); opzione "nessun template".
+         Validazione con `Rule::in` sulle sole opzioni in elenco, non sull'intera tabella
+      2. In creazione il valore iniziale e il predefinito attivo; `CreateProject` riceve la scelta effettiva
+      3. Elenco progetti: eager load `workflowTemplate` con `stepDefinitions:id,workflow_template_id,role_id` e
+         `assignments:id,project_id,role_id,user_id` — l'elenco deve restare a **query costanti** rispetto al numero
+         di progetti; colonna con template e badge dei ruoli scoperti
+      4. Pagina responsabili: banner con i ruoli previsti dal template e non assegnati, con i nomi dei ruoli; nota
+         per ciascuna persona che ricopre piu ruoli sul progetto; avviso se il template non e utilizzabile
+      5. Testi nuovi in `lang/it/projects.php`, con `trans_choice` dove il numero varia
+      6. Verifica a 375 / 768 / 1280 px: i banner non devono spingere fuori schermo i comandi
+      7. `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Il template e scegliibile in creazione (predefinito proposto) e sostituibile in modifica
+      - [x] Un identificativo di template fuori dalle opzioni in elenco e rifiutato
+      - [x] I ruoli scoperti sono nominati in elenco progetti e nella pagina responsabili, con la conseguenza spiegata
+      - [x] Il cumulo di ruoli sulla stessa persona e segnalato come intenzionale
+      - [x] Un template associato non utilizzabile e segnalato con il motivo
+      - [x] Elenco progetti a query costanti rispetto al numero di progetti
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px
+      - [x] Pint e Larastan verdi
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli in questo task (la colonna e la factory sono di TASK-07)
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-13 template e segnalazioni nelle schermate dei progetti`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-12
+    commit:
+      sha: 4ee796b95d3e3b832c8d6f1510f2ea05e037b320
+      short_sha: 4ee796b
+      subject: 'feat(US-003): TASK-13 template e segnalazioni nelle schermate dei progetti'
+      committed_at: '2026-08-12T18:32:06+02:00'
+      url: null
+  -
+    id: TASK-14
+    title: 'Seeder: template Rilascio standard con cinque step e campi'
+    body: |-
+      ## Description
+      Portare il dataset dimostrativo alla forma richiesta dal criterio di accettazione: il template "Rilascio
+      standard" con cinque step realistici e i relativi campi, con tutti e quattro i tipi rappresentati. Serve allo
+      sviluppo, ai test e a valutare l'usabilita reale delle schermate senza tabelle vuote (FR-018).
+
+      Il seeder descrive lo **stato finale voluto** con dati espliciti, non simula il percorso dell'interfaccia: e
+      la convenzione stabilita in US-002 per le mappature.
+
+      Struttura del processo dimostrativo:
+
+      | # | Step | Ruolo | Campi |
+      | --- | --- | --- | --- |
+      | 1 | Preparazione del codice | Dev Lead | Versione (testo breve, obbl.), Link alla pipeline (link, obbl.), Note di preparazione (testo lungo, opz.) |
+      | 2 | Verifica funzionale | QA | Esito della verifica (testo lungo, obbl.), Link al report di test (link, opz.), Regressioni verificate (conferma, obbl.) |
+      | 3 | Valutazione di sicurezza | Security | Rischi rilevati (testo lungo, obbl.), Verifica delle dipendenze eseguita (conferma, obbl.) |
+      | 4 | Preparazione dell'ambiente | DevOps | Ambiente di destinazione (testo breve, obbl.), Backup eseguito (conferma, obbl.), Link al piano di rientro (link, opz.) |
+      | 5 | Consegna in produzione | DevOps | Consegna completata (conferma, obbl.), Link al changelog pubblicato (link, opz.), Note di consegna (testo lungo, opz.) |
+
+      L'ultimo step e la consegna effettiva in produzione, coerente con FR-017. Il ruolo `PM` resta non usato da
+      questo template: e realistico e dimostra che non ogni ruolo del catalogo compare in ogni processo.
+
+      Aggiungere anche un secondo template **disattivato** ("Rilascio urgente", tre step): dimostra il filtro
+      sull'elenco, la sostituibilita del template sul progetto e il fatto che un template disattivato non e
+      proponibile.
+
+      ## Files Involved
+      - database/seeders/DatabaseSeeder.php
+      - lang/it/templates.php (se emergono testi mancanti)
+
+      ## Steps
+      1. Estendere `DatabaseSeeder` con `seedWorkflowTemplates()`, richiamato dopo `seedRoles()` e prima di
+         `seedProjects()`: i progetti nascono gia associati
+      2. Definire template, step e campi in costanti di classe, nello stile di `TEAM`, `ROLES`, `PROJECTS`
+      3. Comporre con le factory di TASK-01/02/03, risolvendo i ruoli per nome come fa `seedAssignments()`
+      4. Associare entrambi i progetti dimostrativi al template predefinito, scrivendo `workflow_template_id`
+         esplicitamente e non tramite `CreateProject`
+      5. Verificare che la mappatura dimostrativa **copra** i ruoli del template: nessun ruolo scoperto sui progetti
+         di partenza, cosi che lo stato iniziale sia quello sano; il caso con ruoli scoperti si ottiene disattivando
+         un'assegnazione a mano e va descritto nelle note di verifica
+      6. `php artisan migrate:fresh --seed` e ispezione delle tre schermate nuove piu quelle dei progetti
+      7. `php artisan test --compact`, Pint, `larapilot:quality`
+
+      ## Completion Criteria
+      - [x] Il template "Rilascio standard" e attivo, predefinito e ha esattamente cinque step ordinati
+      - [x] I quattro tipi di campo sono tutti rappresentati, con un misto di obbligatori e facoltativi
+      - [x] Esiste un secondo template disattivato
+      - [x] I due progetti dimostrativi risultano associati al template predefinito
+      - [x] Nessun ruolo scoperto nello stato iniziale del dataset
+      - [x] `migrate:fresh --seed` produce un ambiente navigabile senza tabelle vuote
+      - [x] Pint e Larastan verdi
+
+      ## Test Data
+      - [x] `DatabaseSeeder` compone template, step e campi con le factory, senza duplicare definizioni
+      - [x] Le factory di TASK-01/02/03 restano la sola sorgente dei valori generati
+      - [x] Nessuno scenario di release nel seeder: resta di US-011
+
+      ## Git Deliverables
+      - Commit: `feat(US-003): TASK-14 dataset dimostrativo del template di rilascio`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-13
+    commit:
+      sha: 0ee654f575fe1ef183c78d2829ff9db7d67c299e
+      short_sha: 0ee654f
+      subject: 'feat(US-003): TASK-14 dataset dimostrativo del template di rilascio'
+      committed_at: '2026-08-12T18:34:01+02:00'
+      url: null
+  -
+    id: TASK-15
+    title: 'Test: autorizzazione, flussi di configurazione e assenza di N+1'
+    body: |-
+      ## Description
+      Coprire la superficie aperta dalle tre schermate nuove e dalle modifiche a quelle dei progetti. Autorizzazione
+      verificata su **entrambi** i livelli — rotta e azione Livewire — perche le azioni non ripassano dal middleware:
+      e la convenzione di `ConfigurationPolicyTest` in US-002.
+
+      Attenzione ai due inganni registrati in `.ai/rules/tests.md`: `session('errors')` e un array in questo
+      progetto, quindi il fallimento di `assertRedirect()` produce un errore fuorviante — leggere a mano
+      `$response->headers->get('Location')` quando un'asserzione sulla risposta fallisce.
+
+      ## Files Involved
+      - tests/Feature/Configuration/WorkflowTemplateManagementTest.php
+      - tests/Feature/Configuration/StepDefinitionManagementTest.php
+      - tests/Feature/Configuration/FieldDefinitionManagementTest.php
+      - tests/Feature/Configuration/ConfigurationPolicyTest.php (estensione)
+
+      ## Steps
+      1. Usare le factory esistenti, con gli stati introdotti nei task precedenti
+      2. Rotte: un `member` autenticato riceve 403 su `/template`, `/template/{template}/step` e
+         `/template/{template}/step/{step}/campi`; un anonimo viene rediretto al login
+      3. Azioni Livewire: un `member` che invoca `save`, `toggleActivation`, `setAsDefault`, `moveUp`, `moveDown` e
+         `delete` sui tre componenti riceve 403 — non basta che i comandi siano nascosti
+      4. Aggiramento per identificativo: uno step appartenente a un **altro** template non e raggiungibile dalla
+         rotta dei campi (`scopeBindings`); un `roleId` o un `type` fuori dalle opzioni in elenco e rifiutato in
+         validazione
+      5. Flussi da amministratore: creazione con nome duplicato rifiutata; modifica; disattivazione; impostazione del
+         predefinito; aggiunta di step con ruolo; riordino; cancellazione di uno step con i suoi campi; aggiunta di
+         campi nei quattro tipi; obbligatorieta salvata
+      6. Progetti: creazione con template proposto e con template sostituito; segnalazione dei ruoli scoperti
+         presente quando manca un'assegnazione e assente quando la mappatura e completa
+      7. N+1: contare le query su elenco template (con step e progetti) e su elenco progetti (con template e
+         assegnazioni) e asserire che il numero non cresca aggiungendo righe — come i due test di US-002 che
+         falliscono al reintrodursi di un conteggio per riga
+      8. `php artisan test --compact` sull'intera suite prima di chiudere il task
+      9. Nessun test browser, Dusk, Playwright o matrice di viewport: il bar e `NORMAL`
+
+      ## Completion Criteria
+      - [x] 403 verificato su rotte **e** azioni Livewire per un `member`
+      - [x] Nessun aggiramento per identificativo fra template diversi
+      - [x] I flussi di configurazione di template, step e campi sono coperti nei percorsi felici e nei rifiuti
+      - [x] Segnalazione dei ruoli scoperti coperta in presenza e in assenza
+      - [x] Due test contano le query e falliscono se ricompare un N+1
+      - [x] Suite intera verde
+
+      ## Git Deliverables
+      - Commit: `test(US-003): TASK-15 copre autorizzazione, configurazione e query`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornamento della descrizione tenuta in locale
+    type: Test
+    status: DONE
+    dependencies:
+      - TASK-14
+    commit:
+      sha: 02815f44b0d09f5e56c0660e26f11a645a3d8d39
+      short_sha: 02815f4
+      subject: 'test(US-003): TASK-15 copre autorizzazione, configurazione e query'
+      committed_at: '2026-08-12T18:38:26+02:00'
+      url: null
+  -
+    id: TASK-16
+    title: 'Documentazione baseline e CHANGELOG'
+    body: |-
+      ## Description
+      Aggiornare il set baseline previsto dal PRD nello stesso ciclo in cui il codice cambia. Nessuna documentazione
+      estesa: diagrammi, runbook e manuali non sono previsti, e non esiste OpenAPI perche non esiste superficie API.
+
+      Il punto da spiegare bene e quello che un nuovo arrivato fraintende: la definizione del processo vive qui, ma
+      l'esecuzione di una release leggera **solo il proprio snapshot**. La nota architetturale del README va estesa
+      di conseguenza, perche da questa spec in avanti esistono davvero le tabelle di definizione che US-004 copiera.
+
+      ## Files Involved
+      - README.md
+      - CHANGELOG.md
+
+      ## Steps
+      1. README, sezione `### Configurazione del processo`: aggiungere template, step e campi, con la tabella delle
+         entita e i vincoli (una sola predefinita, posizioni contigue, quattro tipi di campo)
+      2. README, sezione `### Definizione e istanza sono separate`: chiarire che `workflow_templates`,
+         `step_definitions` e `field_definitions` sono la definizione che US-004 congelera in snapshot, e che nessun
+         percorso di esecuzione deve leggerle
+      3. README, sezione `### Vincoli permanenti`: annotare il trade-off del predefinito unico applicato dalla Action
+         e non dallo schema, con la motivazione di portabilita, e la scelta di `type` come `string` con cast invece di
+         `enum` di schema
+      4. README: aggiornare l'elenco delle schermate e delle credenziali dimostrative se cambiate
+      5. CHANGELOG, sezione `## [Unreleased] / ### Added`: voci per FR-006, FR-007, FR-008 e per la chiusura di
+         FR-004 (associazione al template e ruoli scoperti), nello stile delle voci esistenti — cosa cambia per chi
+         usa lo strumento, non l'elenco dei file
+      6. Verificare che i comandi citati nel README funzionino davvero come scritti
+      7. Pint (nessun PHP toccato, ma il gate resta), `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] README descrive template, step e campi e il confine con lo snapshot di US-004
+      - [x] I due trade-off (predefinito unico, tipo come string) sono annotati fra i vincoli permanenti
+      - [x] CHANGELOG aggiornato con voci leggibili da chi usa lo strumento
+      - [x] I comandi documentati sono stati eseguiti come scritti
+      - [x] Suite verde
+
+      ## Test Data
+      - N/A — nessuna modifica a schema, modelli o dati
+
+      ## Git Deliverables
+      - Commit: `docs(US-003): TASK-16 documentazione baseline e CHANGELOG`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: descrizione finale della PR interna verso `develop`, tenuta in locale
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-15
+    commit:
+      sha: e7071a668144ec0a17a6d6e32188701f83d06e6d
+      short_sha: e7071a6
+      subject: 'docs(US-003): TASK-16 documentazione baseline e CHANGELOG'
+      committed_at: '2026-08-12T18:40:13+02:00'
+      url: null
+updated_at: '2026-08-12T16:40:13+00:00'

@@ -1,0 +1,189 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\RoleFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+
+/**
+ * Ruolo funzionale del processo di rilascio (Dev Lead, QA, DevOps, ...).
+ *
+ * Non e il livello applicativo di un membro (`App\Enums\UserLevel`): quello decide
+ * chi puo configurare il sistema, questo esprime la responsabilita di uno step.
+ * I template di workflow parlano di ruoli e non di persone, cosi che lo stesso
+ * template funzioni su progetti con persone diverse.
+ *
+ * @property bool $is_active
+ */
+#[Fillable(['name', 'description', 'is_active'])]
+class Role extends Model
+{
+    /** @use HasFactory<RoleFactory> */
+    use HasFactory, HasUuids;
+
+    /**
+     * Relazioni che rendono un ruolo non cancellabile.
+     *
+     * Punto di estensione unico della regola. Chi introduce una nuova tabella che
+     * referenzia i ruoli aggiunge il nome della relazione qui, e la regola vale
+     * ovunque senza altre modifiche.
+     *
+     * Chi la estende deve anche aggiungere la relazione ai `withCount()` degli
+     * elenchi che chiamano `usageLabel()` per riga: il conteggio mancante viene
+     * caricato al volo, e sarebbe un N+1.
+     *
+     * @var list<string>
+     */
+    private const REFERENCING_RELATIONS = ['projectAssignments', 'defaultAssignment', 'stepDefinitions', 'releaseSteps'];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
+
+    /**
+     * Assegnazioni del ruolo sui singoli progetti.
+     *
+     * @return HasMany<ProjectRoleAssignment, $this>
+     */
+    public function projectAssignments(): HasMany
+    {
+        return $this->hasMany(ProjectRoleAssignment::class);
+    }
+
+    /**
+     * Persona che ricopre il ruolo per impostazione predefinita nel team.
+     *
+     * @return HasOne<DefaultRoleAssignment, $this>
+     */
+    public function defaultAssignment(): HasOne
+    {
+        return $this->hasOne(DefaultRoleAssignment::class);
+    }
+
+    /**
+     * Step di template che assegnano a questo ruolo la responsabilita.
+     *
+     * @return HasMany<StepDefinition, $this>
+     */
+    public function stepDefinitions(): HasMany
+    {
+        return $this->hasMany(StepDefinition::class);
+    }
+
+    /**
+     * Step di release gia avviate che hanno congelato questo ruolo.
+     *
+     * E il riferimento piu forte di tutti: cancellare il ruolo renderebbe
+     * illeggibile lo storico dei rilasci gia eseguiti. Lo step conserva comunque
+     * il nome del ruolo in `role_name`, ma la riga non si cancella lo stesso —
+     * `restrict` sullo schema e l'ultima difesa.
+     *
+     * @return HasMany<ReleaseStep, $this>
+     */
+    public function releaseSteps(): HasMany
+    {
+        return $this->hasMany(ReleaseStep::class);
+    }
+
+    /**
+     * Indica se il ruolo e referenziato, e quindi non cancellabile.
+     *
+     * Un ruolo referenziato resta disattivabile: la disattivazione lo toglie dalle
+     * scelte future senza riscrivere il passato.
+     */
+    public function isReferenced(): bool
+    {
+        return $this->referenceCounts()->sum() > 0;
+    }
+
+    /**
+     * Numero di riferimenti per relazione, usato per spiegare all'utente perche
+     * la cancellazione e stata rifiutata.
+     *
+     * I conteggi gia caricati con `withCount()` vengono riusati: senza questo
+     * controllo un elenco che chiama il metodo per ogni riga produrrebbe un N+1
+     * proprio dove `withCount()` era stato messo per evitarlo.
+     *
+     * @return Collection<string, int>
+     */
+    public function referenceCounts()
+    {
+        $missing = collect(self::REFERENCING_RELATIONS)
+            ->reject(fn (string $relation): bool => array_key_exists(
+                Str::snake($relation).'_count', $this->attributes
+            ));
+
+        if ($missing->isNotEmpty()) {
+            $this->loadCount($missing->all());
+        }
+
+        return collect(self::REFERENCING_RELATIONS)
+            ->mapWithKeys(fn (string $relation): array => [
+                $relation => (int) $this->getAttribute(Str::snake($relation).'_count'),
+            ]);
+    }
+
+    /**
+     * Descrizione leggibile di dove il ruolo e usato, mostrata in elenco e nel
+     * rifiuto di una cancellazione.
+     *
+     * Vive qui e non nel componente Livewire per due motivi: i conteggi che legge
+     * sono di questo modello, e un metodo pubblico su un componente Livewire e
+     * invocabile dal client, superficie che non serve aprire per un'etichetta.
+     */
+    public function usageLabel(): string
+    {
+        $counts = $this->referenceCounts();
+        $parts = [];
+
+        if ($counts['projectAssignments'] > 0) {
+            $parts[] = trans_choice('roles.used_projects', $counts['projectAssignments'], [
+                'count' => $counts['projectAssignments'],
+            ]);
+        }
+
+        if ($counts['stepDefinitions'] > 0) {
+            $parts[] = trans_choice('roles.used_templates', $counts['stepDefinitions'], [
+                'count' => $counts['stepDefinitions'],
+            ]);
+        }
+
+        if ($counts['releaseSteps'] > 0) {
+            $parts[] = trans_choice('roles.used_releases', $counts['releaseSteps'], [
+                'count' => $counts['releaseSteps'],
+            ]);
+        }
+
+        if ($counts['defaultAssignment'] > 0) {
+            $parts[] = __('roles.used_default');
+        }
+
+        return $parts === [] ? __('roles.unused') : implode(', ', $parts);
+    }
+
+    /**
+     * Ruoli attivi, gli unici proponibili in una nuova assegnazione.
+     */
+    #[Scope]
+    protected function active(Builder $query): void
+    {
+        $query->where('is_active', true);
+    }
+}
