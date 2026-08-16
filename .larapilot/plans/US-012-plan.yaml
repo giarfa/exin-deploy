@@ -234,21 +234,27 @@ tasks:
       7. Suite completa: `php artisan test --compact`
 
       ## Completion Criteria
-      - [ ] Test di regressione sull'espressione `wire:click` resa nell'elenco dei rilasci
-      - [ ] Test di regressione sulle etichette rese nella sfida 2FA
-      - [ ] Test di guardia che fallisce su `@js(` dentro un attributo di componente in tutto `resources/views`
-      - [ ] Guardia verificata rimettendo temporaneamente la forma difettosa
-      - [ ] Asserzioni preesistenti di `ReleaseIndexScreenTest` invariate e verdi
-      - [ ] Suite completa verde
+      - [x] Test di regressione sull'espressione `wire:click` resa nell'elenco dei rilasci
+      - [x] Test di regressione sulle etichette rese nella sfida 2FA
+      - [x] Test di guardia che fallisce su `@js(` dentro un attributo di componente in tutto `resources/views`
+      - [x] Guardia verificata rimettendo temporaneamente la forma difettosa
+      - [x] Asserzioni preesistenti di `ReleaseIndexScreenTest` invariate e verdi
+      - [x] Suite completa verde
 
       ## Git Deliverables
       - Commit: `test(US-012): TASK-03 regressione sui filtri e guardia sulle direttive negli attributi`
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Test
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-02
+    commit:
+      sha: 5a520e6d572bd44d3f6bfef44173a9011fd60dbd
+      short_sha: 5a520e6
+      subject: 'test(US-012): TASK-03 regressione sui filtri e guardia sulle direttive negli attributi'
+      committed_at: '2026-08-16T14:04:03+02:00'
+      url: null
   -
     id: TASK-04
     title: 'Registrare la regola condivisa sulle direttive negli attributi e aggiornare il changelog'
@@ -290,4 +296,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-03
-updated_at: '2026-08-16T12:00:51+00:00'
+updated_at: '2026-08-16T12:04:03+00:00'
