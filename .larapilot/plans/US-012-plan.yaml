@@ -188,10 +188,10 @@ tasks:
       6. `vendor/bin/pint --dirty --format agent`
 
       ## Completion Criteria
-      - [ ] Il comando mostra "Usa un codice di recupero" allo stato iniziale e "Usa il codice dell'app di autenticazione" dopo il click
-      - [ ] Nessun errore Alpine in console sulla pagina della sfida
-      - [ ] Il campo mostrato segue il comando, come prima: codice dell'app oppure codice di recupero
-      - [ ] Nessuna etichetta doppia visibile prima dell'avvio di Alpine
+      - [x] Il comando mostra "Usa un codice di recupero" allo stato iniziale e "Usa il codice dell'app di autenticazione" dopo il click
+      - [x] Nessun errore Alpine in console sulla pagina della sfida
+      - [x] Il campo mostrato segue il comando, come prima: codice dell'app oppure codice di recupero
+      - [x] Nessuna etichetta doppia visibile prima dell'avvio di Alpine
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -201,9 +201,15 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: aggiornare le note locali
     type: Fix
-    status: TODO
+    status: DONE
     dependencies:
       - TASK-01
+    commit:
+      sha: 581c5640fc66f882dc9d9515b795394dd38ac705
+      short_sha: 581c564
+      subject: 'fix(US-012): TASK-02 etichetta del comando di scambio nella sfida 2FA'
+      committed_at: '2026-08-16T14:00:51+02:00'
+      url: null
   -
     id: TASK-03
     title: "Copertura di regressione sul markup reso e guardia sull'intera cartella delle viste"
@@ -284,4 +290,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-03
-updated_at: '2026-08-16T11:59:04+00:00'
+updated_at: '2026-08-16T12:00:51+00:00'
