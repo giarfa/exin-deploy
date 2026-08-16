@@ -95,11 +95,11 @@ tasks:
       7. Redigere titolo e corpo della PR verso `develop` e tenerli in locale — nessun push
 
       ## Completion Criteria
-      - [ ] `develop` contiene US-009, US-010 e US-011 con un merge commit esplicito
-      - [ ] `resources/views/components/releases/⚡index.blade.php` esiste su `develop`
-      - [ ] Ramo `feature/US-012-filtri-stato-rilasci` creato da `develop`
-      - [ ] Artefatti Larapilot (backlog, spec, intake, piano) committati sul ramo
-      - [ ] Titolo e corpo della PR verso `develop` redatti in locale, senza apertura remota
+      - [x] `develop` contiene US-009, US-010 e US-011 con un merge commit esplicito
+      - [x] `resources/views/components/releases/⚡index.blade.php` esiste su `develop`
+      - [x] Ramo `feature/US-012-filtri-stato-rilasci` creato da `develop`
+      - [x] Artefatti Larapilot (backlog, spec, intake, piano) committati sul ramo
+      - [x] Titolo e corpo della PR verso `develop` redatti in locale, senza apertura remota
 
       ## Test Data
       - N/A — nessuna modifica a schema o modelli
@@ -110,8 +110,14 @@ tasks:
       - Push: **omesso** (`git_mode: GITFLOW`)
       - PR: preparata in locale verso `develop`, apertura remota solo su richiesta
     type: Impl
-    status: TODO
+    status: DONE
     dependencies: {}
+    commit:
+      sha: bdd44ecc3e4dc0d1fd21b537e7a7f05f3923b0a8
+      short_sha: bdd44ec
+      subject: 'chore(US-012): TASK-00 ramo di lavoro per i filtri dello stato'
+      committed_at: '2026-08-16T13:57:37+02:00'
+      url: null
   -
     id: TASK-01
     title: "Rendere operativi i filtri di stato nell'elenco dei rilasci"
@@ -272,4 +278,4 @@ tasks:
     status: TODO
     dependencies:
       - TASK-03
-updated_at: '2026-08-16T10:58:41+00:00'
+updated_at: '2026-08-16T11:57:40+00:00'
