@@ -181,6 +181,35 @@ class ReleaseIndexScreenTest extends TestCase
             ->assertSee('v2.3.0');
     }
 
+    public function test_the_filter_buttons_carry_a_usable_expression_in_the_rendered_markup(): void
+    {
+        /*
+         * I due test qui sopra passano dalla **proprieta** — dall'indirizzo o da
+         * `set('statusFilter', …)` — e hanno sempre funzionato: il cablaggio del
+         * bottone reso non lo attraversava nessuno. Il difetto di US-012 stava
+         * esattamente li, e li e rimasto invisibile fino alla console del browser:
+         * `@js()` dentro l'attributo di un componente Blade non viene compilato e
+         * l'espressione raggiungeva la pagina come testo.
+         *
+         * Questo test guarda il markup, che e l'unico posto dove la differenza
+         * esiste.
+         */
+        $body = (string) $this->actingAs($this->member())
+            ->get(route('releases.index'))->assertOk()->getContent();
+
+        // 'tutte' e il valore che non filtra nulla, come nel test dei comandi sopra.
+        foreach (['tutte', ReleaseStatus::InProgress->value, ReleaseStatus::Completed->value] as $value) {
+            $this->assertStringContainsString(
+                sprintf('$set(\'statusFilter\', \'%s\')', $value),
+                $body,
+                sprintf('Il bottone del filtro "%s" non porta un\'espressione utilizzabile.', $value),
+            );
+        }
+
+        // La forma non compilata, se tornasse, comparirebbe qui in chiaro.
+        $this->assertStringNotContainsString('@js(', $body);
+    }
+
     public function test_an_unknown_status_in_the_address_shows_everything_instead_of_failing(): void
     {
         $this->releaseInProgress(label: 'v2.4.0');

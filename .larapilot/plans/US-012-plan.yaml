@@ -1,0 +1,305 @@
+code: US-012
+plan_body: |-
+  ## Soluzione tecnica
+
+  Un solo difetto, due occorrenze, una regola mancante.
+
+  **Causa.** Blade compila le direttive nel testo del template, ma gli attributi di un **componente** Blade (`<flux:button>`, `<flux:link>`, `<x-…>`) vengono estratti dal compilatore dei tag e passati alla attribute bag come **stringhe PHP letterali**. L'interpolazione `{{ }}` viene convertita in concatenazione e sopravvive; `@js()` **no**: resta testo e raggiunge il browser così com'è. La vista compilata di `/rilasci` lo mostra senza ambiguità:
+
+  ```php
+  'wire:click' => '$set(\'statusFilter\', @js($filter[\'value\']))'
+  ```
+
+  Livewire riceve un'espressione che non sa valutare, solleva `Invalid or unexpected token` e **non parte alcuna richiesta**: da qui l'assenza totale di effetto sul filtro.
+
+  **Forme corrette (entrambe verificate su questo progetto).**
+
+  | Forma | Reso | Quando usarla |
+  | --- | --- | --- |
+  | `wire:click="$set('statusFilter', '{{ $valore }}')"` | `$set('statusFilter', 'in_corso')` | Vocabolario **chiuso e privo di apici** — enum, costanti, slug |
+  | `:wire:click="'$set(\'statusFilter\', '.Js::from($valore).')'"` | idem, con gli apici come entità HTML che il browser ridecodifica | Valore arbitrario: `Js::from` mette al sicuro apici e virgolette |
+
+  **Filtri dell'elenco (TASK-01).** I valori sono `tutte`, `in_corso`, `conclusa` — la costante `ALL` e i casi di `ReleaseStatus`, un vocabolario chiuso senza apici. Si usa l'interpolazione: diff minimo, nessuna azione pubblica nuova. Non si introduce un metodo `filterByStatus()` pubblico: il componente documenta già perché evita metodi invocabili dal browser, e qui non servirebbe a nulla — `$set` fa esattamente lo stesso lavoro.
+
+  **Sfida 2FA (TASK-02).** Qui l'interpolazione **non** basta: `auth.two_factor_use_code` vale `Usa il codice dell'app di autenticazione` e contiene un apice, che il browser ridecodifica dentro la stringa JavaScript rompendo l'espressione Alpine. Invece di scegliere una forma di escaping si eliminano le stringhe JavaScript: due `<span>` alternati da `x-show`, con il testo reso da Blade come ovunque nel resto del file (`x-show="! recovery"` / `x-show="recovery" x-cloak` sono già l'idioma di quella pagina). Prima che Alpine avvii, la prima etichetta è comunque quella giusta.
+
+  **Guardia (TASK-03 + TASK-04).** Il difetto è passato due volte perché nulla lo intercettava: un test di guardia scandisce `resources/views` e fallisce su ogni `@js(` dentro un tag di componente, e la regola condivisa in `.ai/rules` spiega la trappola e le due forme corrette al prossimo agente.
+
+  ## Precondizione Git — `develop` è indietro di tre spec
+
+  ⌨️ Sarah: `develop` si ferma a US-008. US-009, US-010 e US-011 sono `DONE` e approvate ma vivono solo su `feature/US-011-ambiente-dimostrativo`; il file difettoso `resources/views/components/releases/⚡index.blade.php` **non esiste su `develop`**. Un `feature/US-012-*` creato da `develop` partirebbe da un albero che non contiene il bug.
+
+  TASK-00 integra quindi la catena approvata in `develop` con un merge esplicito (`--no-ff`, come `merge: integra US-008 dettaglio della release`) e solo dopo dirama US-012. Ripiego se l'integrazione va rimandata per ragioni fuori da questa spec: diramare dalla punta di `feature/US-011-ambiente-dimostrativo` e annotarlo nel corpo della PR — mai lavorare su un albero privo del difetto da correggere.
+
+  Gli artefatti `.larapilot/` non committati in albero di lavoro (backlog, `intake.md`, `specs/US-012.yaml`, questo piano) seguono il checkout e vanno committati sul ramo US-012 in TASK-00.
+
+  ## Git & Branching
+
+  - Modalità: `GITFLOW` — nessun push automatico, nessuna PR remota
+  - Ramo: `feature/US-012-filtri-stato-rilasci` da `develop` (dopo l'integrazione di TASK-00)
+  - TASK-00: bootstrap del ramo + integrazione della catena approvata in `develop`
+  - Un commit atomico per task, Conventional Commits `tipo(US-012): TASK-NN …`
+  - Descrizione della PR verso `develop` preparata in locale; apertura remota solo su richiesta esplicita
+  - Merge dopo l'approvazione umana in `/larapilot-review`
+
+  ## Strategia dei dati di test
+
+  Nessuna modifica a schema, modelli, factory o seeder: la correzione vive interamente nel livello di presentazione. Le factory di `Release`, `ReleaseStep` e `User` e lo scenario di `DatabaseSeeder` (US-011) restano invariati e sono la sorgente dei dati per i test di regressione — nessuna fixture nuova, nessun record inventato nel test.
+
+  Verifica manuale sul dataset dimostrativo esistente: `php artisan migrate:fresh --seed` produce già una release in corso e una conclusa, cioè entrambe le sezioni che i filtri devono separare.
+
+  ## Strategia di test
+
+  - Bar: `NORMAL` — nessun Playwright, nessun Dusk, nessun Pest browser, nessuna matrice di viewport
+  - 🧪 Anne: la lacuna da chiudere è precisa — `ReleaseIndexScreenTest` esercita `->set('statusFilter', …)`, cioè la proprietà lato server, che ha sempre funzionato. I test nuovi asseriscono il **markup reso**: l'espressione `wire:click` prodotta deve contenere il valore dello stato e nessun `@js(`
+  - Test di guardia a livello di repository su `resources/views/**`: nessun `@js(` dentro un attributo di componente Blade — è ciò che avrebbe intercettato entrambe le occorrenze
+  - Le asserzioni esistenti di `ReleaseIndexScreenTest` restano invariate e verdi: il comportamento lato server non cambia
+  - **Verifica manuale (handoff).** Non automatizzabile sotto `NORMAL`, da eseguire prima della revisione su `http://exin-deploy.test/rilasci`:
+    1. Premere "In corso" → resta la sola sezione in corso, indirizzo `?stato=in_corso`, bottone con stato premuto
+    2. Premere "Conclusa" → resta il solo storico, indirizzo `?stato=conclusa`
+    3. Premere "Tutte" → tornano entrambe le sezioni, il parametro sparisce dall'indirizzo
+    4. Ricaricare `/rilasci?stato=conclusa` → l'elenco riapre già filtrato
+    5. Combinare stato e progetto → i due filtri si applicano insieme
+    6. Console del browser vuota in tutti i passaggi (nessun errore Livewire o Alpine)
+    7. Sfida 2FA: il comando mostra "Usa un codice di recupero", premuto mostra "Usa il codice dell'app di autenticazione", console pulita
+
+  ## Qualità e documentazione
+
+  - `php artisan larapilot:quality` (Pint + Larastan livello 5) prima della consegna in revisione
+  - 📝 Albert: voce `Fixed` in `CHANGELOG.md` — è un difetto visibile all'utente. README e note architetturali non sono toccati: nulla cambia nel modello o nel processo
+  - La regola condivisa si registra con lo strumento `record-rule` di Boost su glob `resources/views/**`, con la riga corrispondente in `.ai/rules/index.md`
+
+  ## Rischi residui
+
+  - L'assenza di errori in console è verificabile solo a mano sotto `NORMAL`: il test di guardia copre la causa (la direttiva non compilata), non l'effetto osservato nel browser
+  - Il merge di TASK-00 porta in `develop` tre spec approvate in un colpo solo: è integrazione dovuta, ma va annunciata in revisione perché allarga il diff rispetto alla sola correzione
+tasks:
+  -
+    id: TASK-00
+    title: 'Integrare la catena approvata in develop e diramare il ramo di lavoro'
+    body: |-
+      ## Description
+      Portare in `develop` le spec approvate US-009, US-010 e US-011 — oggi presenti solo su `feature/US-011-ambiente-dimostrativo` — e diramare da lì `feature/US-012-filtri-stato-rilasci`. Senza questa integrazione il ramo di US-012 partirebbe da un albero che non contiene nemmeno il file difettoso. Nessun push: `git_mode` è `GITFLOW`.
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+      - `.larapilot/backlog.yaml`, `.larapilot/specs/US-012.yaml`, `.larapilot/docs/support/intake.md`, `.larapilot/plans/US-012-plan.yaml` (artefatti in albero di lavoro, da committare sul ramo nuovo)
+
+      ## Steps
+      1. Verificare lo scarto: `git log --oneline develop..feature/US-011-ambiente-dimostrativo`
+      2. `git checkout develop`
+      3. `git merge --no-ff feature/US-011-ambiente-dimostrativo -m "merge: integra US-009, US-010 e US-011"` — stessa forma del merge di US-008 già in cronologia
+      4. Verificare che `resources/views/components/releases/⚡index.blade.php` sia ora presente su `develop`
+      5. `git checkout -b feature/US-012-filtri-stato-rilasci`
+      6. Committare gli artefatti Larapilot dell'istruttoria e del piano
+      7. Redigere titolo e corpo della PR verso `develop` e tenerli in locale — nessun push
+
+      ## Completion Criteria
+      - [x] `develop` contiene US-009, US-010 e US-011 con un merge commit esplicito
+      - [x] `resources/views/components/releases/⚡index.blade.php` esiste su `develop`
+      - [x] Ramo `feature/US-012-filtri-stato-rilasci` creato da `develop`
+      - [x] Artefatti Larapilot (backlog, spec, intake, piano) committati sul ramo
+      - [x] Titolo e corpo della PR verso `develop` redatti in locale, senza apertura remota
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli
+
+      ## Git Deliverables
+      - Merge: `merge: integra US-009, US-010 e US-011` su `develop`
+      - Commit: `chore(US-012): TASK-00 ramo di lavoro per i filtri dello stato`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale verso `develop`, apertura remota solo su richiesta
+    type: Impl
+    status: DONE
+    dependencies: {}
+    commit:
+      sha: bdd44ecc3e4dc0d1fd21b537e7a7f05f3923b0a8
+      short_sha: bdd44ec
+      subject: 'chore(US-012): TASK-00 ramo di lavoro per i filtri dello stato'
+      committed_at: '2026-08-16T13:57:37+02:00'
+      url: null
+  -
+    id: TASK-01
+    title: "Rendere operativi i filtri di stato nell'elenco dei rilasci"
+    body: |-
+      ## Description
+      Fix: i bottoni "Tutte", "In corso" e "Conclusa" su `/rilasci` non producono alcuna richiesta Livewire perché `@js()` non viene compilato dentro l'attributo di un componente Blade. Sostituire con l'interpolazione `{{ }}`, che il compilatore dei tag converte in concatenazione e che quindi sopravvive.
+
+      ## Files Involved
+      - `resources/views/components/releases/⚡index.blade.php`
+
+      ## Steps
+      1. Nel `@foreach` sui filtri, sostituire
+         `wire:click="$set('statusFilter', @js($filter['value']))"`
+         con
+         `wire:click="$set('statusFilter', '{{ $filter['value'] }}')"`
+      2. Aggiungere accanto una nota breve sul perché dell'interpolazione — la forma con `@js()` è quella che un lettore scriverebbe d'istinto, e senza nota tornerebbe alla prima modifica
+      3. Non introdurre metodi pubblici nuovi sul componente: in Livewire sarebbero azioni invocabili dal browser, e il componente documenta già perché li evita
+      4. Lasciare invariati `#[Url]`, `selectedStatus()`, `showsInProgress()`, `showsCompleted()` e le due query: il difetto è solo nel cablaggio del bottone
+      5. Verificare la vista compilata: `php artisan view:clear`, ricaricare `/rilasci`, controllare che l'attributo reso contenga `$set('statusFilter', 'in_corso')`
+      6. `php artisan test --compact tests/Feature/Releases/ReleaseIndexScreenTest.php` — deve restare verde
+      7. `vendor/bin/pint --dirty --format agent`
+
+      ## Completion Criteria
+      - [x] Premendo "In corso" resta la sola sezione in corso; "Conclusa" il solo storico; "Tutte" entrambe
+      - [x] L'indirizzo acquisisce `?stato=in_corso` / `?stato=conclusa` e un indirizzo incollato riapre l'elenco già filtrato
+      - [x] Il bottone attivo conserva `aria-pressed="true"` e la variante `primary`; gli altri `aria-pressed="false"`
+      - [x] Stato e progetto si combinano: le due scelte si applicano insieme
+      - [x] Nessun errore in console su `/rilasci`, né al caricamento né al click
+      - [x] `ReleaseIndexScreenTest` verde senza modifiche alle asserzioni esistenti
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli
+
+      ## Git Deliverables
+      - Commit: `fix(US-012): TASK-01 filtri di stato dell'elenco dei rilasci`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Fix
+    status: DONE
+    dependencies:
+      - TASK-00
+    commit:
+      sha: 597dcc5abee0c358a8c11af68a99f20fe3fbf4f2
+      short_sha: 597dcc5
+      subject: "fix(US-012): TASK-01 filtri di stato dell'elenco dei rilasci"
+      committed_at: '2026-08-16T13:59:04+02:00'
+      url: null
+  -
+    id: TASK-02
+    title: "Ripristinare l'etichetta del comando di scambio nella sfida 2FA"
+    body: |-
+      ## Description
+      Fix: nella sfida 2FA il comando che scambia codice dell'app e codice di recupero usa `@js()` dentro `x-text` su `<flux:link>` — stessa causa di TASK-01: l'espressione Alpine arriva al browser non compilata e il comando resta senza testo.
+
+      Qui l'interpolazione `{{ }}` **non** è sufficiente: `auth.two_factor_use_code` vale `Usa il codice dell'app di autenticazione` e l'apice, ridecodificato dal browser, romperebbe la stringa JavaScript. Si eliminano le stringhe JavaScript invece di inseguirne l'escaping.
+
+      ## Files Involved
+      - `resources/views/auth/two-factor-challenge.blade.php`
+
+      ## Steps
+      1. Sostituire l'attributo `x-text` con due `<span>` alternati dentro il corpo del comando:
+         - `<span x-show="! recovery">{{ __('auth.two_factor_use_recovery') }}</span>`
+         - `<span x-show="recovery" x-cloak>{{ __('auth.two_factor_use_code') }}</span>`
+      2. Trasformare `<flux:link … />` in tag aperto e chiuso per ospitare il corpo; conservare `as="button"`, `type="button"`, `class="text-sm"` e `x-on:click="recovery = ! recovery"`
+      3. `x-cloak` sul secondo span, coerentemente con i due blocchi di campo già presenti nella pagina: prima dell'avvio di Alpine deve comparire una sola etichetta, quella corretta
+      4. Non aggiungere `@js()` nell'`x-data` di `<flux:card>`: è a sua volta un attributo di componente, la trappola sarebbe la stessa
+      5. Verificare a mano la pagina della sfida in entrambi gli stati, con la console aperta
+      6. `vendor/bin/pint --dirty --format agent`
+
+      ## Completion Criteria
+      - [x] Il comando mostra "Usa un codice di recupero" allo stato iniziale e "Usa il codice dell'app di autenticazione" dopo il click
+      - [x] Nessun errore Alpine in console sulla pagina della sfida
+      - [x] Il campo mostrato segue il comando, come prima: codice dell'app oppure codice di recupero
+      - [x] Nessuna etichetta doppia visibile prima dell'avvio di Alpine
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli
+
+      ## Git Deliverables
+      - Commit: `fix(US-012): TASK-02 etichetta del comando di scambio nella sfida 2FA`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Fix
+    status: DONE
+    dependencies:
+      - TASK-01
+    commit:
+      sha: 581c5640fc66f882dc9d9515b795394dd38ac705
+      short_sha: 581c564
+      subject: 'fix(US-012): TASK-02 etichetta del comando di scambio nella sfida 2FA'
+      committed_at: '2026-08-16T14:00:51+02:00'
+      url: null
+  -
+    id: TASK-03
+    title: "Copertura di regressione sul markup reso e guardia sull'intera cartella delle viste"
+    body: |-
+      ## Description
+      Chiudere la lacuna che ha lasciato passare il difetto due volte. I test esistenti esercitano `->set('statusFilter', …)`, cioè la proprietà lato server, che ha sempre funzionato: il cablaggio del bottone reso non è mai stato attraversato. I test nuovi asseriscono il **markup**, e una guardia a livello di repository impedisce che la stessa forma rientri altrove.
+
+      Bar `NORMAL`: nessun Playwright, nessun Dusk, nessun Pest browser, nessuna matrice di viewport.
+
+      ## Files Involved
+      - `tests/Feature/Releases/ReleaseIndexScreenTest.php`
+      - `tests/Feature/Auth/TwoFactorTest.php` (o il file esistente che copre la sfida 2FA)
+      - `tests/Unit/Views/BladeComponentAttributesTest.php` (nuovo — guardia)
+
+      ## Steps
+      1. Usare le factory esistenti di `Release`, `ReleaseStep` e `User`: nessuna fixture nuova
+      2. Elenco dei rilasci — asserire sul markup reso che l'espressione del bottone contenga `$set('statusFilter', 'in_corso')` e `$set('statusFilter', 'conclusa')`, e che la pagina non contenga la stringa `@js(`. Usare `assertSee(..., false)` per confrontare il markup non escapato
+      3. Sfida 2FA — asserire che la pagina contenga entrambe le etichette come testo reso e nessun `@js(`
+      4. Guardia — test che scandisce ricorsivamente `resources/views/**/*.blade.php` e fallisce quando `@js(` compare dentro un attributo di un tag di componente (`<x-…`, `<flux:…`, `<livewire:…`), riportando file e riga. Il testo libero e gli elementi HTML nativi restano leciti: la direttiva lì viene compilata
+      5. Verificare che la guardia sia significativa: rimettendo per prova la forma con `@js()` in TASK-01 il test deve fallire, poi ripristinare
+      6. `php artisan test --compact --filter=ReleaseIndexScreenTest`, `--filter=TwoFactor`, `--filter=BladeComponentAttributes`
+      7. Suite completa: `php artisan test --compact`
+
+      ## Completion Criteria
+      - [x] Test di regressione sull'espressione `wire:click` resa nell'elenco dei rilasci
+      - [x] Test di regressione sulle etichette rese nella sfida 2FA
+      - [x] Test di guardia che fallisce su `@js(` dentro un attributo di componente in tutto `resources/views`
+      - [x] Guardia verificata rimettendo temporaneamente la forma difettosa
+      - [x] Asserzioni preesistenti di `ReleaseIndexScreenTest` invariate e verdi
+      - [x] Suite completa verde
+
+      ## Git Deliverables
+      - Commit: `test(US-012): TASK-03 regressione sui filtri e guardia sulle direttive negli attributi`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare le note locali
+    type: Test
+    status: DONE
+    dependencies:
+      - TASK-02
+    commit:
+      sha: 5a520e6d572bd44d3f6bfef44173a9011fd60dbd
+      short_sha: 5a520e6
+      subject: 'test(US-012): TASK-03 regressione sui filtri e guardia sulle direttive negli attributi'
+      committed_at: '2026-08-16T14:04:03+02:00'
+      url: null
+  -
+    id: TASK-04
+    title: 'Registrare la regola condivisa sulle direttive negli attributi e aggiornare il changelog'
+    body: |-
+      ## Description
+      Rendere la trappola patrimonio del progetto invece che di questa sessione: una regola in `.ai/rules` che dichiara il divieto e mostra le due forme corrette, più la voce di changelog per un difetto visibile all'utente.
+
+      ## Files Involved
+      - `.ai/rules/views.md` (nuovo, glob `resources/views/**`)
+      - `.ai/rules/index.md`
+      - `CHANGELOG.md`
+
+      ## Steps
+      1. Registrare la regola con lo strumento `record-rule` di Boost — glob `resources/views/**`, mai la memoria personale dell'agente: `.ai/rules` è ciò che resta nel repository
+      2. Contenuto della regola: negli attributi di un **componente** Blade (`<x-…>`, `<flux:…>`, `<livewire:…>`) l'interpolazione `{{ }}` viene compilata, `@js()` **no** — resta testo e raggiunge il browser. Le due forme corrette, entrambe verificate su questo progetto:
+         - vocabolario chiuso e privo di apici → `wire:click="$set('campo', '{{ $valore }}')"`
+         - valore arbitrario → attributo legato: `:wire:click="'$set(\'campo\', '.Js::from($valore).')'"` (gli apici escono come entità HTML che il browser ridecodifica)
+         - testo con apici destinato a un'espressione Alpine → nessuna stringa JavaScript: elementi alternati con `x-show`, come nella sfida 2FA
+         Citare le due occorrenze reali e il test di guardia che le intercetta
+      3. Aggiungere in `.ai/rules/index.md` la riga `resources/views/**` → `.ai/rules/views.md`, rispettando l'ordine e la forma della tabella esistente
+      4. `CHANGELOG.md`, sezione Unreleased, voce `Fixed`: filtri di stato dell'elenco dei rilasci e etichetta del comando di scambio nella sfida 2FA
+      5. `php artisan larapilot:quality` — Pint e Larastan livello 5 verdi
+
+      ## Completion Criteria
+      - [x] `.ai/rules/views.md` registrata con `record-rule` su glob `resources/views/**`
+      - [x] Regola con entrambe le forme corrette, le occorrenze reali e il riferimento al test di guardia
+      - [x] Riga corrispondente in `.ai/rules/index.md`
+      - [x] Voce `Fixed` in `CHANGELOG.md`
+      - [x] `larapilot:quality` verde
+
+      ## Test Data
+      - N/A — nessuna modifica a schema o modelli
+
+      ## Git Deliverables
+      - Commit: `docs(US-012): TASK-04 regola sulle direttive negli attributi dei componenti e changelog`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: completare il corpo locale con l'elenco dei task consegnati
+    type: Impl
+    status: DONE
+    dependencies:
+      - TASK-03
+    commit:
+      sha: 4816836ddfc7321da00ab74901ff95737ace3c3d
+      short_sha: '4816836'
+      subject: 'docs(US-012): TASK-04 regola sulle direttive negli attributi dei componenti e changelog'
+      committed_at: '2026-08-16T14:05:23+02:00'
+      url: null
+updated_at: '2026-08-16T12:05:23+00:00'

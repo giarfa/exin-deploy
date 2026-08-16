@@ -365,9 +365,17 @@ new class extends Component
             @foreach ($this->statusFilters as $filter)
                 {{-- `aria-pressed` e non un gruppo di radio: sono comandi che
                      cambiano cio che si vede subito, non una scelta da confermare.
-                     Lo stato premuto e annunciato, non dedotto dal colore. --}}
+                     Lo stato premuto e annunciato, non dedotto dal colore.
+
+                     Il valore entra con `{{ }}` e non con `@js()`: questo e
+                     l'attributo di un **componente** Blade, e nelle attribute bag
+                     dei componenti l'interpolazione viene compilata mentre le
+                     direttive no — `@js()` resterebbe testo e arriverebbe al
+                     browser cosi com'e. Il vocabolario e chiuso e senza apici
+                     (`tutte`, `in_corso`, `conclusa`), quindi gli apici singoli
+                     scritti a mano bastano. Vedi `.ai/rules/views.md`. --}}
                 <flux:button size="sm" wire:key="filtro-{{ $filter['value'] }}"
-                             wire:click="$set('statusFilter', @js($filter['value']))"
+                             wire:click="$set('statusFilter', '{{ $filter['value'] }}')"
                              :variant="$statusFilter === $filter['value'] ? 'primary' : 'ghost'"
                              :aria-pressed="$statusFilter === $filter['value'] ? 'true' : 'false'"
                              class="max-sm:w-full">

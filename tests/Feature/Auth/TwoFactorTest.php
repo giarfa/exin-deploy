@@ -109,6 +109,33 @@ class TwoFactorTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_the_challenge_offers_the_switch_between_code_and_recovery_code(): void
+    {
+        /*
+         * Il comando di scambio era reso **senza testo**: `@js()` dentro `x-text`
+         * su un componente Blade non viene compilato e l'espressione Alpine
+         * arrivava al browser come stringa vuota di significato. Chi aveva perso
+         * il telefono si trovava davanti a un collegamento invisibile — e nessun
+         * test se ne accorgeva, perche il percorso del codice di recupero passa
+         * dalla POST e non dalla pagina.
+         *
+         * Entrambe le etichette sono nel DOM di proposito: Alpine sceglie quale
+         * mostrare, senza costruire stringhe JavaScript attorno a un apice.
+         */
+        $user = $this->userWithConfirmedTwoFactor();
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'Rilascio-2026!',
+        ]);
+
+        $response = $this->get(route('two-factor.login'))->assertOk();
+
+        $response->assertSee(__('auth.two_factor_use_recovery'));
+        $response->assertSee(__('auth.two_factor_use_code'));
+        $response->assertDontSee('@js(', false);
+    }
+
     public function test_the_challenge_accepts_a_valid_totp_code(): void
     {
         $user = $this->userWithConfirmedTwoFactor();

@@ -218,3 +218,13 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
 
 - SQLite configurato in modalita **WAL** con `busy_timeout`, per contenere il rischio di
   concorrenza in scrittura accettato nel PRD.
+
+### Fixed
+
+- **Filtri di stato dell'elenco dei rilasci** (US-012): "In corso" e "Conclusa" non
+  restringevano l'elenco e non comparivano nell'indirizzo. L'espressione del comando
+  raggiungeva il browser non compilata, che la rifiutava in console.
+- **Comando di scambio nella sfida in due passaggi** (US-012): il collegamento che passa
+  dal codice dell'app al codice di recupero era reso senza testo, per la stessa causa.
+- L'attributo `x-cloak` era decorativo: mancava la regola di stile che lo rende efficace, e
+  i blocchi alternati della sfida comparivano tutti insieme prima dell'avvio di Alpine.
