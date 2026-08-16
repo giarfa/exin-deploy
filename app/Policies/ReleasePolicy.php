@@ -43,14 +43,24 @@ class ReleasePolicy
     /**
      * Consultare l'elenco delle release.
      *
-     * Resta negato ai non amministratori **anche ora che `view` e aperta a tutti**:
-     * le due non si allineano per sbaglio. Il dettaglio risponde a "dove e fermo
-     * questo rilascio"; l'elenco e una superficie diversa — filtri, storico di ogni
-     * progetto — e la sua Policy si decide con la schermata che la usa, in US-009.
+     * Concessa a **ogni utente autenticato**, ora che la schermata che la usa
+     * esiste. La decisione era rinviata di proposito — un'autorizzazione senza una
+     * pagina che la applichi non si sa valutare — e cade dalla stessa parte di
+     * `view()`, per la stessa ragione: lo strumento non invia notifiche (rischio
+     * accettato n.1 del PRD), quindi vedere quali rilasci sono in corso e su chi si
+     * sono fermati e la funzione del prodotto, non un privilegio. Un elenco riservato
+     * agli amministratori obbligherebbe chiunque altro a conoscere in anticipo
+     * l'indirizzo del rilascio che cerca.
+     *
+     * Non e un allineamento automatico delle due ability: e l'elenco a somigliare al
+     * dettaglio, perche mostra le stesse cose in fila. Cosa **resta chiuso**:
+     * `create` — avviare una release e degli amministratori, concessa dal filtro
+     * `before()` e da nessun altro percorso — e `delete`, negata a chiunque per
+     * sempre.
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -62,10 +72,9 @@ class ReleasePolicy
      * notifiche (rischio accettato n.1 del PRD), quindi chiunque debba sollecitare
      * deve poter vedere su chi il flusso si e fermato e da quanto.
      *
-     * Cosa **resta chiuso**, e non per dimenticanza: `viewAny` — l'elenco con i
-     * filtri e la sua Policy si decidono in US-009, e concederla qui darebbe
-     * un'autorizzazione senza una schermata che la usi — e `delete`, negata a
-     * chiunque per sempre.
+     * Cosa **resta chiuso**, e non per dimenticanza: `delete`, negata a chiunque per
+     * sempre. `viewAny` e invece aperta anch'essa da US-009, quando la schermata che
+     * la applica e arrivata.
      *
      * Il dettaglio e in **sola lettura**: compilare e chiudere restano decise da
      * `ReleaseStepPolicy`, che concede solo al responsabile dello step attivo o a

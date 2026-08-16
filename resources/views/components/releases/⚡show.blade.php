@@ -106,16 +106,14 @@ new class extends Component
 
 <div>
     {{--
-        Briciole di navigazione in **deroga dichiarata** al mockup, che apre con
-        "Release": l'elenco delle release non esiste ancora (US-009) e la pagina dei
-        progetti e riservata agli amministratori, quindi entrambe le voci sarebbero
-        un vicolo cieco o un 403 per un membro. La prima voce porta quindi a "i miei
-        step", che ogni persona autenticata puo aprire. US-009 la sostituira con
-        l'elenco e riportera il mockup alla lettera.
+        Briciole conformi al mockup: la prima voce e l'elenco delle release, che
+        US-009 ha reso aperto a ogni membro autenticato. La deroga dichiarata da
+        US-008 — quando l'elenco non esisteva e la prima voce ripiegava su "i miei
+        step" — e caduta con la schermata che la motivava.
     --}}
     <flux:breadcrumbs class="mb-4">
-        <flux:breadcrumbs.item :href="route('home')">
-            {{ __('releases.detail_breadcrumb_my_steps') }}
+        <flux:breadcrumbs.item :href="route('releases.index')">
+            {{ __('releases.index_heading') }}
         </flux:breadcrumbs.item>
         <flux:breadcrumbs.item>{{ $release->project->name }}</flux:breadcrumbs.item>
         <flux:breadcrumbs.item>{{ $release->label }}</flux:breadcrumbs.item>
@@ -360,6 +358,19 @@ new class extends Component
                 <flux:text class="text-xs">
                     {{ __('releases.detail_template_frozen', ['template' => $release->workflowTemplate->name]) }}
                 </flux:text>
+
+                <flux:separator variant="subtle" />
+
+                {{-- Il passaggio da "dove siamo" a "come ci siamo arrivati": questa
+                     pagina mostra lo stato, il registro la cronologia che lo ha
+                     prodotto. Sotto 1024 px il comando occupa la larghezza e
+                     l'altezza minima del bersaglio. --}}
+                <div class="max-lg:*:min-h-11 max-lg:*:w-full">
+                    <flux:button :href="route('releases.log', $release)" variant="outline"
+                                 size="sm" icon="clock">
+                        {{ __('releases.detail_open_log') }}
+                    </flux:button>
+                </div>
             </flux:card>
         </div>
     </div>

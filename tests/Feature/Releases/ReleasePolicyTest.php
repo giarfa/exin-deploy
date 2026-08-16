@@ -106,12 +106,13 @@ class ReleasePolicyTest extends TestCase
         $this->get(route('releases.show', $release))->assertRedirect(route('login'));
     }
 
-    public function test_the_list_stays_closed_even_now_that_the_detail_is_open(): void
+    public function test_the_list_is_open_to_every_member_now_that_the_screen_exists(): void
     {
-        // Le due ability non si allineano per sbaglio: l'elenco con i filtri e una
-        // superficie diversa, e la sua Policy si decide con la schermata che la usa
-        // (US-009).
-        $this->assertFalse(Gate::forUser(User::factory()->member()->create())->allows('viewAny', Release::class));
+        // La decisione era rinviata di proposito finche l'elenco non esisteva: ora
+        // esiste, e cade dalla stessa parte del dettaglio. Un elenco riservato agli
+        // amministratori obbligherebbe chiunque altro a conoscere in anticipo
+        // l'indirizzo del rilascio che cerca.
+        $this->assertTrue(Gate::forUser(User::factory()->member()->create())->allows('viewAny', Release::class));
         $this->assertTrue(Gate::forUser(User::factory()->admin()->create())->allows('viewAny', Release::class));
     }
 

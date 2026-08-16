@@ -133,6 +133,35 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
 - **Il dettaglio si raggiunge da dove serve**: dal blocco "release in corso su cui sei
   coinvolto", che pone la domanda a cui questa pagina risponde; dalla schermata di uno step,
   in tutti e tre i suoi stati; e dalla conferma di avvio di una release.
+- **Elenco e storico delle release** (US-009, FR-015): la voce "Release" della navigazione
+  porta ora a una pagina. Due sezioni con colonne diverse perche rispondono a domande
+  diverse: quelle in corso dicono a che punto e la catena e chi trattiene il flusso, quelle
+  concluse chi ha consegnato, quando e in quanto tempo. Filtri per stato e per progetto, che
+  vivono nell'indirizzo e sopravvivono a una ricarica: un elenco filtrato e condivisibile.
+  Lo storico non ha limite di data ne paginazione — cresce di qualche riga a settimana e il
+  costo di lettura non dipende dal numero di righe.
+- **L'elenco e consultabile da ogni membro autenticato** (US-009): `ReleasePolicy::viewAny()`
+  passa da negata ad aperta, come gia `view()`. La decisione era rinviata di proposito alla
+  spec che porta la schermata — un'autorizzazione senza una pagina che la applichi non si sa
+  valutare. Avviare una release resta degli amministratori; cancellarne una resta di nessuno.
+- **Le briciole del dettaglio tornano conformi al mockup**: la prima voce e ora l'elenco
+  delle release e non piu "i miei step", ripiego dichiarato di US-008 quando l'elenco non
+  esisteva ancora.
+- **Registro delle transizioni consultabile** (US-010, FR-016): dal dettaglio di una release
+  si apre la cronologia completa di cio che e successo — avvio, chiusura di ogni step,
+  passaggio del flusso al responsabile successivo, conclusione — con l'attore e l'istante di
+  ciascuna voce. L'ordine e crescente, dall'inizio del rilascio in poi: e un racconto di come
+  e andata, non una lista di cose da fare.
+- **I tentativi non autorizzati sono riservati agli amministratori** (US-010): la riga nomina
+  una persona e cosa ha provato a fare, ed e materiale di sicurezza e non di processo. Chi
+  non e amministratore non la vede e non ne vede traccia — nessun conteggio di voci nascoste.
+- **L'immutabilita del registro e ora verificata sull'intera applicazione** (US-010): oltre al
+  rifiuto del modello, i test pretendono che nessuna rotta delle superfici di rilascio accetti
+  un metodo di scrittura, che nessuna rotta risolva una voce dall'indirizzo, che nessun
+  comando Artisan la tocchi e che la schermata non esponga metodi pubblici oltre a quelli di
+  lettura — in Livewire un metodo pubblico e un'azione invocabile dal browser. `update` e
+  `delete` sono negate anche a un amministratore da `ReleaseEventPolicy`.
+
 - **Diagrammi del modello e delle transizioni** nel README: entita-relazioni con definizione
   e istanza distinte, e macchina a stati di step e release annotata con gli eventi scritti
   nel registro.
@@ -141,8 +170,20 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   predefinita e due progetti di cui uno con una sostituzione. Include ora il template
   "Rilascio standard" con cinque step e quattordici campi, e un secondo template
   disattivato.
+- **Scenario di esecuzione dimostrativo** (US-011, FR-018): `migrate:fresh --seed` produce
+  ora anche tre rilasci — uno consegnato con la catena tutta chiusa e il registro completo,
+  uno a meta catena con valori realistici sul primo step, e uno appena avviato e fermo sul
+  primo. Ogni schermata operativa ha quindi qualcosa da mostrare senza dover ricostruire uno
+  scenario a mano. I rilasci sono prodotti chiamando le Action reali e non scrivendo righe:
+  il registro delle transizioni che ne risulta e quello che il processo produce davvero.
 - Documentazione baseline: README con avvio via Herd, nota architetturale sulla separazione
   fra definizione e istanza, questo changelog.
+
+### Removed
+
+- Il componente di navigazione `x-nav.planned` e la sua chiave di traduzione: nessuna
+  sezione della sidebar e piu marcata "in arrivo", e un componente senza chiamanti e codice
+  morto.
 
 ### Security
 

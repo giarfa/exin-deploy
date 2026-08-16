@@ -3,6 +3,7 @@
 use App\Models\DefaultRoleAssignment;
 use App\Models\Project;
 use App\Models\Release;
+use App\Models\ReleaseEvent;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -110,6 +111,25 @@ Route::middleware('auth')->group(function (): void {
         ->name('releases.start');
 
     /*
+     * Elenco delle release, in corso e concluse, con i filtri per stato e per
+     * progetto. E aperto a ogni membro autenticato come il dettaglio: senza
+     * notifiche, sapere quali rilasci sono fermi e su chi e la funzione dello
+     * strumento (vedi `ReleasePolicy::viewAny`).
+     *
+     * Il `->can()` c'e, come sul dettaglio e a differenza di `/step/{releaseStep}`:
+     * qui non esiste alcun tentativo da registrare nel registro delle transizioni,
+     * quindi il middleware puo rifiutare per primo e la protezione resta a due
+     * livelli.
+     *
+     * Registrata **prima** di `/rilasci/{release}`: le rotte statiche precedono
+     * quelle con parametro, cosi che l'indirizzo dell'elenco non venga mai risolto
+     * come identificativo di una release.
+     */
+    Route::livewire('/rilasci', 'releases.index')
+        ->can('viewAny', Release::class)
+        ->name('releases.index');
+
+    /*
      * Dettaglio di una release: la catena congelata con lo stato di ogni step, i
      * responsabili e le informazioni fornite. Schermata di **sola lettura**.
      *
@@ -124,6 +144,22 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/rilasci/{release}', 'releases.show')
         ->can('view', 'release')
         ->name('releases.show');
+
+    /*
+     * Registro delle transizioni di una release: cosa e successo, per mano di chi e
+     * quando. Rotta propria e non una sezione del dettaglio perche le due
+     * rispondono a domande diverse — "dove siamo" contro "come ci siamo arrivati" —
+     * e perche questa e l'unica superficie con righe a **visibilita differenziata**
+     * (i tentativi non autorizzati sono riservati agli amministratori), che dentro
+     * una schermata che mostra tutto a tutti diventerebbe invisibile a chi legge.
+     *
+     * L'ability e sugli **eventi** e non sulla release: e sugli eventi che la
+     * visibilita si decide. Il `->can()` c'e, come sul dettaglio: nessun tentativo
+     * da registrare, quindi la protezione resta a due livelli.
+     */
+    Route::livewire('/rilasci/{release}/registro', 'releases.log')
+        ->can('viewAny', ReleaseEvent::class)
+        ->name('releases.log');
 
     /*
      * Compilazione e chiusura di uno step di una release avviata.

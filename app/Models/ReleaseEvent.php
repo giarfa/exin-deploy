@@ -6,6 +6,8 @@ use App\Enums\ReleaseEventAction;
 use App\Exceptions\ReleaseEventIsAppendOnly;
 use Database\Factories\ReleaseEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,8 +28,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * Il vocabolario degli eventi vive in `App\Enums\ReleaseEventAction`, oggi scritto
  * per intero: avvio, chiusura di uno step, attivazione del successivo, conclusione
- * della release e tentativo non autorizzato. La consultazione del registro
- * appartiene a US-010.
+ * della release e tentativo non autorizzato.
+ *
+ * La consultazione e in `/rilasci/{release}/registro`. Non tutte le voci sono per
+ * tutti: i **tentativi non autorizzati** restano ai soli amministratori, e il filtro
+ * vive nello scope `visibleTo()` piu sotto, allineato a `ReleaseEventPolicy::view()`.
  *
  * @property ReleaseEventAction $action
  * @property array<string, mixed>|null $payload
@@ -104,5 +109,63 @@ class ReleaseEvent extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Voci di una release, quelle che il suo registro mostra.
+     *
+     * Usa l'indice `(release_id, created_at)` creato con la tabella proprio per
+     * questa lettura, e non un indice sul solo `release_id`: la cronologia si legge
+     * sempre ordinata.
+     */
+    #[Scope]
+    protected function forRelease(Builder $query, Release $release): void
+    {
+        $query->where('release_id', $release->getKey());
+    }
+
+    /**
+     * Ordine cronologico: dal primo evento all'ultimo.
+     *
+     * **Crescente e non decrescente**, al contrario delle altre schermate. Quelle
+     * rispondono a "cosa devo fare ora" e mettono in cima il piu recente; un
+     * registro racconta come e andata, e una cronologia si legge dall'inizio —
+     * l'avvio in testa, la consegna in fondo. E anche l'unico ordine in cui "step
+     * attivato" ha senso subito dopo "step completato".
+     *
+     * Lo spareggio sull'identificativo non e cosmetico: `CloseStep` scrive due
+     * eventi nella **stessa transazione**, quindi con lo stesso istante al secondo.
+     * Ordinando sul solo `created_at` i due si scambierebbero di posto fra due
+     * letture, e la cronologia direbbe che il flusso e passato al responsabile
+     * successivo prima che lo step precedente si chiudesse. Gli UUIDv7 sono
+     * monotoni, quindi l'ordine di scrittura e recuperabile dalla chiave.
+     */
+    #[Scope]
+    protected function chronological(Builder $query): void
+    {
+        $query->orderBy('created_at')->orderBy('id');
+    }
+
+    /**
+     * Voci che una persona puo vedere.
+     *
+     * E la **stessa decisione** di `ReleaseEventPolicy::view()`, espressa in query:
+     * i tentativi non autorizzati restano ai soli amministratori. Vive qui e non in
+     * un filtro sulla collezione gia caricata perche caricarle per scartarle
+     * significherebbe leggere righe che chi guarda non puo vedere — e perche il loro
+     * **numero** e a sua volta informazione di sicurezza, che una collezione filtrata
+     * a valle rischia di far trapelare in un conteggio.
+     *
+     * Le due formulazioni devono restare allineate: `ReleaseEventPolicyTest` le
+     * confronta riga per riga sullo stesso insieme, cosi che aprirne una senza
+     * l'altra faccia fallire la suite invece di aprire una fuga.
+     */
+    #[Scope]
+    protected function visibleTo(Builder $query, User $user): void
+    {
+        $query->unless(
+            $user->isAdministrator(),
+            fn (Builder $restricted) => $restricted->whereNot('action', ReleaseEventAction::UnauthorizedAttempt)
+        );
     }
 }

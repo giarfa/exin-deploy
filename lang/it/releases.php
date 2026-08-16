@@ -124,7 +124,60 @@ return [
      * vocabolario. Il titolo delle informazioni fornite riusa
      * `step_values_heading`: e lo stesso blocco, reso dallo stesso componente.
      */
-    'detail_breadcrumb_my_steps' => 'I miei step',
+    /*
+     * Elenco delle release (US-009). Prefisso `index_` come sulle altre schermate
+     * di collezione.
+     *
+     * Le etichette degli stati non hanno chiavi qui: vivono su
+     * `App\Enums\ReleaseStatus::label()`, dove sta il vocabolario. Duplicarle
+     * darebbe due fonti per la stessa parola, destinate a divergere.
+     */
+    'index_heading' => 'Release',
+    'index_counter' => ':in_progress, :completed.',
+    // Condizioni esplicite: senza `{0}` la prima forma renderebbe anche per zero,
+    // cioe "1 rilascio in corso" su un elenco vuoto.
+    'index_counter_in_progress' => '{0} nessun rilascio in corso|{1} un rilascio in corso|[2,*] :count rilasci in corso',
+    'index_counter_completed' => '{0} nessuno concluso|{1} uno concluso|[2,*] :count conclusi',
+
+    'index_filter_all' => 'Tutte',
+    'index_filter_project' => 'Progetto',
+    'index_filter_project_all' => 'Tutti i progetti',
+
+    'index_section_in_progress' => 'In corso',
+    'index_section_completed' => 'Concluse',
+
+    'index_caption_in_progress' => 'Release in corso, con step corrente e responsabile in attesa.',
+    'index_caption_completed' => 'Release concluse, con data e autore della consegna in produzione.',
+
+    'index_column_project' => 'Progetto',
+    'index_column_label' => 'Etichetta',
+    'index_column_status' => 'Stato',
+    'index_column_current_step' => 'Step corrente',
+    'index_column_waiting_on' => 'In attesa di',
+    'index_column_started_at' => 'Avviata',
+    'index_column_delivered_by' => 'Consegnata da',
+    'index_column_completed_at' => 'Conclusa',
+    'index_column_duration' => 'Durata',
+
+    'index_current_step' => ':position di :total — :step',
+    'index_waiting_on' => ':name, da :duration',
+    // Una release in corso ha sempre uno step attivo per invariante: queste due
+    // righe esistono perche una schermata che tacesse davanti a un dato incoerente
+    // lascerebbe senza sapere cosa si sta guardando.
+    'index_without_active_step' => 'Nessuno step attivo',
+    'index_waiting_on_nobody' => 'Nessun responsabile in attesa',
+    'index_delivered_by_unknown' => 'Autore non registrato',
+    'index_completed_at_unknown' => 'Istante non registrato',
+    'index_duration_unknown' => 'Non calcolabile',
+
+    'index_empty_in_progress_heading' => 'Nessun rilascio in corso',
+    'index_empty_in_progress_explained' => 'Compariranno qui non appena una release verra avviata su un progetto.',
+    'index_empty_completed_heading' => 'Nessun rilascio concluso',
+    'index_empty_completed_explained' => 'Lo storico si popola alla chiusura dell\'ultimo step di una release.',
+    // Dice quale filtro produce il vuoto: senza, resta da indovinare se non ci sia
+    // nulla o se sia il filtro a nasconderlo.
+    'index_empty_filtered' => 'Nessun risultato per il progetto :project. Togli il filtro per vedere gli altri progetti.',
+
     'detail_summary_in_progress' => 'Rilascio in corso — step :position di :total, in attesa di :name.',
     // Una release in corso ha sempre uno step attivo per invariante: questa riga
     // esiste perche una pagina che tacesse davanti a un dato incoerente lascerebbe
@@ -152,4 +205,42 @@ return [
     'detail_meta_completed_steps' => 'Step completati',
     'detail_meta_completed_steps_value' => ':completed di :total',
     'detail_template_frozen' => 'Il template e congelato all\'avvio: modifiche successive a :template non alterano questa release.',
+    'detail_open_log' => 'Apri il registro delle transizioni',
+
+    /*
+     * Registro delle transizioni (US-010). Le etichette delle azioni non hanno
+     * chiavi qui: vivono su `App\Enums\ReleaseEventAction::label()`, dove sta il
+     * vocabolario che finisce anche in colonna.
+     */
+    'log_heading' => 'Registro delle transizioni',
+    'log_breadcrumb' => 'Registro',
+    'log_intro' => 'Cronologia completa di :project · :label, dall\'avvio in poi.',
+    'log_append_only' => 'Il registro e in sola aggiunta: una voce scritta non si modifica e non si cancella, da nessuna schermata e da nessun amministratore. E la condizione perche valga come prova di cosa e successo.',
+
+    'log_actor' => 'Per mano di :name',
+    'log_on_step' => 'Step :position — :step',
+    'log_on_release' => 'Riguarda il rilascio nel suo insieme, non un singolo step',
+
+    'log_detail_started' => 'Processo congelato da :template, :steps step copiati nella release.',
+    'log_detail_step_completed' => '{0} Nessuna informazione fornita|{1} Un\'informazione fornita|[2,*] :count informazioni fornite',
+    'log_detail_step_activated' => 'Il flusso e passato a :name.',
+    'log_detail_release_completed' => 'La release :label risulta consegnata.',
+    'log_detail_unauthorized' => 'Tentativo di :ability, rifiutato.',
+
+    /*
+     * Le ability tracciate sono quelle che avrebbero cambiato lo stato del
+     * rilascio, cioe le sole che `RecordUnauthorizedStepAttempt` scrive nel
+     * registro. `unknown` copre una riga scritta da una versione precedente:
+     * il registro e in sola aggiunta, quindi nessuno potra tornare a completarla.
+     */
+    'log_ability_fill' => 'compilazione dello step',
+    'log_ability_close' => 'chiusura dello step',
+    'log_ability_unknown' => 'operazione non registrata',
+
+    'log_admin_only' => 'Questa voce e visibile ai soli amministratori.',
+
+    'log_empty_heading' => 'Nessuna voce nel registro',
+    'log_empty_explained' => 'Non dovrebbe accadere su una release avviata: l\'avvio scrive sempre la prima riga. Se vedi questo messaggio, segnalalo.',
+
+    'log_back_to_release' => 'Torna al dettaglio della release',
 ];

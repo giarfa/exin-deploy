@@ -58,7 +58,46 @@ La mappatura dimostrativa copre tutti i ruoli previsti dal template, quindi lo s
 iniziale e quello sano. Per vedere la segnalazione dei **ruoli scoperti**, rimuovi un
 responsabile dalla pagina dei responsabili di un progetto.
 
-Lo scenario di **esecuzione** — release in corso, release conclusa — arriva con US-011.
+E semina infine lo scenario di **esecuzione**: tre rilasci, uno per ciascuna forma che le
+schermate devono saper mostrare.
+
+| Release | Progetto | Cosa dimostra |
+| --- | --- | --- |
+| `v2.3.0` | Portale Clienti | rilascio **consegnato**: catena tutta chiusa, registro completo con undici voci |
+| `v2.4.0` | Portale Clienti | rilascio **a meta catena**: primo step chiuso con valori veri, secondo attivo |
+| `2026.08.1` | Gestionale Magazzino | rilascio **appena avviato**, fermo sul primo step |
+
+La terza non e un di piu: e l'unica forma in cui lo step attivo e il primo della catena, dove
+`ReleaseStep::activationInstant()` non ha un precedente da cui leggere l'istante e ripiega su
+`release.started_at`. E il ramo che ogni rilascio nuovo percorre.
+
+I tre rilasci sono prodotti **chiamando le Action reali** (`StartRelease`, `CloseStep`) e non
+scrivendo righe, in deroga dichiarata alla convenzione che il resto del seeder segue. La
+configurazione e uno **stato**: si dichiara, ed e piu chiaro che ricostruirlo. Un rilascio e un
+**processo**, e il suo stato *e* la sequenza di transizioni che lo ha prodotto: scriverlo a
+mano significherebbe replicare nel seeder lo snapshot, la risoluzione dei responsabili,
+l'invariante dello step attivo unico e i payload di cinque tipi di evento — il dominio in un
+secondo posto, destinato a divergere. Il registro delle transizioni e proprio cio che una
+scrittura a mano falsificherebbe meglio: righe di forma giusta e contenuto inventato.
+
+Gli istanti sono riportati indietro nel tempo dopo la chiusura: le Action scrivono `now()`, ed
+e giusto che lo facciano, ma un ambiente in cui tutto e successo nello stesso secondo non
+mostrerebbe ne le durate ("aperto da 2 giorni") ne l'ordinamento dello storico.
+
+**Con quale account guardare cosa.** L'amministratore `f.giarola@` vede tutto tranne uno step
+in carico: nello scenario e responsabile come Security dello step 3, che non e ancora il suo
+turno — quindi la sua schermata di ingresso mostra lo **stato vuoto** e, sotto, il blocco delle
+release in attesa. Non e un difetto del seed: il criterio di accettazione fissa lo scenario a
+"primo step chiuso, secondo attivo", e il secondo e di QA. Per vedere la vista operativa piena
+accedi come `m.bellini@` (QA, ha lo step attivo di `v2.4.0`) o `l.serra@` (Dev Lead, ha quello
+di `2026.08.1`).
+
+Il template **disattivato** resta senza release e nessun tentativo non autorizzato viene
+seminato: il primo perche `StartRelease` lo rifiuterebbe — un ambiente dimostrativo che
+contenga uno stato irriproducibile dall'applicazione mente — il secondo perche la traccia di
+qualcuno che ha provato a fare cio che non poteva, con il nome di una persona del team di
+esempio, in un ambiente condiviso si presta a essere letta male. Chi vuole vederla la produce
+aprendo lo step di un altro.
 
 Non ci sono istruzioni Sail o Docker: l'ambiente locale scelto nel PRD e Herd.
 
@@ -334,14 +373,17 @@ rilascio e avvenuto.
 | `/progetti` | Progetti, con il comando di avvio release per riga | amministratore |
 | `/progetti/{progetto}/responsabili` | Mappatura ruolo → persona del progetto | amministratore |
 | `/progetti/{progetto}/rilascio` | **Avvio di una release** | amministratore |
+| `/rilasci` | **Elenco e storico delle release** — in corso e concluse, con filtri | ogni membro |
 | `/rilasci/{release}` | **Dettaglio della release** — catena, responsabili, valori | ogni membro |
+| `/rilasci/{release}/registro` | **Registro delle transizioni** — cronologia in sola aggiunta | ogni membro (tentativi: amministratore) |
 | `/step/{step}` | **Compilazione e chiusura di uno step** | responsabile dello step o amministratore |
 | `/template` · `/template/{t}/step` · `/template/{t}/step/{s}/campi` | Processo di rilascio | amministratore |
 | `/responsabili-predefiniti` | Mappatura predefinita di team | amministratore |
 
-La voce **Release** nella navigazione resta marcata "in arrivo": la pagina che promette e
-l'**elenco** delle release (US-009), non la schermata di avvio, che si raggiunge dal
-progetto su cui si rilascia.
+Nessuna voce della navigazione e piu marcata "in arrivo": ogni sezione della sidebar porta a
+una pagina che esiste. Le due schermate che **non** compaiono in navigazione si raggiungono
+da dove servono e non da un menu — l'avvio di una release dal progetto su cui si rilascia, la
+chiusura di uno step da "i miei step" o dal dettaglio.
 
 `/step/{step}` si raggiunge dalla schermata di ingresso e dalla catena mostrata dopo
 l'avvio. La pagina rende tre stati diversi dello stesso step — attivo con il form,
@@ -396,12 +438,12 @@ di processo (FR-024), l'ordine va spostato in SQL insieme al resto.
 
 `Release::activeStep()` e `ReleaseStep::withActivationInstant()` nascono qui ma sono **seam
 condivisi**: il dettaglio della release riusa lo scope dell'istante di attivazione e l'elenco
-(US-009) leggera lo stesso stato. Vanno letti come tali e non come dettaglio interno di
+(US-009) legge lo stesso stato. Vanno letti come tali e non come dettaglio interno di
 questa schermata.
 
-Finche US-011 non e consegnata, `migrate:fresh --seed` produce un ambiente **senza release**:
-la schermata mostra lo stato vuoto, ed e corretto. Per provarla si avvia una release
-dall'interfaccia (`/progetti/{progetto}/rilascio`).
+`migrate:fresh --seed` produce tre rilasci (US-011), quindi la schermata ha qualcosa da
+mostrare da subito. Per vedere invece lo **stato vuoto** — che e un criterio di accettazione a
+sua volta — basta accedere con un membro che non abbia step in carico.
 
 #### Il dettaglio della release
 
@@ -412,11 +454,13 @@ lettura**: nessuna azione, nessun form, nessuna scrittura. L'unico comando prese
 altrove — a `/step/{step}` — e compare solo dove `ReleaseStepPolicy::fill()` lo consente.
 
 **La lettura e aperta a ogni membro autenticato**, anche a chi e estraneo alla catena.
-`ReleasePolicy::view()` concede a chiunque sia autenticato mentre `viewAny()` resta negata ai
-non amministratori: **le due non si allineano per sbaglio**. Sapere dove e fermo un rilascio
-non e un privilegio — su uno strumento che non invia notifiche, e la funzione stessa dello
-strumento — ma l'elenco con i suoi filtri e una superficie diversa, e la sua Policy si decide
-con la schermata che la usa (US-009).
+`ReleasePolicy::view()` concede a chiunque sia autenticato, e da US-009 lo fa anche
+`viewAny()`: le due **non** si sono allineate per uniformita — la decisione sull'elenco era
+rinviata di proposito finche la schermata non esisteva, perche un'autorizzazione senza una
+pagina che la applichi non si sa valutare. Cade dalla stessa parte per la stessa ragione:
+sapere dove e fermo un rilascio non e un privilegio, su uno strumento che non invia
+notifiche e la sua funzione. Restano negate `create` ai non amministratori e `delete` a
+chiunque.
 
 Una sola lettura di dominio, interamente in eager loading: progetto, template, autore
 dell'avvio, e la catena con campi, responsabile e autore della chiusura. Due vincoli non
@@ -443,10 +487,99 @@ provenienza e non come definizione: catena, ordine e campi arrivano tutti dallo 
 nota accanto lo dichiara a chi legge. Alternativa scartata: congelare `template_name` su
 `releases`, una colonna in piu per un dato che nessun percorso di esecuzione interroga.
 
-Le **briciole di navigazione** sono in deroga dichiarata al mockup, che apre con "Release":
-l'elenco non esiste ancora e `/progetti` e riservata agli amministratori, quindi entrambe le
-voci sarebbero un vicolo cieco o un 403 per un membro. La prima voce porta a "i miei step";
-US-009 la sostituira con l'elenco.
+Le **briciole di navigazione** aprono sull'elenco delle release, conformi al mockup. La
+deroga dichiarata da US-008 — quando l'elenco non esisteva e la prima voce ripiegava su "i
+miei step" — e caduta con la schermata che la motivava.
+
+#### L'elenco e lo storico delle release
+
+`/rilasci` risponde alla domanda d'insieme (FR-015): quali rilasci sono aperti, su chi si
+sono fermati, cosa e stato consegnato e quando. Sola lettura come il dettaglio.
+
+**Due sezioni con colonne diverse**, e non e una duplicazione: quella in corso mostra step
+corrente e responsabile in attesa, lo storico chi ha consegnato, quando e in quanto tempo.
+Uniformarle lascerebbe meta tabella vuota in entrambe.
+
+**Due ordinamenti diversi**, per la stessa ragione: una release aperta e "recente" se e stata
+**avviata** da poco, una conclusa se e stata **consegnata** da poco. Ordinare lo storico su
+`started_at` — la scorciatoia che sembra una pulizia — metterebbe in cima un rilascio avviato
+a marzo e consegnato ieri, sotto uno avviato e consegnato ad aprile. Il caso e coperto da un
+test con due release che si incrociano.
+
+**I filtri vivono nell'indirizzo** (`?stato=`, `?progetto=`) e non nel solo stato del
+componente: un elenco filtrato deve essere condivisibile e ricaricabile. Lo stato ha **tre**
+valori — `tutte`, `in_corso`, `conclusa` — perche il mockup mostra un filtro che nasconde una
+sezione, non un interruttore fra due schermate: senza il terzo non esisterebbe il ritorno
+alla vista d'insieme. Un valore fuori vocabolario mostra tutto invece di far fallire il cast
+a enum: il filtro arriva da un input non fidato.
+
+**Nessuna paginazione, nessun limite di data.** Lo storico e consultabile a tempo
+indeterminato per criterio di accettazione, e su un team interno cresce di qualche riga a
+settimana; un paginatore su due sezioni indipendenti nella stessa pagina introdurrebbe due
+parametri di pagina e due stati vuoti. Il costo di lettura **non dipende dal numero di
+release** (`ReleaseIndexQueryBudgetTest`), e filtrare per stato risparmia davvero la lettura
+della sezione nascosta. Quando lo storico raggiungera l'ordine delle centinaia la sezione
+conclusa va paginata: e la stessa soglia oltre la quale l'ordinamento di "i miei step" va
+spostato in SQL.
+
+**Una sola tabella semantica per sezione.** Sotto 1024 px le utility `max-lg:` la impilano in
+card — `thead` nascosto, righe a blocco, etichetta di colonna resa dal pseudo-elemento della
+cella (`content-[attr(data-label)]`) — e sopra torna una tabella. Il contenuto **non** e
+duplicato in due alberi DOM: uno screen reader lo leggerebbe due volte. Nessun
+`overflow-x-auto` da nessuna parte: il criterio di accettazione esclude lo scorrimento
+orizzontale a ogni larghezza, e un contenitore scorrevole sarebbe il modo piu facile per
+rientrarci senza accorgersene. L'etichetta di colonna arriva dallo stesso array che genera
+l'intestazione (`x-releases.list-cell`), quindi le due non possono divergere.
+
+Nessuna deroga alla regola dello snapshot: a differenza del dettaglio, qui non compare
+nemmeno il template di origine, e `SnapshotIsolationTest` verifica sulla pagina resa che
+l'elenco non interroghi alcuna delle quattro tabelle di definizione.
+
+Il comando "Avvia una release" del mockup **non** e stato portato in cima all'elenco: l'avvio
+si decide su un progetto (`/progetti/{progetto}/rilascio`) e un comando senza progetto non
+porterebbe da nessuna parte.
+
+#### Il registro delle transizioni
+
+`/rilasci/{release}/registro` risponde a "cosa e successo e per mano di chi" (FR-016), dove il
+dettaglio risponde a "dove siamo". Rotta propria e non una sezione del dettaglio: sono due
+domande diverse, e questa e l'unica superficie con righe a **visibilita differenziata** —
+dentro una schermata che mostra tutto a tutti, quella differenza sarebbe invisibile a chi
+legge il codice.
+
+**Ordine crescente**, al contrario di ogni altra schermata. Le altre rispondono a "cosa devo
+fare ora" e mettono in cima il piu recente; una cronologia si legge dall'inizio — l'avvio in
+testa, la consegna in fondo. Lo spareggio e sull'identificativo e non solo sull'istante:
+`CloseStep` scrive chiusura e attivazione nella **stessa transazione**, quindi con lo stesso
+istante al secondo, e senza lo spareggio la cronologia direbbe che il flusso e passato al
+responsabile successivo prima che lo step precedente si chiudesse. Gli UUIDv7 sono monotoni,
+quindi l'ordine di scrittura e recuperabile dalla chiave.
+
+**I tentativi non autorizzati sono dei soli amministratori.** La riga nomina una persona e
+cosa ha provato a fare: e materiale di sicurezza, non di processo, e mostrarlo a tutti
+trasformerebbe il registro in una lavagna delle colpe. Chi non e amministratore non ne vede
+**alcuna traccia** — nessun conteggio di voci nascoste, che sarebbe il peggiore dei due mondi.
+La stessa decisione e scritta in due linguaggi, `ReleaseEventPolicy::view()` per il singolo
+evento e `ReleaseEvent::visibleTo()` per la query: filtrare a valle costerebbe la lettura di
+righe che chi guarda non puo vedere. `ReleaseEventPolicyTest` le confronta riga per riga, cosi
+che aprirne una senza l'altra faccia fallire la suite invece di aprire una fuga.
+
+**Il payload si legge con `??`, mai come se fosse garantito.** E nullable e le sue chiavi
+variano per azione; una riga scritta da una versione precedente non ha le chiavi aggiunte
+dopo, e il registro e in sola aggiunta — nessuno potra tornare a completarla.
+
+Nessuna paginazione: le voci sono proporzionali alla lunghezza della catena, dell'ordine della
+decina per rilascio. Il costo di lettura non dipende dal loro numero
+(`ReleaseLogQueryBudgetTest`), e il punto piu esposto e la relazione **nullable** verso lo
+step — l'avvio non ne ha — che caricata pigramente non si nota su un insieme di sole chiusure.
+
+**Sugli istanti** (`ReleaseLogInstantTest`): sono memorizzati in UTC, resi nel fuso
+dell'applicazione — che e UTC — e identici su registro e dettaglio, verificato confrontando le
+due schermate sullo stesso valore. C'e una trappola fissata da un test: Eloquent serializza una
+data **formattandola**, e il formato non porta l'offset, quindi una `Carbon` in un fuso diverso
+finirebbe in tabella come orario di parete di quel fuso. L'applicazione non ci cade perche
+scrive sempre `now()`; il giorno in cui un istante arrivasse da un input o da un import servira
+una normalizzazione esplicita, su una tabella dove le righe sbagliate non si correggono.
 
 ### Configurazione del processo
 
@@ -572,9 +705,16 @@ riga, con icona e parola.
     `DB::table('release_events')->delete()`), che per costruzione non attraversano gli
     eventi Eloquent, ne per la cascata quando sparisce la release a cui l'evento si
     riferisce. Chiudere anche quelle richiederebbe un trigger di database, incompatibile
-    con il vincolo 1. La difesa contro la cancellazione e altrove: `ReleasePolicy::delete()`
-    la nega a chiunque, amministratori inclusi, e nessun percorso applicativo cancella
-    eventi. Chi introdurra il primo deve passare da quell'eccezione, non aggirarla.
+    con il vincolo 1. La difesa contro la cancellazione e altrove, su **tre** livelli:
+    `ReleaseEventPolicy` nega `update` e `delete` a chiunque — amministratori inclusi, perche
+    le due stanno fra le ability non filtrate da `before()` — `ReleasePolicy::delete()` nega
+    la cancellazione della release che li conterrebbe, e nessun percorso applicativo cancella
+    eventi. Che quest'ultima non sia solo un'affermazione lo verifica
+    `ReleaseEventAppendOnlyTest`: nessuna rotta delle superfici di rilascio accetta un metodo
+    di scrittura, nessuna rotta risolve una voce dall'indirizzo, nessun comando Artisan la
+    nomina, e la schermata del registro non espone metodi pubblici oltre a quelli di lettura —
+    in Livewire un metodo pubblico e un'azione invocabile dal browser. Chi introdurra il primo
+    percorso di scrittura deve passare da quei test, non aggirarli.
 11. **`releases.completed_by` e `completed_at` sono nate vuote.** Create da US-004 e
     riempite da US-006, quando la chiusura dell'ultimo step conclude la release:
     aggiungerle dopo sarebbe stata una seconda migrazione sulla stessa tabella per una
