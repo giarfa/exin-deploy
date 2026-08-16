@@ -537,3 +537,64 @@ specs:
       subject: 'chore(US-011): consuntivo di sessione'
       committed_at: '2026-08-14T00:51:19+02:00'
       url: null
+  -
+    code: US-012
+    title: "Fix: i filtri di stato dell'elenco rilasci non applicano nulla"
+    epic:
+      code: EP-005
+      title: Manutenzione
+    priority: HIGH
+    points: 2
+    status: 'IN PROGRESS'
+    body: |
+      #### US-012: Fix — i filtri di stato dell'elenco rilasci non applicano nulla
+
+      **Epic:** EP-005 | **Priority:** HIGH | **Points:** 2 | **Status:** TODO
+      **Tipo:** Fix
+      **Severità:** High
+      **Sicurezza:** Lars/Oliver — no
+      **Correlata a:** US-009 (filtri dell'elenco), US-001 (sfida 2FA)
+      **Segnalazione:** `BUG-20260816-filtri-stato-rilasci` in `.larapilot/docs/support/intake.md`
+
+      **Storia utente**
+      Come Release Owner,
+      voglio che premendo "In corso" o "Conclusa" nell'elenco dei rilasci l'elenco si restringa davvero,
+      così da isolare i rilasci aperti da quelli consegnati invece di scorrere l'intera pagina.
+
+      **Dimostra**
+      Dopo questa spec premo "In corso" su `/rilasci`: resta la sola sezione dei rilasci in
+      corso e l'indirizzo diventa `/rilasci?stato=in_corso`, condivisibile e ricaricabile.
+      Premo "Conclusa" e resta il solo storico. Premo "Tutte" e tornano entrambe le sezioni.
+      La console del browser non riporta alcun errore. Nella sfida 2FA il comando che scambia
+      codice TOTP e codice di recupero mostra di nuovo la propria etichetta.
+
+      **Passi per riprodurre (prima del fix)**
+      1. Autenticarsi e aprire `http://exin-deploy.test/rilasci`
+      2. Premere "In corso"
+      3. L'elenco non cambia, l'indirizzo non acquisisce `?stato=…`, il bottone non risulta premuto
+      4. In console: `Livewire Expression Error: Invalid or unexpected token — Expression: "$set('statusFilter', @js($filter['value']))"`
+
+      **Causa**
+      In `resources/views/components/releases/⚡index.blade.php` l'attributo `wire:click` è
+      passato a un **componente Blade** (`<flux:button>`). Nelle attribute bag dei componenti
+      Blade l'interpolazione `{{ }}` viene compilata, `@js()` **no**: resta testo e raggiunge
+      il browser così com'è. La stessa forma è usata in
+      `resources/views/auth/two-factor-challenge.blade.php` dentro `x-text` su `<flux:link>`.
+
+      **Criteri di accettazione**
+      - [ ] Premendo "In corso" resta la sola sezione dei rilasci in corso; premendo "Conclusa" resta il solo storico; premendo "Tutte" tornano entrambe
+      - [ ] Il filtro premuto si riflette nell'indirizzo (`?stato=in_corso` / `?stato=conclusa`) e un indirizzo incollato riapre l'elenco già filtrato
+      - [ ] Il bottone attivo conserva `aria-pressed="true"` e la variante `primary`; gli altri `aria-pressed="false"`
+      - [ ] La pagina `/rilasci` non produce alcun errore JavaScript in console, né al caricamento né al click sui filtri
+      - [ ] Il filtro di stato continua a comporsi con il filtro di progetto: le due scelte si applicano insieme
+      - [ ] Nella sfida 2FA il comando che scambia codice TOTP e codice di recupero mostra la propria etichetta in entrambi gli stati, senza errori Alpine in console
+      - [ ] Nessuna occorrenza residua di `@js()` dentro un attributo di componente Blade nell'intero `resources/views` (verificato)
+      - [ ] Test di regressione (Anne) che asserisce il **markup reso**, non la sola proprietà lato server: l'espressione `wire:click` prodotta deve contenere il valore dello stato e nessun `@js(`
+      - [ ] Test di regressione analogo sul rendering della sfida 2FA
+      - [ ] `ReleaseIndexScreenTest` resta verde, comprese le asserzioni esistenti su `->set('statusFilter', …)`
+      - [ ] Regola registrata in `.ai/rules` — divieto di `@js()` negli attributi dei componenti Blade, con la forma corretta da usare — e riga corrispondente in `.ai/rules/index.md`
+      - [ ] Nessuna nuova azione pubblica invocabile dal browser che scriva nel log applicativo, coerentemente con la nota già presente nel componente
+    status_history:
+      - { status: PLANNED, at: '2026-08-16T10:58:41+00:00' }
+      - { status: 'IN PROGRESS', at: '2026-08-16T11:57:20+00:00' }
+    rework: false
