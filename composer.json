@@ -8,6 +8,18 @@
         "framework"
     ],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../larapilot",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "andreapollastri/larapilot": "2.4.0.0"
+                }
+            }
+        }
+    ],
     "require": {
         "php": "^8.3",
         "andreapollastri/larapilot": "^2.3",
@@ -44,6 +56,11 @@
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+        ],
+        "larapilot-refresh": [
+            "@composer dump-autoload",
+            "@php artisan optimize:clear",
+            "@php artisan boost:update --no-discover"
         ],
         "lint": "pint",
         "lint:check": "pint --test",

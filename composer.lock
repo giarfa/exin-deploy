@@ -4,21 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "95774c71a0255d83cc8e34ad03414628",
+    "content-hash": "8dcb63d5795e3b5bdfcd428be85a36c2",
     "packages": [
         {
             "name": "andreapollastri/larapilot",
-            "version": "2.4.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/andreapollastri/larapilot.git",
-                "reference": "dd38f9a2cc1b6dc2f761cc0e9e418b7c02b6b5fe"
-            },
+            "version": "2.4.0.0",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/andreapollastri/larapilot/zipball/dd38f9a2cc1b6dc2f761cc0e9e418b7c02b6b5fe",
-                "reference": "dd38f9a2cc1b6dc2f761cc0e9e418b7c02b6b5fe",
-                "shasum": ""
+                "type": "path",
+                "url": "../larapilot",
+                "reference": "97088277bed618ed2c2896d08df7a102e0a11f5d"
             },
             "require": {
                 "illuminate/console": "^12.0|^13.0",
@@ -46,11 +40,11 @@
                 },
                 "larapilot": {
                     "quality": {
+                        "larastan_level_min": 5,
                         "tools": [
                             "larastan/larastan",
                             "laravel/pint"
-                        ],
-                        "larastan_level_min": 5
+                        ]
                     }
                 }
             },
@@ -59,7 +53,22 @@
                     "Larapilot\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "Larapilot\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ],
+                "lint": [
+                    "pint --format agent"
+                ],
+                "analyse": [
+                    "phpstan analyse --memory-limit=1G"
+                ]
+            },
             "license": [
                 "MIT"
             ],
@@ -82,7 +91,10 @@
                 "issues": "https://github.com/andreapollastri/larapilot/issues",
                 "source": "https://github.com/andreapollastri/larapilot"
             },
-            "time": "2026-08-06T16:53:22+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "bacon/bacon-qr-code",
