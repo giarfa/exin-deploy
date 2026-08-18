@@ -14,7 +14,10 @@
     "sail": false,
     "skills": [
         "infer-conventions",
+        "fortify-development",
         "laravel-best-practices",
+        "fluxui-development",
+        "livewire-development",
         "tailwindcss-development",
         "larapilot-autopilot",
         "larapilot-backstage",
