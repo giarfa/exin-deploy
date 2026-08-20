@@ -1,0 +1,649 @@
+code: US-013
+plan_body: |-
+  ## Soluzione Tecnica
+
+  L'override e **stato effimero del form di avvio**, non un dato di dominio: nessuna tabella, nessuna colonna, nessuna scrittura sulla mappatura di progetto o sui default di team (cella `ProjectRoleAssignment` — one-shot). Cio che finisce in `release_steps.assigned_user_id` e semplicemente la persona **effettiva** risolta all'avvio, esattamente come oggi: lo snapshot non distingue la provenienza (celle `create_release_steps_table.php:39` e `⚡show.blade.php`, entrambe decided-null).
+
+  ### 1. Action — `StartRelease`
+
+  La firma diventa:
+
+  ```php
+  public function handle(Project $project, string $label, User $actor, array $overrides = []): Release
+  ```
+
+  `$overrides` e un array indicizzato per `role_id` con valore `user_id`, **sempre presente** e con default vuoto: le due chiamate esistenti (`database/seeders/DatabaseSeeder.php:493` e `resources/views/components/releases/⚡start.blade.php:144`) restano valide senza modifiche (cella `StartRelease.php:55`).
+
+  Dentro `responsibles()` la risoluzione diventa, nell'ordine:
+
+  1. **Igiene dell'input** — si tengono solo le chiavi che corrispondono a un ruolo previsto dagli step del template; il resto si scarta. Un identificativo di persona che non risolve non e un override: si scarta anche quello, e il ruolo torna a dipendere dalla mappatura di progetto con le precondizioni odierne. Non e una decisione di prodotto ma difesa al confine: dalla UI il caso e irraggiungibile, perche il select e validato contro il solo insieme in elenco.
+  2. **Una query batch** — `User::query()->whereIn('id', array_unique(array_values($overrides)))->get()->keyBy('id')`, eseguita una volta sola e solo quando ci sono override. Zero query per ruolo, il costo non cresce con la lunghezza della catena (cella `StartReleaseQueryBudgetTest.php:1`).
+  3. **Ruoli scoperti** — `$project->uncoveredRoles()` **al netto** dei ruoli coperti da un override risolto: un ruolo senza responsabile di progetto ma con un override valido si considera coperto per questa release (celle `StartRelease.php:204` e `RolesWithoutResponsible.php:19`). L'elenco nominato dall'eccezione e quindi quello residuo.
+  4. **Sostituzione integrale** — per ogni ruolo previsto la persona effettiva e l'override quando c'e, altrimenti l'assegnato di progetto. Nessun ripiego sul dato di progetto per un ruolo overridden (cella `StartRelease.php:199`).
+  5. **Responsabili disattivati** — il controllo si applica all'insieme **effettivo**: un override verso una persona disattivata e rifiutato con lo stesso `InactiveResponsibleOnProject` di oggi, e un override verso una persona attiva rimuove dall'elenco il responsabile di progetto disattivato che sostituisce (celle `StartRelease.php:216` e `InactiveResponsibleOnProject.php:20`).
+
+  L'ordine dei due rifiuti resta quello odierno — prima i ruoli scoperti, poi i disattivati: sono due problemi con due soluzioni diverse, e il commento in testa a `responsibles()` lo dichiara gia.
+
+  Le due classi di eccezione **non cambiano forma**: nessun costruttore, nessun campo, nessuna firma nuova. Cambia cio che il chiamante passa loro, cioe l'elenco residuo. Il docblock di ciascuna viene aggiornato per dirlo, perche il testo attuale afferma che l'elenco e calcolato sulla mappatura di progetto e da qui in poi non e piu vero.
+
+  ### 2. Mappatura effettiva — un solo punto di verita
+
+  Il banner delle precondizioni deve tenere conto degli override **gia scelti nel form**, ma `Project::uncoveredRoles()`, `Project::inactiveResponsibles()` e `Project::startBlocker()` restano invariati (celle `Project.php:101`, `:136`, `:172`): il ricalcolo vive nel componente Livewire.
+
+  Invece di riscrivere quelle tre regole nel componente — due copie della stessa regola divergono, ed e l'avvertenza scritta sul modello stesso — il componente costruisce la **mappatura effettiva** e la sovrappone alla relazione `assignments` di un **clone** del progetto:
+
+  ```php
+  $effective = clone $this->project;
+  $effective->setRelation('assignments', $merged);
+  ```
+
+  `$merged` contiene, per ogni ruolo previsto, l'assegnazione di progetto reale oppure una istanza `ProjectRoleAssignment` **non persistita** (`role_id`, `user_id`, relazione `user` popolata a mano con `setRelation`) che rappresenta la selezione corrente. Nessun `save()`, nessun `create()`: e un oggetto in memoria che serve solo a far ricalcolare i metodi esistenti. `clone` copia l'array delle relazioni per valore, quindi `$this->project` continua a descrivere lo stato **persistito** e non viene contaminato.
+
+  Con questo, `$effective->uncoveredRoles()`, `$effective->inactiveResponsibles()` e `$effective->startBlocker()` restituiscono il quadro reale della release che si sta per avviare, senza toccare il modello e senza duplicare nulla. Le relazioni sono gia precaricate da `mount()`, quindi il ricalcolo non interroga il database.
+
+  Rischio noto e sua mitigazione: un'istanza `ProjectRoleAssignment` in memoria puo essere confusa per un percorso di scrittura. Il commento nel componente lo dichiara, e `StartReleaseOverrideTest` verifica che nessuna riga di `project_role_assignments` (ne di `default_role_assignments`) risulti creata o modificata dopo un avvio con override.
+
+  ### 3. Form di avvio — `⚡start.blade.php`
+
+  - `public array $overrides = []` indicizzato per `role_id`, precompilato in `mount()` con l'assegnato di progetto (stringa vuota quando il ruolo e scoperto). Select **sempre visibile** per ogni ruolo previsto, default preselezionato (cella `:39`).
+  - Insieme selezionabile identico a quello della mappatura di progetto: ogni membro attivo, piu l'assegnato corrente anche se disattivato per non far sparire la selezione, nessuna restrizione legata al ruolo (cella `:53`). Stessa forma del computed `assignableUsers()` di `⚡assignments.blade.php`, una sola query.
+  - Validazione: chiavi limitate ai ruoli previsti dal template, valori vincolati con `Rule::in` ai soli identificativi in elenco — cosi una persona fuori insieme non e scegliibile nemmeno indicandone l'identificativo, com'e gia per `workflowTemplateId` in `⚡index.blade.php`.
+  - Etichetta e comando di invio sono abilitati quando la mappatura **effettiva** non ha piu blocchi: un progetto con ruoli scoperti o responsabili disattivati diventa avviabile appena ogni ruolo bloccante ha un override valido selezionato. Restano disabilitati per i blocchi che un override non risolve — progetto disattivato, processo assente o inutilizzabile.
+  - Il messaggio di rifiuto post-submit resta **identico a oggi** per i ruoli non coperti da override: le quattro `catch` esistenti non cambiano forma, e i nomi arrivano dall'eccezione come adesso (cella `:144`).
+  - `refuse()` e `startAnother()` invalidano anche i computed nuovi.
+
+  Nessuna modifica a `ReleasePolicy` (cella decided-null): l'autorizzazione resta il solo `create` da amministratore gia in vigore, e resta verificata sia in `start()` sia in `startAnother()`.
+
+  ### 4. Elenco progetti — `⚡index.blade.php:325`
+
+  Il comando "avvia release" resta raggiungibile quando il blocco e risolvibile con un override; il form obbliga poi a fornirlo prima dell'invio (cella `:325`). La condizione si esprime in positivo, evitando di riclassificare il messaggio di `startBlocker()`:
+
+  ```php
+  $reachable = $project->is_active && (bool) $project->workflowTemplate?->isUsable();
+  ```
+
+  Due condizioni, non quattro: se il progetto e attivo e il processo utilizzabile, qualunque motivo residuo riguarda ruoli scoperti o responsabili disattivati, cioe esattamente i due casi che un override risolve. `startBlocker()` resta l'unica fonte del **messaggio**, mostrato accanto al comando come indicazione invece che come motivo di disabilitazione. Le relazioni sono gia precaricate dal computed `projects()`: nessuna query per riga, invariante gia protetta da `StartReleaseScreenTest::test_the_project_list_does_not_query_per_row_for_the_start_command`.
+
+  ### 5. Mappatura di progetto — `⚡assignments.blade.php:45`
+
+  Nota informativa: le singole release possono sovrascrivere questa mappatura in fase di creazione. Nessuna modifica al comportamento di salvataggio (cella `:45`).
+
+  ### Celle decise → task
+
+  | Cella | Task |
+  | --- | --- |
+  | `StartRelease.php:55` (firma `overrides`) | TASK-01 |
+  | `StartRelease.php:199` (sostituzione integrale) | TASK-01 |
+  | `StartRelease.php:204` (ruolo coperto da override) | TASK-01 |
+  | `StartRelease.php:216` (override disattivato) | TASK-01 |
+  | `RolesWithoutResponsible.php:19` | TASK-01 |
+  | `InactiveResponsibleOnProject.php:20` | TASK-01 |
+  | `lang/it/releases.php` | TASK-02 |
+  | `⚡start.blade.php:39` (select per ruolo) | TASK-03 |
+  | `⚡start.blade.php:53` (insieme selezionabile) | TASK-03 |
+  | `⚡start.blade.php:144` (messaggi di rifiuto) | TASK-03 |
+  | `Project.php:101` (banner: ruoli scoperti) | TASK-03 |
+  | `Project.php:136` (banner: disattivati) | TASK-03 |
+  | `ProjectRoleAssignment.php` (one-shot) | TASK-01 + TASK-06 |
+  | `projects/⚡index.blade.php:325` | TASK-04 |
+  | `projects/⚡assignments.blade.php:45` | TASK-05 |
+  | `tests/.../StartReleaseTest.php:97` (divisione suite) | TASK-06 |
+  | `tests/.../StartReleaseQueryBudgetTest.php:1` | TASK-08 |
+  | `tests/Feature/DatabaseSeederTest.php:73` | TASK-08 |
+
+  ### Non-modifiche dichiarate (celle decided-null)
+
+  Queste sei celle sono **invariate per decisione**, non per dimenticanza: un diff che le tocca e un errore, non un miglioramento.
+
+  - `database/migrations/2026_08_12_221632_create_release_steps_table.php:39` — nessuna colonna, nessun flag di provenienza: `assigned_user_id` accetta gia qualsiasi utente attivo.
+  - `app/Actions/Releases/StartRelease.php:142` — il payload dell'evento `release_avviata` resta `label` / `template` / `steps`, senza elenco dei ruoli sovrascritti.
+  - `app/Enums/ReleaseEventAction.php:20` — nessun caso enum nuovo: l'override e parte dello stesso evento `ReleaseStarted`.
+  - `app/Policies/ReleasePolicy.php` — nessuna ability nuova, nessuna condizione nuova.
+  - `resources/views/components/releases/⚡show.blade.php` — nessuna distinzione visiva per gli step con responsabile overridden.
+  - `database/seeders/DatabaseSeeder.php:411` — dati dimostrativi invariati, nessun esempio di override seminato.
+
+  Fuori perimetro per decisione: `tests/Feature/Configuration/ProjectTemplateAssociationTest.php:125` — verifica la sola associazione progetto/template, non l'avvio release.
+
+  ### Nota di organizzazione file (nessuna cella)
+
+  `tests/Feature/Releases/StartReleaseScreenTest.php` non e enumerato nella tabella (non usa i simboli in `sources`), ma tre suoi test asseriscono il comportamento precedente del comando disabilitato: aggiornarli e conseguenza meccanica delle celle `⚡index.blade.php:325` e `⚡start.blade.php:39`, non una scelta di prodotto. Gli scenari override di livello schermata restano nello stesso file: la divisione decisa dalla cella `StartReleaseTest.php:97` riguarda la suite dell'Action, e nessuna cella prescrive un secondo file per la schermata. Scelta reversibile, dichiarata qui e verificabile in review.
+
+  ## Git & Branching
+
+  - Mode: `GITFLOW` (da `settings.git_mode`)
+  - Branch: `feature/US-013-responsabile-override-release` da `develop`
+  - TASK-00: bootstrap del branch; descrizione della PR verso `develop` preparata **in locale**
+  - **Nessun push e nessuna PR remota**: `GITFLOW` non li implica: solo su richiesta esplicita in sessione
+  - Un commit atomico per task, Conventional Commits: `type(US-013): TASK-NN riepilogo`
+  - `CHANGELOG.md` sezione Unreleased aggiornata in TASK-09 (cambia comportamento visibile all'utente)
+  - Merge verso `develop` solo dopo approvazione umana in `/larapilot-review`
+  - Su drift da `develop`: rebase con Sarah alla guida della meccanica Git
+
+  ## Test Data Strategy
+
+  - **Nessuna modifica di schema, nessun modello nuovo**: nessuna factory nuova e nessuna migrazione. `ProjectRoleAssignmentFactory`, `UserFactory` (stato `admin`, membri disattivati), `WorkflowTemplateFactory`, `StepDefinitionFactory`, `RoleFactory` bastano cosi come sono.
+  - **Seeder invariato per decisione** (cella `DatabaseSeeder.php:411`): nessun override seminato. `seedReleases()` continua a chiamare `StartRelease::handle()` con tre argomenti e il quarto a default: se il diff tocca il seeder, e un errore.
+  - Le suite di test costruiscono gli scenari override con le factory esistenti: progetto con ruolo scoperto, progetto con responsabile disattivato, progetto sano con override verso un'altra persona attiva, override verso una persona disattivata.
+  - `php artisan migrate:fresh --seed` deve continuare a riuscire e a produrre lo stesso ambiente dimostrativo di oggi: e la verifica di TASK-08.
+
+  ## Test Strategy
+
+  - Bar: **`NORMAL`** (da `settings.testing`) — feature test PHPUnit, test di componente Livewire, test di budget query. **Nessun** Playwright, Dusk, Pest browser, matrice di viewport o E2E di percorso.
+  - I test sono interlacciati con l'implementazione, non accodati: TASK-06 segue TASK-01, TASK-07 segue le tre task di UI, TASK-08 chiude su budget e regressione dei dati dimostrativi.
+  - **Livello Action** — `StartReleaseTest.php` resta il percorso **senza** override e non viene modificato (cella `:97`); il nuovo `StartReleaseOverrideTest.php` copre: override che sostituisce un default sano, ruolo scoperto sbloccato da un override valido, responsabile disattivato sostituito da uno attivo, override verso una persona disattivata rifiutato con `InactiveResponsibleOnProject`, elenco dell'eccezione al netto degli override, override per un ruolo non previsto ignorato, assenza di qualsiasi scrittura su `project_role_assignments` e `default_role_assignments`, payload dell'evento invariato.
+  - **Livello schermata** — tre test esistenti di `StartReleaseScreenTest.php` cambiano asserzione (comando raggiungibile invece che disabilitato); si aggiungono: select per ruolo con default preselezionato, insieme selezionabile che include l'assegnato disattivato, banner che smette di segnalare il blocco quando l'override lo copre, invio bloccato finche un ruolo bloccante resta senza override, messaggio di rifiuto identico a oggi per i ruoli non coperti, comando in elenco progetti raggiungibile con ruoli scoperti e disabilitato con progetto disattivato o processo inutilizzabile, nota informativa sulla mappatura di progetto.
+  - **Budget query** — `StartReleaseQueryBudgetTest.php` esteso: l'avvio con override costa lo stesso su catena corta e lunga, e su un ruolo o su cinque. L'invariante misurata resta la costanza, non un numero assoluto.
+  - **Regressione dati dimostrativi** — `DatabaseSeederTest.php` asserisce che in assenza di override la risoluzione dei responsabili sui progetti seminati resta quella odierna.
+  - **Manual test handoff** (bar `NORMAL`, spec con UI): verifica a mano su Herd a 375 / 768 / 1280 px che i select non producano scorrimento orizzontale e che il comando di invio si abiliti alla selezione dell'ultimo override mancante. Passi elencati in TASK-07.
+  - Gate di qualita prima della consegna: `php artisan larapilot:quality` (Pint + Larastan livello 5) e `vendor/bin/pint --dirty`.
+tasks:
+  -
+    id: TASK-00
+    title: 'Bootstrap del branch di feature e descrizione PR locale'
+    body: |-
+      ## Description
+      Predisporre Gitflow per US-013: branch di feature da `develop` e descrizione della PR interna verso `develop` preparata in locale. Nessun push: `settings.git_mode` e `GITFLOW`.
+
+      ## Files Involved
+      - (solo git — nessun file applicativo)
+
+      ## Steps
+      1. `git checkout develop` (allineato: la sessione parte da `develop`)
+      2. `git checkout -b feature/US-013-responsabile-override-release`
+      3. Redigere titolo e corpo della PR verso `develop`: titolo `US-013: Responsabile diverso dal default per singola release`, corpo con il collegamento al piano e l'elenco dei task previsti. Tenerli in locale.
+      4. Commit di ancoraggio del branch: `chore(US-013): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+
+      ## Test Data
+      - N/A — nessuna modifica di modello o schema in questo task
+
+      ## Git Deliverables
+      - Commit: `chore(US-013): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
+
+      ## Completion Criteria
+      - [x] Branch `feature/US-013-responsabile-override-release` esistente in locale
+      - [x] Titolo e corpo della PR verso `develop` redatti
+      - [x] Nessun push eseguito
+    type: Impl
+    status: DONE
+    assignee: Sarah
+    estimate_hours: 0.5
+    dependencies: {}
+    commit:
+      sha: 651f7b09bee584aa943b4b3cb0d9b2ff4ac92831
+      short_sha: 651f7b0
+      subject: 'chore(US-013): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-20T12:50:41+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/651f7b09bee584aa943b4b3cb0d9b2ff4ac92831'
+  -
+    id: TASK-01
+    title: 'StartRelease accetta gli override e risolve la mappatura effettiva in una query batch'
+    body: |-
+      ## Description
+      Aggiungere a `StartRelease::handle()` il parametro `overrides` (array `role_id` => `user_id`, sempre presente, default vuoto) e far risolvere a `responsibles()` la mappatura **effettiva**: l'override sostituisce integralmente il responsabile di progetto per il ruolo indicato, copre i ruoli scoperti, e resta soggetto al rifiuto per persona disattivata. Zero modifiche di schema, zero scritture sulle tabelle di mappatura.
+
+      ## Files Involved
+      - app/Actions/Releases/StartRelease.php
+      - app/Exceptions/RolesWithoutResponsible.php (solo docblock)
+      - app/Exceptions/InactiveResponsibleOnProject.php (solo docblock)
+
+      ## Steps
+      1. Firma: `public function handle(Project $project, string $label, User $actor, array $overrides = []): Release`. Docblock con array shape `array<string, string>` e i due `@throws` esistenti invariati. Verificare che i due chiamanti attuali (`database/seeders/DatabaseSeeder.php:493`, `resources/views/components/releases/⚡start.blade.php:144`) restino validi senza modifiche.
+      2. Passare `$overrides` a `responsibles($project, $template, $overrides)`.
+      3. In `responsibles()`, igiene dell'input: tenere solo le chiavi che corrispondono a un `role_id` previsto dagli step del template; scartare valori vuoti. Commentare che e difesa al confine, non regola di prodotto: dalla UI il caso e chiuso dal `Rule::in` sul select.
+      4. Risolvere le persone indicate con **una sola query batch**: `User::query()->whereIn('id', array_unique(array_values($overrides)))->get()->keyBy('id')`, eseguita solo quando l'array non e vuoto. Nessuna query per ruolo. Un identificativo che non risolve **non e un override**: si scarta, e il ruolo torna a dipendere dalla mappatura di progetto con le precondizioni odierne.
+      5. Ruoli scoperti: `$project->uncoveredRoles()` al netto dei ruoli con un override risolto. Se l'insieme residuo non e vuoto, `throw RolesWithoutResponsible::on($project, $residuo)` — l'eccezione nomina quindi i soli ruoli davvero scoperti.
+      6. Persona effettiva per ruolo: override quando presente, altrimenti `$byRole->get($roleId)->user`. Nessun ripiego sul dato di progetto per un ruolo overridden.
+      7. Controllo dei disattivati sull'insieme **effettivo**, dopo il controllo dei ruoli scoperti (ordine odierno preservato): `throw InactiveResponsibleOnProject::on($project, $inattivi)` con lo stesso errore di oggi, sia che la persona disattivata arrivi dal progetto sia che arrivi da un override.
+      8. Aggiornare il docblock di `responsibles()` e quello delle due classi di eccezione: oggi dichiarano che l'elenco e calcolato sulla mappatura di progetto, e da qui in poi e calcolato al netto degli override. **Nessuna modifica alla forma delle eccezioni**: costruttore, campi pubblici e firma di `on()` restano identici.
+      9. Verifiche di non-modifica dichiarate dal piano: il payload di `ReleaseEvent` a riga 142 resta `label` / `template` / `steps`; nessun caso nuovo in `App\Enums\ReleaseEventAction`; nessuna scrittura su `ProjectRoleAssignment` o `DefaultRoleAssignment`; nessuna migrazione.
+      10. `vendor/bin/pint --dirty --format agent`
+      11. `php artisan test --compact tests/Feature/Releases/StartReleaseTest.php` — la suite senza override deve passare **senza modifiche al file**: e la prova che il default vuoto conserva il comportamento.
+
+      ## Test Data
+      - N/A — nessun modello, nessuna migrazione, nessun cambio di relazione. Il seeder resta invariato per decisione (cella `DatabaseSeeder.php:411`).
+
+      ## Git Deliverables
+      - Commit: `feat(US-013): TASK-01 risoluzione dei responsabili con override per singola release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare la descrizione locale
+
+      ## Completion Criteria
+      - [x] `handle()` accetta `overrides` con default vuoto e i due chiamanti esistenti non sono stati modificati
+      - [x] Un override sostituisce integralmente il responsabile di progetto per quel ruolo, senza ripiego
+      - [x] Un ruolo scoperto coperto da un override valido non compare piu in `RolesWithoutResponsible`
+      - [x] Un responsabile disattivato sostituito da un override attivo non compare piu in `InactiveResponsibleOnProject`
+      - [x] Un override verso una persona disattivata e rifiutato con `InactiveResponsibleOnProject`
+      - [x] Le persone indicate come override si risolvono in una sola query `whereIn`
+      - [x] Payload dell'evento, enum, Policy, schema e seeder invariati
+      - [x] `StartReleaseTest.php` passa senza essere stato toccato
+      - [x] Pint pulito
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 4
+    dependencies:
+      - TASK-00
+    commit:
+      sha: aaa4d074a3256d4e5a1a8143e628b28a24ccc988
+      short_sha: aaa4d07
+      subject: 'feat(US-013): TASK-01 risoluzione dei responsabili con override per singola release'
+      committed_at: '2026-08-20T12:53:32+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/aaa4d074a3256d4e5a1a8143e628b28a24ccc988'
+  -
+    id: TASK-02
+    title: "Etichette e messaggi dell'override nel namespace releases"
+    body: |-
+      ## Description
+      Aggiungere in `lang/it/releases.php` le etichette e i messaggi dell'override: titolo della sezione dei responsabili nel form, etichetta e testo di aiuto del select per ruolo, marcatura del valore predefinito, indicazione del responsabile disattivato in elenco, richiesta di un override per un ruolo bloccante, indicazione accanto al comando di avvio in elenco progetti, nota informativa sulla mappatura di progetto.
+
+      Tutte le chiavi nuove vivono nel namespace **`releases` esistente** (cella `lang/it/releases.php`), inclusa quella resa dalla schermata progetti: e una scelta decisa, e la nota nel file la dichiara perche altrimenti sembrerebbe una chiave finita nel posto sbagliato.
+
+      ## Files Involved
+      - lang/it/releases.php
+
+      ## Steps
+      1. Aggiungere le chiavi in un blocco commentato subito dopo quelle delle precondizioni, seguendo lo stile del file (commento che spiega **perche** la stringa dice quello che dice, non cosa fa il codice).
+      2. Chiavi previste (nomi da confermare in implementazione, prefisso coerente con le esistenti):
+         - `override_heading` — titolo della sezione dei responsabili nel form di avvio
+         - `override_explained` — l'override vale solo per questa release e non modifica la mappatura del progetto
+         - `override_role_label` — etichetta del select per ruolo
+         - `override_default_option` — marcatura della persona risolta dalla mappatura di progetto
+         - `override_unassigned_option` — nessuna persona scelta, per un ruolo scoperto
+         - `override_required` — messaggio di validazione: questo ruolo non ha un responsabile di progetto, indicane uno per avviare
+         - `override_inactive_person` — la persona scelta e disattivata
+         - `start_needs_override` — indicazione accanto al comando in elenco progetti: si entra nel form e si indica un responsabile
+         - `override_note_on_assignments` — nota resa da `⚡assignments.blade.php`: le singole release possono sovrascrivere questa mappatura in fase di creazione
+      3. Forme plurali esplicite con `{0}` dove il conteggio puo valere zero, come le voci `precondition_steps` e `index_counter_*` gia presenti.
+      4. Nessuna etichetta di stato duplicata: gli stati restano su `ReleaseStepStatus::label()` / `ReleaseStatus::label()` come dichiarato nei commenti del file.
+      5. Rilettura di coerenza terminologica con il resto del file: "responsabile", "mappatura del progetto", "processo" — non introdurre sinonimi nuovi.
+
+      ## Test Data
+      - N/A — nessuna modifica di modello o schema in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-013): TASK-02 etichette e messaggi dell'override nel namespace releases`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare la descrizione locale
+
+      ## Completion Criteria
+      - [x] Tutte le chiavi nuove sono nel namespace `releases`, nessuna in `projects`
+      - [x] Ogni chiave nuova ha un commento che ne spiega la scelta di tono quando non e ovvia
+      - [x] Le forme plurali hanno la condizione `{0}` dove il conteggio puo essere zero
+      - [x] Nessuna etichetta di stato duplicata rispetto agli enum
+    type: Impl
+    status: DONE
+    assignee: Marika
+    estimate_hours: 1
+    dependencies:
+      - TASK-00
+    commit:
+      sha: a14334fa8b129b6bf198b49cfa9d1ca9bb869fce
+      short_sha: a14334f
+      subject: "feat(US-013): TASK-02 etichette e messaggi dell'override nel namespace releases"
+      committed_at: '2026-08-20T12:54:49+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/a14334fa8b129b6bf198b49cfa9d1ca9bb869fce'
+  -
+    id: TASK-03
+    title: 'Form di avvio: select per ruolo, insieme selezionabile e banner ricalcolato sugli override'
+    body: |-
+      ## Description
+      Aggiungere al form di avvio un select per ogni ruolo previsto dal processo, con il responsabile di default preselezionato e sovrascrivibile, e far ricalcolare il riepilogo delle precondizioni sulla mappatura **effettiva** — override compresi — senza modificare alcun metodo di modello.
+
+      ## Files Involved
+      - resources/views/components/releases/⚡start.blade.php
+
+      ## Steps
+      1. Proprieta `public array $overrides = []` indicizzata per `role_id`. `mount()` la precompila con l'assegnato di progetto per ogni ruolo previsto dal template, stringa vuota quando il ruolo e scoperto. Le relazioni servono gia al primo render e sono gia caricate in `mount()`: non aggiungere un secondo `load()`.
+      2. Computed `processRoles()` — i ruoli previsti dagli step del template, deduplicati e ordinati per nome, letti dalle relazioni gia precaricate (zero query).
+      3. Computed `assignableUsers()` — ogni membro attivo, piu gli assegnati correnti su questo progetto anche se disattivati, cosi la selezione in corso non sparisce dall'elenco. Stessa forma del computed omonimo di `⚡assignments.blade.php`: una sola query, `select` sulle sole colonne servite, ordinamento per nome.
+      4. **Mappatura effettiva** — metodo privato che costruisce la collezione delle assegnazioni effettive (riga reale di progetto oppure istanza `ProjectRoleAssignment` non persistita con `role_id`, `user_id` e relazione `user` popolata via `setRelation`) e la sovrappone a un **clone** del progetto con `setRelation('assignments', ...)`. Commento obbligatorio: le istanze sono in memoria e non vengono mai salvate: l'effetto e one-shot sulla singola release, e `$this->project` continua a descrivere lo stato persistito.
+      5. Ricalcolare i tre computed esistenti sul clone: `uncoveredRoles()`, `inactiveResponsibles()` e `blockingReason()` chiamano gli **stessi** metodi di modello sul progetto con la mappatura effettiva. `Project::uncoveredRoles()`, `::inactiveResponsibles()` e `::startBlocker()` **non vengono modificati** (tre celle decise). Nessuna copia della regola nel componente.
+      6. Regole di validazione: `overrides` array; chiavi limitate ai `role_id` di `processRoles()`; valori vincolati con `Rule::in` ai soli identificativi di `assignableUsers()`; un ruolo che risulta bloccante nella mappatura effettiva richiede un valore non vuoto, con messaggio `releases.override_required`. Vincolare le chiavi in `start()` prima di validare, come fa `save()` in `⚡assignments.blade.php` con `only($allowedRoles)`.
+      7. Passare gli override sanificati alla Action: `$startRelease->handle($this->project, $validated['label'], auth()->user(), $overrides)`. `Gate::authorize('create', ...)` resta dov'e ed e invariato (cella `ReleasePolicy` decided-null).
+      8. Le quattro `catch` esistenti **non cambiano**: il messaggio di rifiuto per i ruoli non coperti da override resta identico a oggi e continua a leggere i nomi dall'eccezione, non dallo stato corrente (cella `:144`).
+      9. Abilitazione dei comandi: etichetta e pulsante di invio sono attivi quando la mappatura effettiva non ha blocchi; restano disabilitati per progetto disattivato, processo assente o inutilizzabile. Il riquadro delle precondizioni mostra il motivo residuo con lo stesso stile di oggi.
+      10. `refuse()` e `startAnother()` invalidano anche i computed nuovi, altrimenti dopo un rifiuto la schermata mostrerebbe un insieme selezionabile di un istante prima.
+      11. Vista: una scheda per ruolo con `flux:select`, impilate a piena larghezza — mai una tabella con select dentro, che a 375 px obbligherebbe allo scorrimento orizzontale (stessa scelta gia motivata in `⚡assignments.blade.php`). Verifica a mano a 375 / 768 / 1280 px.
+      12. **Nessuna direttiva Blade dentro gli attributi dei componenti** (`.ai/rules/views.md`): interpolazione diretta o attributo legato con la stringa costruita in PHP. `tests/Unit/Views/BladeComponentAttributesTest.php` fallirebbe riportando file e riga.
+      13. `vendor/bin/pint --dirty --format agent`
+      14. `php artisan test --compact tests/Unit/Views/BladeComponentAttributesTest.php tests/Feature/Releases/StartReleaseTest.php`
+
+      ## Test Data
+      - N/A — nessuna modifica di modello o schema in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-013): TASK-03 select per ruolo nel form di avvio con banner ricalcolato sugli override`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare la descrizione locale
+
+      ## Completion Criteria
+      - [x] Un select per ogni ruolo previsto, sempre visibile, con il default preselezionato
+      - [x] Insieme selezionabile: ogni membro attivo piu l'assegnato corrente anche se disattivato
+      - [x] Un ruolo scoperto con un override valido selezionato non compare piu come bloccante nel banner
+      - [x] Un responsabile disattivato sostituito da un override attivo non compare piu come bloccante
+      - [x] `Project::uncoveredRoles()`, `::inactiveResponsibles()` e `::startBlocker()` non sono stati modificati
+      - [x] Nessuna istanza `ProjectRoleAssignment` viene salvata
+      - [x] Invio bloccato finche un ruolo bloccante resta senza override; messaggio di rifiuto invariato per i ruoli non coperti
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px senza scorrimento orizzontale
+      - [x] `BladeComponentAttributesTest` verde
+      - [x] Pint pulito
+    type: Impl
+    status: DONE
+    assignee: Joe
+    estimate_hours: 6
+    dependencies:
+      - TASK-01
+      - TASK-02
+    commit:
+      sha: e841504f7aab8c75a03fa67d6df00870d915ab69
+      short_sha: e841504
+      subject: 'feat(US-013): TASK-03 select per ruolo nel form di avvio con banner ricalcolato sugli override'
+      committed_at: '2026-08-20T13:04:01+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/e841504f7aab8c75a03fa67d6df00870d915ab69'
+  -
+    id: TASK-04
+    title: "Elenco progetti: comando di avvio raggiungibile quando l'override puo sbloccare"
+    body: |-
+      ## Description
+      Nell'elenco progetti il comando "avvia release" resta raggiungibile quando il blocco riguarda ruoli scoperti o responsabili disattivati: l'utente entra nella schermata di avvio, dove il form obbliga a fornire un override per i ruoli bloccanti. Resta disabilitato per i blocchi che un override non risolve.
+
+      ## Files Involved
+      - resources/views/components/projects/⚡index.blade.php
+
+      ## Steps
+      1. Accanto al `$blocker = $project->startBlocker()` esistente, calcolare la raggiungibilita in positivo: `$reachable = $project->is_active && (bool) $project->workflowTemplate?->isUsable();`. Due condizioni, non quattro: se il progetto e attivo e il processo utilizzabile, qualunque motivo residuo riguarda ruoli scoperti o responsabili disattivati, cioe esattamente i due casi che un override risolve.
+      2. `startBlocker()` resta l'unica fonte del **messaggio** e non viene modificato (cella decided-null): quando il progetto e raggiungibile ma il motivo esiste, il testo si mostra come indicazione (`releases.start_needs_override`) invece che come motivo di disabilitazione.
+      3. Comando disabilitato solo quando `! $reachable`, con `title` uguale al motivo, come oggi.
+      4. Commento sul perche la condizione e espressa in positivo: riclassificare la stringa restituita da `startBlocker()` legherebbe la vista al testo, che e traducibile.
+      5. **Nessuna query per riga**: `is_active`, `workflowTemplate` e `stepDefinitions` sono gia precaricate dal computed `projects()`. L'invariante e protetta da `StartReleaseScreenTest::test_the_project_list_does_not_query_per_row_for_the_start_command` — non aggiungere relazioni all'eager loading se non servono.
+      6. Nessuna direttiva Blade dentro gli attributi dei componenti (`.ai/rules/views.md`).
+      7. `vendor/bin/pint --dirty --format agent`
+      8. `php artisan test --compact tests/Unit/Views/BladeComponentAttributesTest.php`
+
+      ## Test Data
+      - N/A — nessuna modifica di modello o schema in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-013): TASK-04 comando di avvio raggiungibile con ruoli scoperti sbloccabili da override`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare la descrizione locale
+
+      ## Completion Criteria
+      - [x] Comando raggiungibile con ruoli scoperti o responsabili disattivati, con indicazione accanto
+      - [x] Comando disabilitato con progetto disattivato, processo assente o inutilizzabile, con il motivo accanto
+      - [x] `Project::startBlocker()` non modificato
+      - [x] Nessuna query aggiuntiva per riga dell'elenco
+      - [x] Pint pulito
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 1.5
+    dependencies:
+      - TASK-02
+    commit:
+      sha: 7f6a414d42b25cad13e70e493bbf2043cdb9adfd
+      short_sha: 7f6a414
+      subject: 'feat(US-013): TASK-04 comando di avvio raggiungibile con ruoli scoperti sbloccabili da override'
+      committed_at: '2026-08-20T13:05:00+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/7f6a414d42b25cad13e70e493bbf2043cdb9adfd'
+  -
+    id: TASK-05
+    title: 'Mappatura di progetto: nota informativa sugli override di release'
+    body: |-
+      ## Description
+      La schermata di mappatura ruolo -> persona del progetto segnala che le singole release possono sovrascrivere questa mappatura in fase di creazione. Nessuna modifica al comportamento di salvataggio.
+
+      ## Files Involved
+      - resources/views/components/projects/⚡assignments.blade.php
+
+      ## Steps
+      1. Aggiungere una nota informativa accanto a `projects.defaults_note`, con la chiave `releases.override_note_on_assignments` di TASK-02: le nuove etichette dell'override vivono nel namespace `releases` per decisione, anche quando la schermata e quella dei progetti.
+      2. Stile coerente con le note esistenti della pagina: `flux:text` di taglia piccola, icona e parola — mai il solo colore a portare l'informazione.
+      3. Nessuna modifica a `save()`, alle regole di validazione, ai computed o alla logica di cancellazione delle assegnazioni.
+      4. Nessuna direttiva Blade dentro gli attributi dei componenti (`.ai/rules/views.md`).
+      5. `vendor/bin/pint --dirty --format agent`
+      6. `php artisan test --compact tests/Feature/Configuration/ProjectAssignmentsTest.php`
+
+      ## Test Data
+      - N/A — nessuna modifica di modello o schema in questo task
+
+      ## Git Deliverables
+      - Commit: `feat(US-013): TASK-05 nota sugli override di release nella mappatura di progetto`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare la descrizione locale
+
+      ## Completion Criteria
+      - [x] La nota e visibile sulla schermata di mappatura e usa la chiave nel namespace `releases`
+      - [x] Comportamento di salvataggio della mappatura invariato
+      - [x] `ProjectAssignmentsTest` verde
+      - [x] Pint pulito
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 1
+    dependencies:
+      - TASK-02
+    commit:
+      sha: 76a574f35fafa6ab69622ffd5a9f1cefda4f45fb
+      short_sha: 76a574f
+      subject: 'feat(US-013): TASK-05 nota sugli override di release nella mappatura di progetto'
+      committed_at: '2026-08-20T13:05:31+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/76a574f35fafa6ab69622ffd5a9f1cefda4f45fb'
+  -
+    id: TASK-06
+    title: 'StartReleaseOverrideTest: la suite degli scenari con override'
+    body: |-
+      ## Description
+      Nuovo file `tests/Feature/Releases/StartReleaseOverrideTest.php` per gli scenari **con** override a livello di Action. `StartReleaseTest.php` resta la suite del percorso **senza** override e non viene modificato (cella decisa).
+
+      ## Files Involved
+      - tests/Feature/Releases/StartReleaseOverrideTest.php (nuovo)
+
+      ## Steps
+      1. `php artisan make:test --phpunit Releases/StartReleaseOverrideTest --no-interaction`
+      2. Riusare le factory esistenti (`ProjectRoleAssignmentFactory`, `UserFactory` stato `admin` e membri disattivati, `WorkflowTemplateFactory`, `StepDefinitionFactory`, `RoleFactory`) e un helper locale sullo stile di `projectReadyToRelease()`: non duplicare definizioni di factory nel test.
+      3. Casi da coprire:
+         - un override su un progetto sano congela lo step con la persona indicata e non con l'assegnato di progetto
+         - un ruolo senza responsabile di progetto, coperto da un override valido, si considera coperto: l'avvio riesce
+         - un responsabile di progetto disattivato, sostituito da un override verso una persona attiva, non blocca piu l'avvio
+         - un override verso una persona disattivata e rifiutato con `InactiveResponsibleOnProject` e la persona e **nominata**
+         - `RolesWithoutResponsible` nomina i soli ruoli residui: un ruolo coperto da override non compare nell'elenco
+         - `InactiveResponsibleOnProject` non nomina i responsabili disattivati sostituiti da un override
+         - un override per un ruolo non previsto dal processo viene ignorato e non altera l'avvio
+         - un override con un identificativo di persona inesistente non vale come override: il ruolo torna a dipendere dalla mappatura di progetto, e se e scoperto l'avvio viene rifiutato
+         - **effetto one-shot**: dopo un avvio con override, nessuna riga di `project_role_assignments` e di `default_role_assignments` risulta creata, modificata o cancellata
+         - il payload dell'evento `ReleaseStarted` resta `label` / `template` / `steps`, senza traccia dei ruoli sovrascritti
+         - un rifiuto non lascia una release a meta: riusare la forma di `assertRefusedWithoutWriting()` gia presente nella suite senza override
+      4. Nessun test di browser, viewport o E2E: bar `NORMAL`.
+      5. `php artisan test --compact tests/Feature/Releases/StartReleaseOverrideTest.php`
+      6. `php artisan test --compact tests/Feature/Releases/StartReleaseTest.php` — deve passare senza che il file sia stato toccato.
+      7. `vendor/bin/pint --dirty --format agent`
+
+      ## Test Data
+      - N/A — nessuna factory nuova, nessuna modifica di seeder: gli scenari si costruiscono con le factory e gli stati esistenti
+
+      ## Git Deliverables
+      - Commit: `test(US-013): TASK-06 suite degli scenari di avvio con override`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare la descrizione locale
+
+      ## Completion Criteria
+      - [x] `StartReleaseOverrideTest.php` copre tutti i casi elencati e passa
+      - [x] `StartReleaseTest.php` passa e risulta non modificato nel diff
+      - [x] Il caso one-shot verifica esplicitamente l'assenza di scritture sulle due tabelle di mappatura
+      - [x] Nessun test di browser, viewport o E2E introdotto
+      - [x] Pint pulito
+    type: Test
+    status: DONE
+    assignee: Anne
+    estimate_hours: 3
+    dependencies:
+      - TASK-01
+    commit:
+      sha: 1a35bcf152320d3bc0ccfc94bfa96e96149f9c99
+      short_sha: 1a35bcf
+      subject: 'test(US-013): TASK-06 suite degli scenari di avvio con override'
+      committed_at: '2026-08-20T13:07:23+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/1a35bcf152320d3bc0ccfc94bfa96e96149f9c99'
+  -
+    id: TASK-07
+    title: 'Test di schermata: form di avvio con override, comando in elenco, nota sulla mappatura'
+    body: |-
+      ## Description
+      Aggiornare in `StartReleaseScreenTest.php` i test che asseriscono il comportamento precedente del comando disabilitato — conseguenza meccanica delle celle decise su `⚡index.blade.php:325` e `⚡start.blade.php:39` — e aggiungere gli scenari override di livello schermata. Coprire anche la nota informativa sulla mappatura di progetto.
+
+      ## Files Involved
+      - tests/Feature/Releases/StartReleaseScreenTest.php
+      - tests/Feature/Configuration/ProjectAssignmentsTest.php
+
+      ## Steps
+      1. Aggiornare i tre test esistenti che oggi asseriscono comando disabilitato o form bloccato per ruoli scoperti / responsabili disattivati (`test_a_project_without_a_responsible_shows_the_reason_and_disables_the_command`, `test_an_inactive_responsible_blocks_the_start_and_is_named`, `test_the_start_command_is_disabled_with_a_reason_when_the_project_is_not_ready`): il comando resta raggiungibile e il motivo si mostra come indicazione. Conservare l'asserzione di disabilitazione per i casi che un override non risolve — progetto disattivato, processo assente o inutilizzabile.
+      2. Aggiungere in `StartReleaseScreenTest.php`:
+         - un select per ogni ruolo previsto, sempre visibile, con il default preselezionato
+         - l'insieme selezionabile include gli assegnati correnti anche disattivati e ogni membro attivo
+         - selezionando un override valido su un ruolo scoperto, il banner smette di segnalarlo come bloccante e l'invio si abilita
+         - stesso comportamento per un responsabile di progetto disattivato sostituito da una persona attiva
+         - l'invio resta bloccato finche un ruolo bloccante e senza override, con il messaggio `releases.override_required`
+         - un avvio con override congela lo step con la persona scelta e la conferma la mostra
+         - il messaggio di rifiuto post-submit per i ruoli **non** coperti da override e identico a oggi
+         - un override selezionato su una persona disattivata produce un messaggio e non un errore non gestito
+         - il comando in elenco progetti e raggiungibile con ruoli scoperti e disabilitato con progetto disattivato o processo inutilizzabile
+      3. Conservare i due test di budget query di schermata gia presenti (`test_the_project_list_does_not_query_per_row_for_the_start_command`, `test_the_confirmation_panel_does_not_query_per_step`): devono continuare a passare. Il primo e la rete che protegge TASK-04.
+      4. In `ProjectAssignmentsTest.php`: la nota informativa sugli override e resa dalla schermata di mappatura.
+      5. Nessun test di browser, viewport o E2E: bar `NORMAL`.
+      6. **Manual test handoff** — verifica a mano su Herd, da riportare in review: a 375 px i select non producono scorrimento orizzontale e restano raggiungibili da tastiera; a 375 / 768 / 1280 px il pulsante di invio si abilita alla selezione dell'ultimo override mancante; il messaggio di ruolo bloccante e leggibile da lettore di schermo (`aria-live` come sui riquadri esistenti).
+      7. `php artisan test --compact tests/Feature/Releases/StartReleaseScreenTest.php tests/Feature/Configuration/ProjectAssignmentsTest.php`
+      8. `vendor/bin/pint --dirty --format agent`
+
+      ## Test Data
+      - N/A — nessuna factory nuova, nessuna modifica di seeder
+
+      ## Git Deliverables
+      - Commit: `test(US-013): TASK-07 scenari di schermata per l'override del responsabile`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare la descrizione locale
+
+      ## Completion Criteria
+      - [x] I tre test aggiornati riflettono il comportamento deciso e passano
+      - [x] Tutti gli scenari override di schermata sono coperti e passano
+      - [x] I due test di budget query di schermata continuano a passare
+      - [x] La nota sulla mappatura di progetto e coperta
+      - [x] Passi di verifica manuale annotati per la review
+      - [x] Nessun test di browser, viewport o E2E introdotto
+      - [x] Pint pulito
+    type: Test
+    status: DONE
+    assignee: Anne
+    estimate_hours: 4
+    dependencies:
+      - TASK-03
+      - TASK-04
+      - TASK-05
+    commit:
+      sha: d0d7cfb6b2069339241674d0d70261a49f40335d
+      short_sha: d0d7cfb
+      subject: "test(US-013): TASK-07 scenari di schermata per l'override del responsabile"
+      committed_at: '2026-08-20T13:09:34+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/d0d7cfb6b2069339241674d0d70261a49f40335d'
+  -
+    id: TASK-08
+    title: "Budget query dell'override e regressione dei dati dimostrativi"
+    body: |-
+      ## Description
+      Estendere `StartReleaseQueryBudgetTest.php` per fissare l'invariante deciso — gli utenti indicati come override si risolvono in un'unica query batch, senza crescere con il numero di ruoli — e aggiungere in `DatabaseSeederTest.php` l'asserzione di regressione: in assenza di override la risoluzione dei responsabili sui progetti seminati resta quella odierna.
+
+      ## Files Involved
+      - tests/Feature/Releases/StartReleaseQueryBudgetTest.php
+      - tests/Feature/DatabaseSeederTest.php
+
+      ## Steps
+      1. In `StartReleaseQueryBudgetTest.php`, seguendo la forma dei test esistenti (nessun numero assoluto, solo l'invariante di costanza):
+         - l'avvio **con** override costa lo stesso su una catena corta e su una lunga
+         - l'avvio con override su un solo ruolo costa lo stesso che su cinque ruoli distinti, ciascuno con la propria persona: e la prova che la risoluzione e batch e non per ruolo
+         - l'avvio con override costa al massimo una query in piu dell'avvio senza override, e quella differenza non cresce con il numero di ruoli
+      2. Riusare `queriesWhile()` e `projectWith()` gia presenti; estendere `projectWith()` con un parametro per il numero di ruoli distinti invece di scrivere un secondo helper.
+      3. In `DatabaseSeederTest.php`, accanto alle asserzioni di riga 73-74, aggiungere la regressione: per ogni progetto seminato la persona risolta per ciascun ruolo previsto e quella della mappatura di progetto quando `StartRelease` viene invocato **senza** override. Il seeder resta invariato per decisione: nessun esempio di override seminato.
+      4. `php artisan migrate:fresh --seed` deve riuscire e produrre lo stesso ambiente dimostrativo di oggi.
+      5. `php artisan test --compact tests/Feature/Releases/StartReleaseQueryBudgetTest.php tests/Feature/DatabaseSeederTest.php`
+      6. `vendor/bin/pint --dirty --format agent`
+
+      ## Test Data
+      - [x] Nessuna factory nuova: gli scenari usano le factory esistenti
+      - [x] `database/seeders/DatabaseSeeder.php` **non** modificato (cella `:411` decided-null) e verificato nel diff
+      - [x] `php artisan migrate:fresh --seed` eseguito e riuscito
+
+      ## Git Deliverables
+      - Commit: `test(US-013): TASK-08 budget query dell'override e regressione dei dati dimostrativi`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiornare la descrizione locale
+
+      ## Completion Criteria
+      - [x] Il costo dell'avvio con override non cresce con il numero di ruoli
+      - [x] Il costo dell'avvio con override non cresce con la lunghezza della catena
+      - [x] La regressione sul seeder verifica la risoluzione odierna in assenza di override
+      - [x] `DatabaseSeeder.php` non modificato
+      - [x] `migrate:fresh --seed` riuscito
+      - [x] Pint pulito
+    type: Test
+    status: DONE
+    assignee: Anne
+    estimate_hours: 2
+    dependencies:
+      - TASK-01
+      - TASK-03
+    commit:
+      sha: 15f0c60ccead0cce517a64ac0d830046232e8cf8
+      short_sha: 15f0c60
+      subject: "test(US-013): TASK-08 budget query dell'override e regressione dei dati dimostrativi"
+      committed_at: '2026-08-20T13:19:32+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/15f0c60ccead0cce517a64ac0d830046232e8cf8'
+  -
+    id: TASK-09
+    title: 'CHANGELOG, regola di progetto e gate di qualita'
+    body: |-
+      ## Description
+      Chiudere la spec: voce nel CHANGELOG per un comportamento visibile all'utente, registrazione della regola non ovvia introdotta da questa spec, e gate di qualita Pint + Larastan sull'intero incremento.
+
+      ## Files Involved
+      - CHANGELOG.md
+      - .ai/rules/components-releases.md (oppure nuova voce via `record-rule`)
+
+      ## Steps
+      1. `CHANGELOG.md`, sezione Unreleased, voce `Added`: in fase di creazione di una release il responsabile di ciascun ruolo e sovrascrivibile per quella sola release, senza toccare la mappatura di progetto ne i default di team.
+      2. Registrare la regola durevole con il tool `record-rule` di Boost, glob `resources/views/components/releases/**`: la mappatura **effettiva** del form di avvio si ottiene sovrapponendo istanze `ProjectRoleAssignment` non persistite alla relazione `assignments` di un clone del progetto, cosi `uncoveredRoles()`, `inactiveResponsibles()` e `startBlocker()` ricalcolano senza che la regola venga duplicata nel componente. Annotare la trappola: le istanze non vanno mai salvate, e il clone serve a non contaminare `$this->project`, che deve continuare a descrivere lo stato persistito.
+      3. Se il tool non e disponibile, aggiungere la stessa voce a mano in `.ai/rules/components-releases.md` e verificare che `.ai/rules/index.md` copra gia il glob (lo copre).
+      4. `php artisan larapilot:quality` — Pint + Larastan livello 5. Correggere i rilievi; non abbassare il livello.
+      5. `php artisan test --compact` — suite completa, per escludere regressioni fuori dal perimetro.
+      6. Nessuna documentazione estesa: la spec non ha registrato deliverable oltre la baseline, e non ci sono rotte API pubbliche che tocchino OpenAPI.
+
+      ## Test Data
+      - N/A — nessuna modifica di modello o schema in questo task
+
+      ## Git Deliverables
+      - Commit: `chore(US-013): TASK-09 CHANGELOG, regola di progetto e gate di qualita`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: finalizzare titolo e corpo della descrizione locale verso `develop`
+
+      ## Completion Criteria
+      - [x] Voce Unreleased nel CHANGELOG
+      - [x] Regola registrata con glob corretto e trappola annotata
+      - [x] `larapilot:quality` verde, livello Larastan non abbassato
+      - [x] Suite completa verde
+      - [x] Descrizione della PR verso `develop` pronta in locale, nessun push eseguito
+    type: Impl
+    status: DONE
+    assignee: Albert
+    estimate_hours: 1
+    dependencies:
+      - TASK-06
+      - TASK-07
+      - TASK-08
+    commit:
+      sha: 070e2d08e0e64b331345027ae9ac7b56f3cc0c21
+      short_sha: 070e2d0
+      subject: 'chore(US-013): TASK-09 CHANGELOG, regola di progetto e gate di qualita'
+      committed_at: '2026-08-20T13:23:01+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/070e2d08e0e64b331345027ae9ac7b56f3cc0c21'
+updated_at: '2026-08-20T11:23:01+00:00'

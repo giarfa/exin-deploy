@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Releases\StartRelease;
 use App\Enums\FieldType;
 use App\Enums\ReleaseStatus;
 use App\Enums\ReleaseStepStatus;
@@ -64,6 +65,8 @@ class DatabaseSeederTest extends TestCase
 
         $this->assertGreaterThanOrEqual(2, $projects->count());
 
+        $admin = User::where('level', UserLevel::Admin)->firstOrFail();
+
         foreach ($projects as $project) {
             $this->assertNotNull($project->workflow_template_id, "Il progetto {$project->name} non ha un processo associato.");
 
@@ -72,6 +75,28 @@ class DatabaseSeederTest extends TestCase
             // dimostrativo — avviare una release — risponde con un rifiuto.
             $this->assertCount(0, $project->uncoveredRoles(), "Il progetto {$project->name} ha ruoli senza responsabile.");
             $this->assertCount(0, $project->inactiveResponsibles(), "Il progetto {$project->name} ha responsabili disattivati.");
+
+            /*
+             * Regressione di US-013: senza override la risoluzione dei responsabili
+             * resta quella di sempre. L'ambiente dimostrativo non semina nessuna
+             * sostituzione — la sua utilita e mostrare il caso normale — quindi e qui
+             * che si nota se il parametro nuovo cambiasse il percorso ordinario.
+             */
+            $expected = $project->assignments->pluck('user_id', 'role_id');
+
+            $release = app(StartRelease::class)->handle(
+                $project->fresh(),
+                'regressione-'.$project->slug,
+                $admin,
+            );
+
+            foreach ($release->steps()->get() as $step) {
+                $this->assertSame(
+                    $expected[$step->role_id],
+                    $step->assigned_user_id,
+                    "Sul progetto {$project->name} il ruolo {$step->role_name} non ha risolto il responsabile di progetto."
+                );
+            }
         }
 
         $template = WorkflowTemplate::where('name', 'Rilascio standard')
