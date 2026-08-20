@@ -105,24 +105,48 @@ foreach (($backlog['specs'] ?? $backlog) as $spec) {
 
 [, $branchFiles] = $base !== null ? $git(sprintf('diff --name-only %s...HEAD', escapeshellarg($base))) : [true, []];
 
-// Re-enumeration must compare against the tree as it stood when the table was written,
-// not the working tree: files created by the implementation legitimately match the
-// symbols and are not dropped sites. Branch immutability guarantees the table predates
-// the branch, so the base ref *is* the enumeration-time tree.
-$baseTree = null;
 $notes = [];
 
-if ($base !== null) {
-    [$ok, $tracked] = $git(sprintf('ls-tree -r --name-only %s', escapeshellarg($base)));
+/** @var array<string, array<string, true>> $treeCache */
+$treeCache = [];
 
-    if ($ok) {
-        $baseTree = array_fill_keys($tracked, true);
+/**
+ * Tree as it stood when a decision table was written, memoized per anchor commit.
+ *
+ * Re-enumeration must compare against that tree and not the working tree: files created
+ * by the implementation legitimately match the symbols and are not dropped sites.
+ *
+ * The anchor is the last commit that touched the table itself, never the tip of --base.
+ * Branch immutability means the table cannot have moved since enumeration, so that commit
+ * *is* enumeration time — and it stays the right answer after the feature branch merges,
+ * when --base has absorbed the implementation and can no longer answer the question.
+ * Reading the tip instead made every file a spec created look, one merge later, like a
+ * site dropped from the table: a finding on a decision that was in fact ratified.
+ *
+ * Returns null when the table is not committed yet. That is not enumeration time we can
+ * anchor, and it is also the one moment when there is nothing to catch — /larapilot-feature
+ * has just written the table and no implementation exists to have dropped a site.
+ */
+$enumerationTree = static function (string $tableFile) use ($git, &$treeCache): ?array {
+    [$ok, $out] = $git(sprintf('log -1 --format=%%H -- %s', escapeshellarg($tableFile)));
+    $anchor = $ok ? trim((string) ($out[0] ?? '')) : '';
+
+    if ($anchor === '') {
+        return null;
     }
-}
 
-if ($baseTree === null) {
-    $notes[] = 'drop detection skipped: pass --base=<branch> to compare against the enumeration-time tree';
-}
+    if (! array_key_exists($anchor, $treeCache)) {
+        [$treeOk, $tracked] = $git(sprintf('ls-tree -r --name-only %s', escapeshellarg($anchor)));
+
+        if (! $treeOk) {
+            return null;
+        }
+
+        $treeCache[$anchor] = array_fill_keys($tracked, true);
+    }
+
+    return $treeCache[$anchor];
+};
 
 foreach ($files as $file) {
     $table = Yaml::parseFile($file);
@@ -239,10 +263,18 @@ foreach ($files as $file) {
     $symbols = (array) ($table['symbols'] ?? []);
     $scope = (array) ($table['scope'] ?? ['app', 'routes', 'resources', 'database', 'tests', 'lang']);
     $scope = array_values(array_filter($scope, static fn ($p) => is_string($p) && is_dir($p)));
+    $enumeratedTree = $enumerationTree($file);
+
+    if ($enumeratedTree === null) {
+        $notes[] = sprintf(
+            'drop detection skipped for %s: the decision table is not committed, so enumeration time has no anchor',
+            $spec
+        );
+    }
 
     if ($symbols === []) {
         $fail($spec, $file, 're-enumeration', 'no `symbols` recorded — the enumeration cannot be reproduced, so it cannot be trusted');
-    } elseif ($scope !== []) {
+    } elseif ($scope !== [] && $enumeratedTree !== null) {
         $hits = [];
 
         foreach ($symbols as $symbol) {
@@ -276,11 +308,7 @@ foreach ($files as $file) {
 
             // Present now but absent from the enumeration-time tree = created by the
             // implementation, not a dropped site.
-            if ($baseTree !== null && ! isset($baseTree[$hit])) {
-                continue;
-            }
-
-            if ($baseTree === null) {
+            if (! isset($enumeratedTree[$hit])) {
                 continue;
             }
 
