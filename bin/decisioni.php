@@ -25,7 +25,7 @@ const STATES = ['decided', 'decided-null', 'undecided', 'out-of-scope'];
 
 $root = getcwd();
 
-foreach ([$root . '/vendor/autoload.php', $root . '/../vendor/autoload.php'] as $autoload) {
+foreach ([$root.'/vendor/autoload.php', $root.'/../vendor/autoload.php'] as $autoload) {
     if (is_file($autoload)) {
         require $autoload;
         break;
@@ -54,7 +54,7 @@ $fail = static function (string $spec, string $site, string $check, string $deta
 $normalize = static fn (string $s): string => preg_replace('/\s+/u', ' ', mb_strtolower(trim($s))) ?? '';
 
 $git = static function (string $args): array {
-    exec('git ' . $args . ' 2>/dev/null', $out, $code);
+    exec('git '.$args.' 2>/dev/null', $out, $code);
 
     return [$code === 0, array_values(array_filter($out, static fn ($l) => trim($l) !== ''))];
 };
@@ -76,21 +76,21 @@ if ($base !== null && is_dir($dir)) {
     foreach ($changed as $file) {
         $fail('-', $file, 'branch-immutability', sprintf(
             'decision table modified on this branch. Cells are filled in /larapilot-feature, '
-            . 'with a human present; a change here means the agent decided. Revert, then re-run '
-            . 'the feature skill for the open cells.'
+            .'with a human present; a change here means the agent decided. Revert, then re-run '
+            .'the feature skill for the open cells.'
         ));
     }
 }
 
 $files = $only !== null
     ? array_filter([sprintf('%s/%s.yaml', $dir, $only)], 'is_file')
-    : (glob($dir . '/*.yaml') ?: []);
+    : (glob($dir.'/*.yaml') ?: []);
 
 if ($files === []) {
     $payload = ['schema' => 'larapilot/v1', 'kind' => 'decision_check', 'data' => [
         'ok' => $findings === [], 'tables' => 0, 'findings' => $findings, 'notes' => [],
     ]];
-    echo $json ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n" : "decisioni: no tables found in {$dir}\n";
+    echo $json ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n" : "decisioni: no tables found in {$dir}\n";
     exit($findings === [] ? 0 : 2);
 }
 
@@ -129,6 +129,7 @@ foreach ($files as $file) {
 
     if (! is_array($table) || ! isset($table['cells']) || ! is_array($table['cells'])) {
         $fail(basename($file, '.yaml'), $file, 'schema', 'missing or malformed `cells` list');
+
         continue;
     }
 
@@ -141,6 +142,7 @@ foreach ($files as $file) {
 
         if (! in_array($state, STATES, true)) {
             $fail($spec, $site, 'schema', sprintf('state `%s` not in {%s}', $state, implode(', ', STATES)));
+
             continue;
         }
 
@@ -297,7 +299,7 @@ $payload = ['schema' => 'larapilot/v1', 'kind' => 'decision_check', 'data' => [
 ]];
 
 if ($json) {
-    echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
 } elseif ($findings === []) {
     printf("decisioni: OK — %d table(s), no findings.\n", count($files));
 

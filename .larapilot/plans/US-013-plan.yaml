@@ -570,9 +570,9 @@ tasks:
       6. `vendor/bin/pint --dirty --format agent`
 
       ## Test Data
-      - [ ] Nessuna factory nuova: gli scenari usano le factory esistenti
-      - [ ] `database/seeders/DatabaseSeeder.php` **non** modificato (cella `:411` decided-null) e verificato nel diff
-      - [ ] `php artisan migrate:fresh --seed` eseguito e riuscito
+      - [x] Nessuna factory nuova: gli scenari usano le factory esistenti
+      - [x] `database/seeders/DatabaseSeeder.php` **non** modificato (cella `:411` decided-null) e verificato nel diff
+      - [x] `php artisan migrate:fresh --seed` eseguito e riuscito
 
       ## Git Deliverables
       - Commit: `test(US-013): TASK-08 budget query dell'override e regressione dei dati dimostrativi`
@@ -580,19 +580,25 @@ tasks:
       - PR: aggiornare la descrizione locale
 
       ## Completion Criteria
-      - [ ] Il costo dell'avvio con override non cresce con il numero di ruoli
-      - [ ] Il costo dell'avvio con override non cresce con la lunghezza della catena
-      - [ ] La regressione sul seeder verifica la risoluzione odierna in assenza di override
-      - [ ] `DatabaseSeeder.php` non modificato
-      - [ ] `migrate:fresh --seed` riuscito
-      - [ ] Pint pulito
+      - [x] Il costo dell'avvio con override non cresce con il numero di ruoli
+      - [x] Il costo dell'avvio con override non cresce con la lunghezza della catena
+      - [x] La regressione sul seeder verifica la risoluzione odierna in assenza di override
+      - [x] `DatabaseSeeder.php` non modificato
+      - [x] `migrate:fresh --seed` riuscito
+      - [x] Pint pulito
     type: Test
-    status: TODO
+    status: DONE
     assignee: Anne
     estimate_hours: 2
     dependencies:
       - TASK-01
       - TASK-03
+    commit:
+      sha: 15f0c60ccead0cce517a64ac0d830046232e8cf8
+      short_sha: 15f0c60
+      subject: "test(US-013): TASK-08 budget query dell'override e regressione dei dati dimostrativi"
+      committed_at: '2026-08-20T13:19:32+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/15f0c60ccead0cce517a64ac0d830046232e8cf8'
   -
     id: TASK-09
     title: 'CHANGELOG, regola di progetto e gate di qualita'
@@ -634,4 +640,4 @@ tasks:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T11:09:34+00:00'
+updated_at: '2026-08-20T11:19:32+00:00'
