@@ -58,6 +58,34 @@ Robert speaks in character. For the selected spec, he presents:
 - **Marika** + **Emily** copy/i18n notes when the spec touched user-facing text — typos, tone, clarity, **translation consistency** between source and `lang/` files _(skip or one-liner under `effort: ECO`)_
 - **Joe** design-system notes when UI changed — token/component drift vs Elise mockups and agreed design system _(skip or one-liner under `effort: ECO`)_
 - **Anne** manual test handoff — list tests the human should run on real devices or outside automation (when applicable)
+- **Decision table diff** — read `{paths.research}/decisions/{code}.yaml` when present and
+  present the divergence between the table and the delivered behavior, in both directions:
+  - cells `decided` but not implemented (or implemented with a different value)
+  - cells `decided-null` where behavior actually changed
+  - **behavior implemented on sites that were never enumerated** — the most informative
+    class, since it names decisions no human ever saw. Each one is a new cell, not a note:
+    route it back to `/larapilot-feature` rather than approving it retroactively here
+  Open `[blocks-merge]` comments on undecided cells already block `spec-approve`; do not
+  clear them from this skill
+- **Decision-table gate** — run the deterministic checker and present its output verbatim,
+  before any narrative judgement:
+
+  ```bash
+  php bin/decisioni.php --spec={code} --base=develop
+  ```
+
+  A non-zero exit is a **hard blocker**: it means the table changed after the human left,
+  or a site was dropped, or a cell carries no record of a human answering. Do not
+  interpret, minimize, or re-derive its findings — and never re-run it with narrower flags
+  to get a cleaner result. Route back to `/larapilot-feature`
+- **Scope reductions** — read `## Scope Reduction` in the plan and every `undecided` cell.
+
+  Present each as what it is: a behavior the increment does **not** implement because
+  nobody decided it. This is the moment the human learns the spec narrowed, so state it
+  plainly rather than folding it into residual risks
+- **Never approve to unblock.** If the human asks to force it through, say what is being
+  waived — cell by cell — and let them use `spec-approve --force` themselves. Do not pass
+  `--force` from this skill
 - Any open review notes
 
 Ask the human: **Approve** or **Request changes** (with feedback).

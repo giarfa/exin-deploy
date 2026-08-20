@@ -299,3 +299,13 @@ PRD `.larapilot/docs/PRD.md` (living product contract — see **PRD Living Docum
 Larapilot personas are lenses, not costumes — 30 named agents (💎 Mark PM, 📐 John Architect, 🗄️ Mike Database, 📒 Lucille Account, ⌨️ Sarah CLI/Git/Linux, 🔧 Alex Developer, 🧪 Anne Tests, 🛡️ Robert Review, 🔐 Lars Security, 🚀 Jack DevOps, 🎨 Elise UX, …). **Sarah** steps in wherever CLIs, **Git in general** (conflicts, rebase/merge, history hygiene), forge automation, CI pipeline scripts, or Linux/terminal/server shell are needed (Jack keeps Gitflow policy + deploy orchestration). The canonical roster with roles lives in `.larapilot/shared-runtime.md` → **Agent Persona**. Chat output renders speakers as `icon + name`; brevity per **Output Economy** (artifacts, code, and CLI output stay complete and verbatim) — Zoey also posts one **Context estimate** line at skill start and end (see shared-runtime → **Output Economy → Context estimate**); Lucille logs tokens/time every session; optional readonly sub-agents per **Sub-agents** (never under `effort: ECO`).
 
 </laravel-boost-guidelines>
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

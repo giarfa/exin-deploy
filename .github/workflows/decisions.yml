@@ -1,0 +1,65 @@
+# Decision-table gate.
+#
+# This is the only check in the loop that the agent cannot talk its way past: it runs
+# after the session ends, on a machine the agent does not control. Everything in the
+# skills is a convention; this is the enforcement.
+#
+# Install in the CONSUMING project (the one with .larapilot/), not in the package repo:
+#   cp decisions.yml .github/workflows/decisions.yml
+#
+# Also register a branch protection rule requiring this check, or it is advisory only.
+
+name: decisions
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+jobs:
+  decisions:
+    runs-on: ubuntu-latest
+    name: Decision-table integrity
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Full history: the gate diffs the decision tables against the base ref, and a
+          # shallow clone cannot see it.
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Resolve base ref
+        id: base
+        run: |
+          BASE="${{ github.event.pull_request.base.ref || 'develop' }}"
+          git fetch --no-tags origin "$BASE:$BASE" 2>/dev/null || BASE=main
+          echo "ref=$BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Decision-table gate
+        run: php bin/decisioni.php --base=${{ steps.base.outputs.ref }}
+
+      # A forced approval is legitimate — sometimes the product owner really does accept
+      # the risk. It just must not be silent. This step fails the build when a spec
+      # reached DONE with blocking comments still open, so the waiver has to be explicit
+      # in the PR conversation rather than buried in a --force nobody saw.
+      - name: Blocking comments still open on DONE specs
+        run: |
+          if grep -rl '\[blocks-merge\]' .larapilot/internal-feedback/ 2>/dev/null | while read -r f; do
+                code=$(basename "$f" .md)
+                grep -q "code: $code" -A6 .larapilot/backlog.yaml \
+                  && grep -A6 "code: $code" .larapilot/backlog.yaml | grep -q 'status: DONE' \
+                  && echo "$code"
+              done | grep -q .; then
+            echo "::error::A spec reached DONE with open [blocks-merge] comments — undecided cells were forced through."
+            exit 1
+          fi
+          echo "No forced approvals detected."

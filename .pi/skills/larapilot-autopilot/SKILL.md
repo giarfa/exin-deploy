@@ -59,6 +59,22 @@ After each spec:
 
 ## Safety
 
+- **Decision-table gate, before anything else.** For each candidate spec, read
+  `{paths.research}/decisions/{code}.yaml` and run:
+
+  ```bash
+  php bin/decisioni.php --spec={code} --base=develop
+  ```
+
+  A spec with `undecided` cells, or a non-zero exit, is **not eligible for batching** —
+  skip it and report `US-XXX: skipped | open decision cells (K)`. Batch mode is the worst
+  possible place to resolve an open cell: there is no human watching, the pressure to keep
+  the run going is highest, and a wrong answer propagates into every spec downstream.
+  Autopilot never writes the table and never marks a cell `out-of-scope`
+- **`auto_approve: YES` does not extend to decisions.** It waives the *review* gate on
+  delivered work; it does not authorize answering questions the product owner left open.
+  A spec whose blockers are `[blocks-merge]` comments on undecided cells stays in `REVIEW`
+  regardless of `auto_approve`
 - **`auto_approve: NO` (default)** — never call `spec-approve`; human gate via `/larapilot-review` remains required
 - **`auto_approve: YES`** — autopilot may approve only after implement with no Critical open blockers; still never approve on test failure or explicit rework need
 - Confirm with user before processing more than 5 specs — **Zoey** flags suspension risk and suggests `--max` or phased batches when Budget Sensitivity is `Tracked`
