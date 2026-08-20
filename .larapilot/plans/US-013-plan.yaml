@@ -415,16 +415,22 @@ tasks:
       - PR: aggiornare la descrizione locale
 
       ## Completion Criteria
-      - [ ] La nota e visibile sulla schermata di mappatura e usa la chiave nel namespace `releases`
-      - [ ] Comportamento di salvataggio della mappatura invariato
-      - [ ] `ProjectAssignmentsTest` verde
-      - [ ] Pint pulito
+      - [x] La nota e visibile sulla schermata di mappatura e usa la chiave nel namespace `releases`
+      - [x] Comportamento di salvataggio della mappatura invariato
+      - [x] `ProjectAssignmentsTest` verde
+      - [x] Pint pulito
     type: Impl
-    status: TODO
+    status: DONE
     assignee: Alex
     estimate_hours: 1
     dependencies:
       - TASK-02
+    commit:
+      sha: 76a574f35fafa6ab69622ffd5a9f1cefda4f45fb
+      short_sha: 76a574f
+      subject: 'feat(US-013): TASK-05 nota sugli override di release nella mappatura di progetto'
+      committed_at: '2026-08-20T13:05:31+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/76a574f35fafa6ab69622ffd5a9f1cefda4f45fb'
   -
     id: TASK-06
     title: 'StartReleaseOverrideTest: la suite degli scenari con override'
@@ -616,4 +622,4 @@ tasks:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T11:05:00+00:00'
+updated_at: '2026-08-20T11:05:31+00:00'
