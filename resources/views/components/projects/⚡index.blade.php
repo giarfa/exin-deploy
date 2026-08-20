@@ -347,17 +347,30 @@ new class extends Component
                                  allineati a destra su una riga. --}}
                             <div class="flex flex-wrap justify-end gap-1">
                                 {{-- Il comando di avvio vive qui, dove l'amministratore vede gia
-                                     template associato e ruoli scoperti. Quando il progetto non e
-                                     avviabile e disabilitato con il motivo accanto, invece di
-                                     portare a una pagina che rifiuta.
+                                     template associato e ruoli scoperti.
 
-                                     `startBlocker()` riusa le relazioni gia precaricate
-                                     dall'elenco: nessuna query per riga. --}}
+                                     Resta **raggiungibile** anche con ruoli scoperti o
+                                     responsabili disattivati: da US-013 quei due casi si
+                                     risolvono nella schermata di avvio, che obbliga a indicare
+                                     un responsabile per questa release prima di procedere.
+                                     Disabilitarlo qui costringerebbe a passare dalla mappatura
+                                     del progetto, cioe a cambiare il default per tutti i
+                                     rilasci futuri per gestire un'assenza di un giorno.
+
+                                     La raggiungibilita e espressa **in positivo** sulle due
+                                     condizioni che nessuna scelta di persona sistema. Ridurre
+                                     invece la stringa di `startBlocker()` a una categoria
+                                     legherebbe la vista a un testo traducibile.
+
+                                     `startBlocker()` resta l'unica fonte del motivo, e riusa le
+                                     relazioni gia precaricate dall'elenco: nessuna query per
+                                     riga. --}}
                                 @php($blocker = $project->startBlocker())
+                                @php($reachable = $project->is_active && (bool) $project->workflowTemplate?->isUsable())
 
                                 <flux:button
-                                    :href="$blocker ? null : route('releases.start', $project)"
-                                    :disabled="(bool) $blocker"
+                                    :href="$reachable ? route('releases.start', $project) : null"
+                                    :disabled="! $reachable"
                                     :title="$blocker"
                                     size="sm"
                                     variant="ghost"
@@ -365,6 +378,16 @@ new class extends Component
                                 >
                                     {{ __('releases.start_from_project') }}
                                 </flux:button>
+
+                                {{-- Il motivo residuo non disabilita piu il comando: si mostra
+                                     come indicazione di cosa fare entrando, e non come
+                                     spiegazione di una porta chiusa. --}}
+                                @if ($reachable && $blocker)
+                                    <flux:text class="inline-flex w-full items-start justify-end gap-1.5 text-xs">
+                                        <flux:icon name="information-circle" variant="mini" class="mt-0.5 size-4 shrink-0" />
+                                        {{ __('releases.start_needs_override') }}
+                                    </flux:text>
+                                @endif
 
                                 <flux:button :href="route('projects.assignments', $project)" size="sm" variant="ghost">
                                     {{ __('projects.manage_assignments') }}
