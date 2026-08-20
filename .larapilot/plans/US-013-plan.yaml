@@ -627,17 +627,23 @@ tasks:
       - PR: finalizzare titolo e corpo della descrizione locale verso `develop`
 
       ## Completion Criteria
-      - [ ] Voce Unreleased nel CHANGELOG
-      - [ ] Regola registrata con glob corretto e trappola annotata
-      - [ ] `larapilot:quality` verde, livello Larastan non abbassato
-      - [ ] Suite completa verde
-      - [ ] Descrizione della PR verso `develop` pronta in locale, nessun push eseguito
+      - [x] Voce Unreleased nel CHANGELOG
+      - [x] Regola registrata con glob corretto e trappola annotata
+      - [x] `larapilot:quality` verde, livello Larastan non abbassato
+      - [x] Suite completa verde
+      - [x] Descrizione della PR verso `develop` pronta in locale, nessun push eseguito
     type: Impl
-    status: TODO
+    status: DONE
     assignee: Albert
     estimate_hours: 1
     dependencies:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T11:19:32+00:00'
+    commit:
+      sha: 070e2d08e0e64b331345027ae9ac7b56f3cc0c21
+      short_sha: 070e2d0
+      subject: 'chore(US-013): TASK-09 CHANGELOG, regola di progetto e gate di qualita'
+      committed_at: '2026-08-20T13:23:01+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/070e2d08e0e64b331345027ae9ac7b56f3cc0c21'
+updated_at: '2026-08-20T11:23:01+00:00'

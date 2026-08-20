@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\WorkflowTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -258,9 +259,58 @@ class StartReleaseScreenTest extends TestCase
             ->set('label', 'v2.4.0')
             ->set('overrides.'.$orphan->id, '')
             ->call('start')
-            ->assertHasErrors(['overrides.'.$orphan->id => 'required']);
+            ->assertHasErrors(['overrides.'.$orphan->id => 'required'])
+            // Il messaggio e quello deciso e non quello generico di Laravel: dice
+            // cosa fare, non che un campo e obbligatorio.
+            ->assertSee(__('releases.override_required'));
 
         $this->assertSame(0, Release::count());
+    }
+
+    public function test_the_start_form_does_not_query_per_role(): void
+    {
+        /*
+         * Il modulo rende un select per ruolo e ricalcola la mappatura effettiva a
+         * ogni render: e esattamente la forma in cui un N+1 entra senza farsi notare.
+         * L'insieme selezionabile e una query sola qualunque sia il numero di ruoli, e
+         * la mappatura effettiva si costruisce in memoria.
+         */
+        $few = Livewire::test('releases.start', ['project' => $this->projectReadyToRelease(steps: 2)]);
+        $many = Livewire::test('releases.start', ['project' => $this->projectReadyToRelease(steps: 6)]);
+
+        $fewCost = $this->queriesWhile(fn () => $few->call('$refresh'));
+        $manyCost = $this->queriesWhile(fn () => $many->call('$refresh'));
+
+        $this->assertSame(
+            $fewCost,
+            $manyCost,
+            "Il modulo e costato {$fewCost} query su due ruoli e {$manyCost} su sei: manca un eager loading."
+        );
+    }
+
+    public function test_choosing_an_override_does_not_query_per_role(): void
+    {
+        // Stessa invariante sul ramo con una sostituzione scelta: la persona indicata
+        // si risolve dall'insieme gia in memoria, non con una lettura per ruolo.
+        $few = $this->projectReadyToRelease(steps: 2);
+        $many = $this->projectReadyToRelease(steps: 6);
+
+        $substitute = User::factory()->create();
+
+        $fewComponent = Livewire::test('releases.start', ['project' => $few]);
+        $manyComponent = Livewire::test('releases.start', ['project' => $many]);
+
+        $fewRole = $few->workflowTemplate->stepDefinitions->first()->role_id;
+        $manyRole = $many->workflowTemplate->stepDefinitions->first()->role_id;
+
+        $fewCost = $this->queriesWhile(fn () => $fewComponent->set('overrides.'.$fewRole, $substitute->id));
+        $manyCost = $this->queriesWhile(fn () => $manyComponent->set('overrides.'.$manyRole, $substitute->id));
+
+        $this->assertSame(
+            $fewCost,
+            $manyCost,
+            "La selezione e costata {$fewCost} query su due ruoli e {$manyCost} su sei: la risoluzione avviene per ruolo."
+        );
     }
 
     public function test_a_start_with_an_override_freezes_the_step_with_the_chosen_member(): void
@@ -338,6 +388,84 @@ class StartReleaseScreenTest extends TestCase
             ->assertSee($inactive->name);
 
         $this->assertSame(0, Release::count());
+    }
+
+    public function test_a_non_textual_override_is_not_a_choice_and_does_not_break_the_render(): void
+    {
+        /*
+         * `overrides` e legata a `wire:model`, quindi il suo **contenuto** e vincolato
+         * dalla validazione ma la sua **forma** no: un valore annidato non e
+         * selezionabile dall'interfaccia, ed e comunque inviabile. Convertirlo darebbe
+         * un warning che Laravel promuove a eccezione, cioe un 500 al primo render —
+         * prima che la validazione possa dire di no.
+         *
+         * Un valore non testuale non e una scelta: il ruolo ricade sul responsabile
+         * di progetto, esattamente come se nessuno avesse toccato il select.
+         */
+        $project = $this->projectReadyToRelease();
+
+        $role = Role::query()->whereKey(
+            $project->workflowTemplate->stepDefinitions->first()->role_id
+        )->first();
+
+        $expected = $project->assignments->firstWhere('role_id', $role->id)->user_id;
+
+        Livewire::test('releases.start', ['project' => $project])
+            ->set('overrides.'.$role->id, ['annidato'])
+            ->assertSee(__('releases.override_heading'))
+            ->set('label', 'v2.4.0')
+            ->call('start')
+            ->assertHasNoErrors();
+
+        $release = Release::where('project_id', $project->id)->sole();
+
+        foreach ($release->steps()->where('role_id', $role->id)->get() as $step) {
+            $this->assertSame($expected, $step->assigned_user_id);
+        }
+    }
+
+    public function test_a_non_textual_override_still_leaves_an_uncovered_role_blocking(): void
+    {
+        // Sull'altro ramo il valore scartato non deve **coprire** nulla: il ruolo
+        // resta scoperto, e l'invio viene rifiutato dalla regola che lo esige.
+        $project = $this->projectReadyToRelease();
+
+        $orphan = Role::query()->whereKey(
+            $project->workflowTemplate->stepDefinitions->first()->role_id
+        )->first();
+
+        ProjectRoleAssignment::where('project_id', $project->id)
+            ->where('role_id', $orphan->id)
+            ->delete();
+
+        Livewire::test('releases.start', ['project' => $project->fresh()])
+            ->set('overrides.'.$orphan->id, ['annidato'])
+            ->assertSee(__('releases.blocked_heading'))
+            ->set('label', 'v2.4.0')
+            ->call('start')
+            ->assertHasErrors(['overrides.'.$orphan->id => 'required']);
+
+        $this->assertSame(0, Release::count());
+    }
+
+    public function test_the_baseline_of_each_select_cannot_be_rewritten_from_the_browser(): void
+    {
+        /*
+         * `primedDefaults` decide quali scelte contano come sostituzione. Se il client
+         * potesse riscriverla, un preselezionato mai toccato diventerebbe un override
+         * a comando — cioe la protezione contro la mappatura cambiata sotto il modulo
+         * si disattiverebbe con un `$set`.
+         */
+        $project = $this->projectReadyToRelease();
+
+        $role = Role::query()->whereKey(
+            $project->workflowTemplate->stepDefinitions->first()->role_id
+        )->first();
+
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        Livewire::test('releases.start', ['project' => $project])
+            ->set('primedDefaults.'.$role->id, '');
     }
 
     public function test_the_selects_are_not_offered_when_no_choice_of_person_can_unblock(): void
