@@ -259,4 +259,14 @@ class ProjectAssignmentsTest extends TestCase
                 'count' => 1,
             ]));
     }
+
+    public function test_the_page_declares_that_a_release_can_override_this_mapping(): void
+    {
+        // Senza questa nota una persona diversa su uno step si leggerebbe come
+        // mappatura andata storta, e qualcuno "correggerebbe" il default.
+        $assignment = ProjectRoleAssignment::factory()->create();
+
+        Livewire::test('projects.assignments', ['project' => $assignment->project])
+            ->assertSee(__('releases.override_note_on_assignments'));
+    }
 }
