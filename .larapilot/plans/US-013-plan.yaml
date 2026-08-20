@@ -268,16 +268,22 @@ tasks:
       - PR: aggiornare la descrizione locale
 
       ## Completion Criteria
-      - [ ] Tutte le chiavi nuove sono nel namespace `releases`, nessuna in `projects`
-      - [ ] Ogni chiave nuova ha un commento che ne spiega la scelta di tono quando non e ovvia
-      - [ ] Le forme plurali hanno la condizione `{0}` dove il conteggio puo essere zero
-      - [ ] Nessuna etichetta di stato duplicata rispetto agli enum
+      - [x] Tutte le chiavi nuove sono nel namespace `releases`, nessuna in `projects`
+      - [x] Ogni chiave nuova ha un commento che ne spiega la scelta di tono quando non e ovvia
+      - [x] Le forme plurali hanno la condizione `{0}` dove il conteggio puo essere zero
+      - [x] Nessuna etichetta di stato duplicata rispetto agli enum
     type: Impl
-    status: TODO
+    status: DONE
     assignee: Marika
     estimate_hours: 1
     dependencies:
       - TASK-00
+    commit:
+      sha: a14334fa8b129b6bf198b49cfa9d1ca9bb869fce
+      short_sha: a14334f
+      subject: "feat(US-013): TASK-02 etichette e messaggi dell'override nel namespace releases"
+      committed_at: '2026-08-20T12:54:49+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/a14334fa8b129b6bf198b49cfa9d1ca9bb869fce'
   -
     id: TASK-03
     title: 'Form di avvio: select per ruolo, insieme selezionabile e banner ricalcolato sugli override'
@@ -598,4 +604,4 @@ tasks:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T10:53:49+00:00'
+updated_at: '2026-08-20T10:54:50+00:00'
