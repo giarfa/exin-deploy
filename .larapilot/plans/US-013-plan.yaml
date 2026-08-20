@@ -371,17 +371,23 @@ tasks:
       - PR: aggiornare la descrizione locale
 
       ## Completion Criteria
-      - [ ] Comando raggiungibile con ruoli scoperti o responsabili disattivati, con indicazione accanto
-      - [ ] Comando disabilitato con progetto disattivato, processo assente o inutilizzabile, con il motivo accanto
-      - [ ] `Project::startBlocker()` non modificato
-      - [ ] Nessuna query aggiuntiva per riga dell'elenco
-      - [ ] Pint pulito
+      - [x] Comando raggiungibile con ruoli scoperti o responsabili disattivati, con indicazione accanto
+      - [x] Comando disabilitato con progetto disattivato, processo assente o inutilizzabile, con il motivo accanto
+      - [x] `Project::startBlocker()` non modificato
+      - [x] Nessuna query aggiuntiva per riga dell'elenco
+      - [x] Pint pulito
     type: Impl
-    status: TODO
+    status: DONE
     assignee: Alex
     estimate_hours: 1.5
     dependencies:
       - TASK-02
+    commit:
+      sha: 7f6a414d42b25cad13e70e493bbf2043cdb9adfd
+      short_sha: 7f6a414
+      subject: 'feat(US-013): TASK-04 comando di avvio raggiungibile con ruoli scoperti sbloccabili da override'
+      committed_at: '2026-08-20T13:05:00+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/7f6a414d42b25cad13e70e493bbf2043cdb9adfd'
   -
     id: TASK-05
     title: 'Mappatura di progetto: nota informativa sugli override di release'
@@ -610,4 +616,4 @@ tasks:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T11:04:01+00:00'
+updated_at: '2026-08-20T11:05:00+00:00'
