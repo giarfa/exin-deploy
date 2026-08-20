@@ -319,23 +319,29 @@ tasks:
       - PR: aggiornare la descrizione locale
 
       ## Completion Criteria
-      - [ ] Un select per ogni ruolo previsto, sempre visibile, con il default preselezionato
-      - [ ] Insieme selezionabile: ogni membro attivo piu l'assegnato corrente anche se disattivato
-      - [ ] Un ruolo scoperto con un override valido selezionato non compare piu come bloccante nel banner
-      - [ ] Un responsabile disattivato sostituito da un override attivo non compare piu come bloccante
-      - [ ] `Project::uncoveredRoles()`, `::inactiveResponsibles()` e `::startBlocker()` non sono stati modificati
-      - [ ] Nessuna istanza `ProjectRoleAssignment` viene salvata
-      - [ ] Invio bloccato finche un ruolo bloccante resta senza override; messaggio di rifiuto invariato per i ruoli non coperti
-      - [ ] Interfaccia usabile a 375 / 768 / 1280 px senza scorrimento orizzontale
-      - [ ] `BladeComponentAttributesTest` verde
-      - [ ] Pint pulito
+      - [x] Un select per ogni ruolo previsto, sempre visibile, con il default preselezionato
+      - [x] Insieme selezionabile: ogni membro attivo piu l'assegnato corrente anche se disattivato
+      - [x] Un ruolo scoperto con un override valido selezionato non compare piu come bloccante nel banner
+      - [x] Un responsabile disattivato sostituito da un override attivo non compare piu come bloccante
+      - [x] `Project::uncoveredRoles()`, `::inactiveResponsibles()` e `::startBlocker()` non sono stati modificati
+      - [x] Nessuna istanza `ProjectRoleAssignment` viene salvata
+      - [x] Invio bloccato finche un ruolo bloccante resta senza override; messaggio di rifiuto invariato per i ruoli non coperti
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px senza scorrimento orizzontale
+      - [x] `BladeComponentAttributesTest` verde
+      - [x] Pint pulito
     type: Impl
-    status: TODO
+    status: DONE
     assignee: Joe
     estimate_hours: 6
     dependencies:
       - TASK-01
       - TASK-02
+    commit:
+      sha: e841504f7aab8c75a03fa67d6df00870d915ab69
+      short_sha: e841504
+      subject: 'feat(US-013): TASK-03 select per ruolo nel form di avvio con banner ricalcolato sugli override'
+      committed_at: '2026-08-20T13:04:01+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/e841504f7aab8c75a03fa67d6df00870d915ab69'
   -
     id: TASK-04
     title: "Elenco progetti: comando di avvio raggiungibile quando l'override puo sbloccare"
@@ -604,4 +610,4 @@ tasks:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T10:54:50+00:00'
+updated_at: '2026-08-20T11:04:01+00:00'
