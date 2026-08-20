@@ -14,8 +14,10 @@ use App\Models\Release;
 use App\Models\ReleaseEvent;
 use App\Models\ReleaseStep;
 use App\Models\ReleaseStepField;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -47,14 +49,22 @@ use Illuminate\Support\Str;
 class StartRelease
 {
     /**
+     * `$overrides` sovrascrive il responsabile di uno o piu ruoli **per questa sola
+     * release**: e un effetto one-shot, nessuna riga di `project_role_assignments`
+     * o `default_role_assignments` viene toccata. Il parametro e sempre presente
+     * con default vuoto, cosi i chiamanti che non hanno eccezioni da gestire
+     * restano validi senza modifiche.
+     *
+     * @param  array<string, string>  $overrides  identificativo del ruolo -> identificativo della persona
+     *
      * @throws InactiveProjectCannotStartRelease se il progetto e disattivato
      * @throws ProjectWithoutUsableTemplate se il processo manca, e disattivato o non ha step
-     * @throws RolesWithoutResponsible se un ruolo previsto non ha un responsabile sul progetto
-     * @throws InactiveResponsibleOnProject se un responsabile risolto e disattivato
+     * @throws RolesWithoutResponsible se un ruolo previsto non ha un responsabile, ne sul progetto ne fra gli override
+     * @throws InactiveResponsibleOnProject se un responsabile effettivo e disattivato
      */
-    public function handle(Project $project, string $label, User $actor): Release
+    public function handle(Project $project, string $label, User $actor, array $overrides = []): Release
     {
-        return DB::transaction(function () use ($project, $label, $actor): Release {
+        return DB::transaction(function () use ($project, $label, $actor, $overrides): Release {
             /*
              * Il progetto viene **riletto**, non solo ricaricato nelle relazioni.
              *
@@ -78,7 +88,7 @@ class StartRelease
                 ->firstOrFail();
 
             $template = $this->usableTemplate($project);
-            $responsibles = $this->responsibles($project, $template);
+            $responsibles = $this->responsibles($project, $template, $overrides);
 
             $now = now();
 
@@ -185,20 +195,38 @@ class StartRelease
 
     /**
      * Persona responsabile per ciascun ruolo previsto dal processo, indicizzata
-     * per ruolo.
+     * per ruolo: la mappatura **effettiva**, cioe quella di progetto con gli
+     * override sovrapposti.
+     *
+     * Un override **sostituisce integralmente** il responsabile di progetto per il
+     * suo ruolo: nessun ripiego sul dato di progetto, nemmeno quando quel dato
+     * esiste ed e valido. Chi indica una sostituzione la sta indicando per quella
+     * release, e un ripiego silenzioso la disfarebbe senza dirlo.
      *
      * Rifiuta prima i ruoli scoperti e poi i responsabili disattivati: sono due
      * problemi diversi con due soluzioni diverse, e un messaggio unico
-     * costringerebbe chi avvia a indovinare quale dei due sta bloccando.
+     * costringerebbe chi avvia a indovinare quale dei due sta bloccando. Entrambi i
+     * controlli valgono sull'insieme **effettivo**, quindi un ruolo scoperto
+     * coperto da un override non e piu scoperto, e un responsabile di progetto
+     * disattivato sostituito da una persona attiva non blocca piu — mentre un
+     * override *verso* una persona disattivata viene rifiutato esattamente come se
+     * arrivasse dalla mappatura.
      *
+     * @param  array<string, string>  $overrides
      * @return array<string, User>
      *
      * @throws RolesWithoutResponsible
      * @throws InactiveResponsibleOnProject
      */
-    private function responsibles(Project $project, WorkflowTemplate $template): array
+    private function responsibles(Project $project, WorkflowTemplate $template, array $overrides): array
     {
-        $uncovered = $project->uncoveredRoles();
+        $neededRoles = $template->stepDefinitions->pluck('role_id')->unique();
+
+        $overridden = $this->resolveOverrides($neededRoles, $overrides);
+
+        $uncovered = $project->uncoveredRoles()
+            ->reject(fn (Role $role): bool => $overridden->has($role->id))
+            ->values();
 
         if ($uncovered->isNotEmpty()) {
             throw RolesWithoutResponsible::on($project, $uncovered);
@@ -206,12 +234,9 @@ class StartRelease
 
         $byRole = $project->assignments->keyBy('role_id');
 
-        $needed = $template->stepDefinitions
-            ->pluck('role_id')
-            ->unique()
-            ->mapWithKeys(fn (string $roleId): array => [
-                $roleId => $byRole->get($roleId)->user,
-            ]);
+        $needed = $neededRoles->mapWithKeys(fn (string $roleId): array => [
+            $roleId => $overridden->get($roleId) ?? $byRole->get($roleId)->user,
+        ]);
 
         $inactive = $needed->reject(fn (User $user): bool => $user->is_active)->unique('id')->values();
 
@@ -220,5 +245,47 @@ class StartRelease
         }
 
         return $needed->all();
+    }
+
+    /**
+     * Le persone indicate come override, indicizzate per ruolo.
+     *
+     * Igiene al confine, non regola di prodotto: si tengono le sole chiavi che
+     * corrispondono a un ruolo previsto dagli step del processo e si scartano i
+     * valori vuoti. Dalla schermata di avvio il caso e gia chiuso dal vincolo di
+     * appartenenza sul select, ma la Action e chiamata anche dal seeder e dai test,
+     * e un ruolo estraneo al processo non deve poter cambiare l'esito dell'avvio.
+     *
+     * Una sola query, e solo quando c'e qualcosa da risolvere: le persone si
+     * leggono in blocco con un `whereIn`, quindi il costo non cresce con il numero
+     * di ruoli sovrascritti.
+     *
+     * Un identificativo che non risolve **non e un override**: si scarta, e il
+     * ruolo torna a dipendere dalla mappatura di progetto con le precondizioni
+     * odierne. Trattarlo come una copertura darebbe uno step assegnato a nessuno.
+     *
+     * @param  Collection<int, string>  $neededRoles
+     * @param  array<string, string>  $overrides
+     * @return Collection<string, User>
+     */
+    private function resolveOverrides(Collection $neededRoles, array $overrides): Collection
+    {
+        $wanted = collect($overrides)
+            ->only($neededRoles->all())
+            ->map(fn (string $userId): string => trim($userId))
+            ->filter(fn (string $userId): bool => $userId !== '');
+
+        if ($wanted->isEmpty()) {
+            return collect();
+        }
+
+        $users = User::query()
+            ->whereIn('id', $wanted->values()->unique()->all())
+            ->get()
+            ->keyBy('id');
+
+        return $wanted
+            ->map(fn (string $userId): ?User => $users->get($userId))
+            ->filter();
     }
 }
