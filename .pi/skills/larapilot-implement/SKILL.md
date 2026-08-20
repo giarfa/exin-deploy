@@ -31,18 +31,12 @@ When `settings.effort` is **`ECO`**: **never spawn sub-agents**; **defer docs** 
 4. `php artisan larapilot:task-done {code} {taskId}` (after each task)
 5. `php artisan larapilot:quality` — Pint + Larastan (level 5+) before backend `task-done`; use `--fix` for formatting when needed
 6. `php artisan larapilot:spec-review {code}`
+7. When `settings.decision_tables` is `YES` (experimental, default `NO`): `php artisan larapilot:decisions-check --spec={code} --base=develop` — decision-table gate, before `spec-review`
 
 ## Execution Contract
 
-1. **Autonomous by default** — stop only for explicit blockers (scope change, missing prerequisite spec, semantic test breakage). **An `undecided` decision-table cell on a site a task must touch is an explicit blocker.** Autonomy covers *how* to build what was decided; it never extends to deciding what was left open.
-2. **The decision table is read-only here.** `{paths.research}/decisions/{code}.yaml` is written only by `/larapilot-feature` (see **Single writer** there). Do not fill a cell, reword a question, mark a cell `out-of-scope`, or "sync" the counts to the table — the table must not appear in this branch's diff at all:
-
-   ```bash
-   php bin/decisioni.php --spec={code} --base=develop   # before spec-review
-
-   ```
-
-   When a task turns out to touch a site whose cell is open, implement the rest of the plan, leave that behavior unchanged, and report it in the handoff as a scope reduction. Do not reach for the answer because it looks obvious, because the plan implies it, or because stopping is expensive: the cost of stopping is one session, the cost of a wrong silent decision is everything the enumeration was built to prevent.
+1. **Autonomous by default** — stop only for explicit blockers (scope change, missing prerequisite spec, semantic test breakage). When `settings.decision_tables` is `YES`: **an `undecided` decision-table cell on a site a task must touch is an explicit blocker.** Autonomy covers *how* to build what was decided; it never extends to deciding what was left open.
+2. **The decision table is read-only here, and only exists when `settings.decision_tables` is `YES`** (experimental, default `NO` — when it is `NO`, skip this rule entirely: no table to read, none to create, nothing to mention). `{paths.research}/decisions/{code}.yaml` is written only by `/larapilot-feature` (see **Single writer** there). Do not fill a cell, reword a question, mark a cell `out-of-scope`, or "sync" the counts to the table: it must not appear in this branch's diff at all. When a task turns out to touch a site whose cell is open, implement the rest of the plan, leave that behavior unchanged, and report it in the handoff as a scope reduction. Do not reach for the answer because it looks obvious, because the plan implies it, or because stopping is expensive — the cost of stopping is one session, the cost of a wrong silent decision is everything the enumeration was built to prevent.
 3. Implement the **full planned spec** — never silently drop acceptance criteria to fit an MVP unless the PRD delivery target is MVP and the spec was scoped accordingly. If in doubt, read `paths.prd` for the delivery target — do not assume MVP.
 4. Work under the task's target repo: default **`data.workdir`** (Laravel) for backend tasks; **`data.frontend.repo_path`** for tasks marked `repo: frontend`. Connector commands always run from `data.project_root`.
 5. After `spec-start`, re-run `spec-show` if a worktree may have been created.

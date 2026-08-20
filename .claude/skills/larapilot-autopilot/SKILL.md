@@ -9,7 +9,7 @@ Batch-run `larapilot-plan` and `larapilot-implement` across eligible specs. Opti
 
 ## Shared Runtime
 
-Read `.larapilot/shared-runtime.md` — especially **Project Settings** (`auto_approve`).
+Read `.larapilot/shared-runtime.md` — especially **Project Settings** (`auto_approve`, `decision_tables`).
 
 ## Output Economy
 
@@ -28,6 +28,7 @@ Read `.larapilot/shared-runtime.md` — especially **Project Settings** (`auto_a
 2. `php artisan larapilot:spec-list`
 3. `php artisan larapilot:metrics`
 4. When auto-approving: `php artisan larapilot:spec-approve {code}`
+5. When `settings.decision_tables` is `YES` (experimental, default `NO`), per candidate spec before planning: `php artisan larapilot:decisions-check --spec={code} --base=develop`
 
 ## Selection Rules
 
@@ -59,22 +60,8 @@ After each spec:
 
 ## Safety
 
-- **Decision-table gate, before anything else.** For each candidate spec, read
-  `{paths.research}/decisions/{code}.yaml` and run:
-
-  ```bash
-  php bin/decisioni.php --spec={code} --base=develop
-  ```
-
-  A spec with `undecided` cells, or a non-zero exit, is **not eligible for batching** —
-  skip it and report `US-XXX: skipped | open decision cells (K)`. Batch mode is the worst
-  possible place to resolve an open cell: there is no human watching, the pressure to keep
-  the run going is highest, and a wrong answer propagates into every spec downstream.
-  Autopilot never writes the table and never marks a cell `out-of-scope`
-- **`auto_approve: YES` does not extend to decisions.** It waives the *review* gate on
-  delivered work; it does not authorize answering questions the product owner left open.
-  A spec whose blockers are `[blocks-merge]` comments on undecided cells stays in `REVIEW`
-  regardless of `auto_approve`
+- **Decision-table gate, before anything else** *(only when `settings.decision_tables` is `YES`; when `NO`, skip this bullet and the next — there is no table)* — read `{paths.research}/decisions/{code}.yaml` and run the gate for each candidate spec. A spec with `undecided` cells, or a non-zero exit, is **not eligible for batching**: skip it and report `US-XXX: skipped | open decision cells (K)`. Batch mode is the worst place to resolve an open cell — no human is watching, the pressure to keep the run going is highest, and a wrong answer propagates into every spec downstream. Autopilot never writes the table and never marks a cell `out-of-scope`
+- **`auto_approve: YES` does not extend to decisions** — it waives the *review* gate on delivered work, not the authority to answer questions the product owner left open. A spec whose blockers are `[blocks-merge]` comments on undecided cells stays in `REVIEW` regardless of `auto_approve`
 - **`auto_approve: NO` (default)** — never call `spec-approve`; human gate via `/larapilot-review` remains required
 - **`auto_approve: YES`** — autopilot may approve only after implement with no Critical open blockers; still never approve on test failure or explicit rework need
 - Confirm with user before processing more than 5 specs — **Zoey** flags suspension risk and suggests `--max` or phased batches when Budget Sensitivity is `Tracked`

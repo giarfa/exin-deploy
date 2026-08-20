@@ -1,6 +1,6 @@
 ---
 name: larapilot-settings
-description: Configure persistent Larapilot project settings (effort, backlog granularity, git mode, testing, auto-approve, lucille, GitHub/GitLab/Bitbucket, notifications) via AskQuestion. Use when the user runs /larapilot-settings, wants to change token economy, backlog/spec granularity, Gitflow/push behavior, test depth, auto-approve, Lucille, remote forge, or Slack/Discord/Telegram notifications. Italian triggers include "impostazioni larapilot", "settings", "modalità eco", "granularità backlog", "meno specs", "gitflow push", "autoapprove", "disattiva Lucille", "escludi Lucille", "notifiche slack", "telegram", "discord", "github", "gitlab", "bitbucket".
+description: Configure persistent Larapilot project settings (effort, backlog granularity, git mode, testing, auto-approve, lucille, GitHub/GitLab/Bitbucket, notifications, experimental decision tables) via AskQuestion. Use when the user runs /larapilot-settings, wants to change token economy, backlog/spec granularity, Gitflow/push behavior, test depth, auto-approve, Lucille, remote forge, or Slack/Discord/Telegram notifications. Italian triggers include "impostazioni larapilot", "settings", "modalità eco", "granularità backlog", "meno specs", "gitflow push", "autoapprove", "disattiva Lucille", "escludi Lucille", "notifiche slack", "telegram", "discord", "github", "gitlab", "bitbucket", "decision table", "tabelle di decisione", "funzioni sperimentali".
 ---
 
 # Larapilot — Project Settings
@@ -9,7 +9,7 @@ Persist project-wide Larapilot settings into `.larapilot/config.yaml`. All other
 
 ## Shared Runtime
 
-Read `.larapilot/shared-runtime.md` — **Project Settings** (effort, backlog, git mode, testing, auto_approve, lucille, github, gitlab, bitbucket, notifications). Bot/webhook/forge setup: `.larapilot/integrations.md`.
+Read `.larapilot/shared-runtime.md` — **Project Settings** (effort, backlog, git mode, testing, auto_approve, lucille, github, gitlab, bitbucket, notifications, decision_tables). Bot/webhook/forge setup: `.larapilot/integrations.md`.
 
 ## Output Economy
 
@@ -27,6 +27,7 @@ Read `.larapilot/shared-runtime.md` — **Project Settings** (effort, backlog, g
 | 🛡️ **Robert** | Code Reviewer — owns auto_approve risk framing |
 | 📒 **Lucille** | Project tracking — owns the lucille on/exclude setting; default is always ON |
 | 🔗 **Matt** | Integration Manager — owns Slack/Discord/Telegram notification toggles (secrets stay in `.env`) |
+| 🔎 **Tom** | Requirements Analyst — owns the experimental `decision_tables` toggle and frames what it costs per feature |
 
 ## Config & CLI
 
@@ -43,7 +44,7 @@ Never edit `.larapilot/config.yaml` by hand from the skill — always use `larap
 
 Run `config-show`. Show one line with current values:
 
-`effort={…} · backlog={…} · git_mode={…} · testing={…} · auto_approve={…} · lucille={…} · github={…} · gitlab={…} · bitbucket={…} · notifications={…}`
+`effort={…} · backlog={…} · git_mode={…} · testing={…} · auto_approve={…} · lucille={…} · github={…} · gitlab={…} · bitbucket={…} · notifications={…} · decision_tables={…}`
 
 If `.larapilot/config.yaml` is missing, suggest `php artisan larapilot:install` first (settings-set will scaffold defaults if needed, but install is preferred).
 
@@ -165,8 +166,22 @@ If notifications = `YES`, ask channels in the same round (or next if at max):
 
 When any channel is YES, remind once: configure env vars per `.larapilot/integrations.md` — do not paste secrets into chat. Suggest a test: `php artisan larapilot:notify --event=custom --title="Larapilot test"`.
 
-Defaults when unset: `STANDARD` / `STANDARD` / `GITFLOW` / `NORMAL` / `NO` / **`YES` (lucille)** / **`NO` (github/gitlab/bitbucket)** / **`NO` (notifications + channels)**.  
-(`config.yaml` stores booleans; `config-show` / CLI envelopes expose `YES` | `NO`. Missing `lucille` → YES; missing forge/notifications → NO.)
+**Round 4 — Experimental**
+
+**12. Decision tables** — 🧪 **experimental**, default OFF
+
+- **AskQuestion prompt:** `Decision tables (current: {VALUE}) — EXPERIMENTAL: enumerate every site a feature breaks and decide each one before planning?`
+- **Chat framing (one line):** 🔎 Tom — experimental: catches contract breaks the request never mentioned, at the cost of one decision pass per feature (and a CI gate).
+
+| Option id | AskQuestion label |
+| --- | --- |
+| `NO` | `NO — plain feature discovery interview (default); no decision table, no decisions-check gate` |
+| `YES` | `YES (experimental) — /larapilot-feature enumerates broken sites into research/decisions/{code}.yaml, you decide each row, open cells block approval` |
+
+Ask this one only when the user asks about experimental features or about missed/unforeseen impacts of a change — otherwise leave it at its current value. Warn once when the user picks `YES`: it is **experimental** (shape and checks may change between minor versions), it adds a mandatory decision pass to every `/larapilot-feature` run at any `effort`, and the gate is only binding in CI once `resources/stubs/decisions.yml` is copied into `.github/workflows/` with a branch protection rule.
+
+Defaults when unset: `STANDARD` / `STANDARD` / `GITFLOW` / `NORMAL` / `NO` / **`YES` (lucille)** / **`NO` (github/gitlab/bitbucket)** / **`NO` (notifications + channels)** / **`NO` (decision_tables)**.  
+(`config.yaml` stores booleans; `config-show` / CLI envelopes expose `YES` | `NO`. Missing `lucille` → YES; missing forge/notifications/decision_tables → NO.)
 
 ### 2. Persist
 
@@ -186,12 +201,13 @@ php artisan larapilot:settings-set \
   --notifications=NO \
   --notify-slack=NO \
   --notify-discord=NO \
-  --notify-telegram=NO
+  --notify-telegram=NO \
+  --decision-tables=NO
 ```
 
 Pass only the keys the user answered. On success, parse the JSON envelope (`kind: "settings"`) and confirm:
 
-`Saved → effort=… · backlog=… · git_mode=… · testing=… · auto_approve=… · lucille=… · github=… · gitlab=… · bitbucket=… · notifications=…`  
+`Saved → effort=… · backlog=… · git_mode=… · testing=… · auto_approve=… · lucille=… · github=… · gitlab=… · bitbucket=… · notifications=… · decision_tables=…`  
 `Path: data.config_path` (or `.larapilot/config.yaml`)
 
 If `data.lucille_disabled_by_eco` is true (or effort was just set to ECO without an explicit lucille flag), state once: **Lucille disabled by ECO** — re-enable with `php artisan larapilot:settings-set --lucille=YES`.
@@ -209,3 +225,4 @@ Remind once (one line): other skills honor these on next run via `config-show` �
 - If the user wants a single setting changed, AskQuestion only that dimension
 - Never invent persistence — CLI only
 - Never collect Slack/Discord/Telegram secrets in chat
+- Never enable `decision_tables` implicitly — it is experimental and only ever set by an explicit user answer
