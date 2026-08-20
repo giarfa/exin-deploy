@@ -34,3 +34,4 @@
 {"id":"0e8e1cd18fe7dcb2","ts":"2026-08-16T12:08:53+00:00","user":"git:giarfa <giarfa@outlook.com>","category":"support","tokens":118000,"minutes":42,"skill":"larapilot-implement","spec":"US-012","note":null,"estimated":true}
 {"id":"a9f7fa6dc212eaf6","ts":"2026-08-16T12:20:28+00:00","user":"git:giarfa <giarfa@outlook.com>","category":"review","tokens":38000,"minutes":9,"skill":"larapilot-review","spec":"US-012","note":"Cancello umano US-012: suite 566 test e quality gate rieseguiti, approvata","estimated":true}
 {"id":"bb699aecbc3dd3aa","ts":"2026-08-20T10:42:18+00:00","user":"git:giarfa <giarfa@outlook.com>","category":"feature","tokens":60000,"minutes":22,"skill":"larapilot-plan","spec":"US-013","note":null,"estimated":true}
+{"id":"ea11bf85e893b37b","ts":"2026-08-20T11:39:53+00:00","user":"git:giarfa <giarfa@outlook.com>","category":"feature","tokens":118000,"minutes":42,"skill":"larapilot-implement","spec":"US-013","note":null,"estimated":true}
