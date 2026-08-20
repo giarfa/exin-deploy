@@ -117,7 +117,11 @@ cells:
   - site: "tests/Feature/Releases/StartReleaseTest.php:97"
     source: grep
     question: "i test esistenti sulla risoluzione dei responsabili (nessun override passato) restano invariati, o la firma dell'Action cambiata richiede un adattamento"
-    state: undecided
+    state: decided
+    value: "il file viene diviso in due suite distinte: StartReleaseTest.php per il percorso senza override (invariato) e un nuovo StartReleaseOverrideTest.php per gli scenari con override"
+    human_text: "Il file viene diviso in due suite distinte: StartReleaseTest.php per il percorso senza override (invariato) e un nuovo StartReleaseOverrideTest.php per gli scenari con override"
+    decided_by: proposal
+    ratified: true
     proposals_shown_after_oracle: true
     proposals:
       - "Le chiamate esistenti restano cosi come sono: il nuovo parametro overrides ha un default vuoto lato firma, zero modifiche al file di test attuale"
@@ -234,7 +238,11 @@ cells:
   - site: "tests/Feature/Releases/StartReleaseQueryBudgetTest.php:1"
     source: grep
     question: "la risoluzione degli override deve rispettare lo stesso budget di query gia testato per l'avvio release (nessuna query aggiuntiva per ruolo), o e accettabile una query in piu per la risoluzione degli utenti indicati come override"
-    state: undecided
+    state: decided
+    value: "stesso budget di oggi: gli utenti overridden vengono risolti in un'unica query batch (whereIn sugli id), sommata a quelle gia esistenti — zero query aggiuntive per ruolo"
+    human_text: "Stesso budget di oggi: gli utenti overridden si risolvono in un'unica query batch aggiuntiva (whereIn), sommata a quelle esistenti — zero query per-ruolo."
+    decided_by: proposal
+    ratified: true
     proposals_shown_after_oracle: true
     proposals:
       - "Stesso budget di oggi: gli utenti overridden vengono risolti in un'unica query batch (whereIn sugli id), sommata a quelle gia esistenti — zero query aggiuntive per ruolo"
