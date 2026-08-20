@@ -470,17 +470,23 @@ tasks:
       - PR: aggiornare la descrizione locale
 
       ## Completion Criteria
-      - [ ] `StartReleaseOverrideTest.php` copre tutti i casi elencati e passa
-      - [ ] `StartReleaseTest.php` passa e risulta non modificato nel diff
-      - [ ] Il caso one-shot verifica esplicitamente l'assenza di scritture sulle due tabelle di mappatura
-      - [ ] Nessun test di browser, viewport o E2E introdotto
-      - [ ] Pint pulito
+      - [x] `StartReleaseOverrideTest.php` copre tutti i casi elencati e passa
+      - [x] `StartReleaseTest.php` passa e risulta non modificato nel diff
+      - [x] Il caso one-shot verifica esplicitamente l'assenza di scritture sulle due tabelle di mappatura
+      - [x] Nessun test di browser, viewport o E2E introdotto
+      - [x] Pint pulito
     type: Test
-    status: TODO
+    status: DONE
     assignee: Anne
     estimate_hours: 3
     dependencies:
       - TASK-01
+    commit:
+      sha: 1a35bcf152320d3bc0ccfc94bfa96e96149f9c99
+      short_sha: 1a35bcf
+      subject: 'test(US-013): TASK-06 suite degli scenari di avvio con override'
+      committed_at: '2026-08-20T13:07:23+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/1a35bcf152320d3bc0ccfc94bfa96e96149f9c99'
   -
     id: TASK-07
     title: 'Test di schermata: form di avvio con override, comando in elenco, nota sulla mappatura'
@@ -622,4 +628,4 @@ tasks:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T11:05:31+00:00'
+updated_at: '2026-08-20T11:07:23+00:00'
