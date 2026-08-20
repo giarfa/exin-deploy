@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "../larapilot",
-                "reference": "97088277bed618ed2c2896d08df7a102e0a11f5d"
+                "reference": "23b9f084de34172a42e2aecf4355f643286ffcd0"
             },
             "require": {
                 "illuminate/console": "^12.0|^13.0",
@@ -1379,20 +1379,20 @@
         },
         {
             "name": "laravel/boost",
-            "version": "v2.5.1",
+            "version": "v2.5.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/boost.git",
-                "reference": "ae6ae78ecd053000d14204cef3c5c37aae6c97ed"
+                "reference": "a6c798975a893d3c0a609ebc6ed37a007ecbedec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/boost/zipball/ae6ae78ecd053000d14204cef3c5c37aae6c97ed",
-                "reference": "ae6ae78ecd053000d14204cef3c5c37aae6c97ed",
+                "url": "https://api.github.com/repos/laravel/boost/zipball/a6c798975a893d3c0a609ebc6ed37a007ecbedec",
+                "reference": "a6c798975a893d3c0a609ebc6ed37a007ecbedec",
                 "shasum": ""
             },
             "require": {
-                "guzzlehttp/guzzle": "^7.9",
+                "guzzlehttp/guzzle": "^7.9|^8.0",
                 "illuminate/console": "^11.45.3|^12.41.1|^13.0",
                 "illuminate/contracts": "^11.45.3|^12.41.1|^13.0",
                 "illuminate/routing": "^11.45.3|^12.41.1|^13.0",
@@ -1441,7 +1441,7 @@
                 "issues": "https://github.com/laravel/boost/issues",
                 "source": "https://github.com/laravel/boost"
             },
-            "time": "2026-08-05T17:03:29+00:00"
+            "time": "2026-08-19T02:26:00+00:00"
         },
         {
             "name": "laravel/fortify",
