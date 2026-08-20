@@ -236,3 +236,12 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   dal codice dell'app al codice di recupero era reso senza testo, per la stessa causa.
 - L'attributo `x-cloak` era decorativo: mancava la regola di stile che lo rende efficace, e
   i blocchi alternati della sfida comparivano tutti insieme prima dell'avvio di Alpine.
+- **Gate delle decisioni, tempo di enumerazione** (`bin/decisioni.php`): il controllo
+  anti-shrink leggeva l'albero alla punta di `--base` come istante dell'enumerazione.
+  L'approssimazione scadeva nel momento del merge — la base assorbiva l'implementazione,
+  e ogni file creato dalla spec diventava un sito lasciato cadere. Il primo caso e
+  arrivato con US-013 subito dopo il merge, con CI rossa su `develop` per una decisione
+  che era stata ratificata. Ora l'ancora e l'ultimo commit che ha toccato la tabella
+  stessa, che l'immutabilita di ramo rende esattamente il tempo di enumerazione e che il
+  merge non sposta. Come effetto, il rilevamento dei drop non richiede piu `--base`:
+  prima, senza quel flag, veniva saltato in silenzio.
