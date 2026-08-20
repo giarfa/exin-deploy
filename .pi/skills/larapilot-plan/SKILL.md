@@ -27,6 +27,7 @@ Read `.larapilot/task-templates.md` — copy task body structures gated by `data
 2. `php artisan larapilot:spec-show {code}` OR `php artisan larapilot:spec-next --status=TODO`
 3. `php artisan larapilot:validate-plan {code} --file=...`
 4. `php artisan larapilot:spec-plan {code} --file=...`
+5. When `settings.decision_tables` is `YES` (experimental, default `NO`): `php artisan larapilot:decisions-check --spec={code} --base=develop` — decision-table gate, read-only in this skill
 
 ## Workflow
 
@@ -47,41 +48,28 @@ From `data.workdir` (codebase) and `data.project_root` (artifacts):
 - Mockups (`paths.mockups/{code}/`) if they exist
 - Relevant Laravel code: models, migrations, routes, tests
 - Boost `Database Schema` for data model context; `Search Docs` for Laravel/package patterns
-- **Decision table** — `{paths.research}/decisions/{code}.yaml` when present (written by
-  `/larapilot-feature`). Three obligations, in order:
-  1. **Do not plan around an `undecided` cell.** If any task would touch a site whose cell
-     is `undecided` (or `decided_by: proposal` with `ratified: false`), stop and route back
-     to `/larapilot-feature` for that cell. Do not answer it here: this skill has no human
-     gate, so a cell filled in planning is a cell the LLM decided for itself.
+- **Decision table** (`{paths.research}/decisions/{code}.yaml`) when `settings.decision_tables` is `YES` — written by `/larapilot-feature`; see **Decision table** below
 
-     **The table is read-only in this skill** — see **Single writer** in
-     `larapilot-feature`. Never edit the YAML, not to fill a cell, not to reword a
-     question, not to mark a cell `out-of-scope`. Verify with:
+#### Decision table (read-only here) — `decision_tables: YES` only
 
-     ```bash
-     php bin/decisioni.php --spec={code} --base=develop
-     ```
+**Skip this whole subsection when `settings.decision_tables` is `NO` (the default):** do not read, look for, or mention a decision table, and do not run `decisions-check`. Read the setting from `config-show` before anything else here.
 
-     **When an open cell blocks progress, narrow — do not decide.** The legal move is to
-     shrink the spec so the site goes untouched, and to say so in `plan_body`:
+The table is written only by `/larapilot-feature` — see **Single writer** there. Never edit the YAML in this skill: not to fill a cell, not to reword a question, not to mark a cell `out-of-scope`. Three obligations, in order:
 
-     ```markdown
-     ## Scope Reduction
+1. **Do not plan around an `undecided` cell** — if any task would touch a site whose cell is `undecided` (or `decided_by: proposal` with `ratified: false`), stop and route back to `/larapilot-feature` for that cell. Do not answer it here: this skill has no human gate, so a cell filled in planning is a cell the LLM decided for itself
+2. **Re-verify the enumeration** — re-run the grep and schema read from the table's `sources`; sites that appeared after the spec was written are new cells, not details. Report them and route back, do not append answers
+3. **Map cells to tasks** — every `decided` cell names the task that implements it; every `decided-null` cell is stated as an explicit non-change in `plan_body`, so a later diff can tell "unchanged on purpose" from "forgotten"
 
-     - {site} — cell undecided; no task touches this site in {code}. Needs
-       /larapilot-feature with the product owner before the behavior can change.
-     ```
+**When an open cell blocks progress, narrow — do not decide.** The legal move is to shrink the spec so the site goes untouched, and to say so in `plan_body`:
 
-     The cell stays `undecided` — because it is. Narrowing is reversible, visible in the
-     plan, and surfaced again at review; deciding is none of those things. That asymmetry
-     is the point: there is always a way to keep moving that does not require inventing an
-     answer, so "I filled it to avoid blocking" is never the only option available.
-  2. **Re-verify the enumeration.** Re-run the grep and schema read from the table's
-     `sources`; sites that appeared after the spec was written are new cells, not details.
-     Report them and route back — do not append answers.
-  3. **Map cells to tasks.** Every `decided` cell names the task that implements it; every
-     `decided-null` cell is stated as an explicit non-change in `plan_body`, so a later
-     diff can tell "unchanged on purpose" from "forgotten".
+```markdown
+
+## Scope Reduction
+
+- {site} — cell undecided; no task touches this site in {code}. Needs /larapilot-feature with the product owner before the behavior can change.
+```
+
+The cell stays `undecided` — because it is. Narrowing is reversible, visible in the plan, and surfaced again at review; deciding is none of those things. That asymmetry is the point: there is always a way to keep moving that does not require inventing an answer, so "I filled it to avoid blocking" is never the only option available.
 
 #### Sub-agent (optional — large or unfamiliar codebase)
 

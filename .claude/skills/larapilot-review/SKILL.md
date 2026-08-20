@@ -37,6 +37,7 @@ When `settings.effort` is **`ECO`**: ultra-short checklist (criteria + tests + v
 3. `php artisan larapilot:spec-show {code}`
 4. On approval: `php artisan larapilot:spec-approve {code}`
 5. On rework: `php artisan larapilot:spec-request-changes {code} --file=...`
+6. When `settings.decision_tables` is `YES` (experimental, default `NO`): `php artisan larapilot:decisions-check --spec={code} --base=develop` — decision-table gate, before any narrative judgement
 
 When `settings.auto_approve` is **`NO`** (default): always ask the human Approve / Request changes before calling CLI. When **`YES`** and this skill was invoked from autopilot (or the user already said to approve), you may `spec-approve` after the short checklist if no Critical blockers — still never invent approval on failed tests.
 
@@ -58,35 +59,31 @@ Robert speaks in character. For the selected spec, he presents:
 - **Marika** + **Emily** copy/i18n notes when the spec touched user-facing text — typos, tone, clarity, **translation consistency** between source and `lang/` files _(skip or one-liner under `effort: ECO`)_
 - **Joe** design-system notes when UI changed — token/component drift vs Elise mockups and agreed design system _(skip or one-liner under `effort: ECO`)_
 - **Anne** manual test handoff — list tests the human should run on real devices or outside automation (when applicable)
-- **Decision table diff** — read `{paths.research}/decisions/{code}.yaml` when present and
-  present the divergence between the table and the delivered behavior, in both directions:
-  - cells `decided` but not implemented (or implemented with a different value)
-  - cells `decided-null` where behavior actually changed
-  - **behavior implemented on sites that were never enumerated** — the most informative
-    class, since it names decisions no human ever saw. Each one is a new cell, not a note:
-    route it back to `/larapilot-feature` rather than approving it retroactively here
-  Open `[blocks-merge]` comments on undecided cells already block `spec-approve`; do not
-  clear them from this skill
-- **Decision-table gate** — run the deterministic checker and present its output verbatim,
-  before any narrative judgement:
+- **Decision-table gate** *(only when `settings.decision_tables` is `YES`; when `NO`, skip this and the three bullets below — no gate, no table diff, no cell-level scope reductions)* — present the checker output **verbatim**, before any narrative judgement. A non-zero exit is a **hard blocker**: the table changed after the human left, or a site was dropped, or a cell carries no record of a human answering. Do not interpret, minimize, or re-derive its findings, and never re-run it with narrower flags to get a cleaner result — route back to `/larapilot-feature`. The `notes` are part of the output: a declared abstention (`drop detection skipped…`) is not a pass
+- **Decision table diff** — read `{paths.research}/decisions/{code}.yaml` when present and present the divergence from delivered behavior in both directions: cells `decided` but not implemented (or implemented with a different value); cells `decided-null` where behavior actually changed; and **behavior implemented on sites that were never enumerated** — the most informative class, since it names decisions no human ever saw. Each unenumerated site is a new cell, not a note: route it back to `/larapilot-feature` rather than approving it retroactively here. Open `[blocks-merge]` comments on undecided cells already block `spec-approve` — do not clear them from this skill. Format below
+- **Scope reductions** — read `## Scope Reduction` in the plan and every `undecided` cell; present each as what it is, a behavior the increment does **not** implement because nobody decided it, one line per cell with its number and site. This is the moment the human learns the spec narrowed, so state it plainly rather than folding it into residual risks
 
-  ```bash
-  php bin/decisioni.php --spec={code} --base=develop
-  ```
-
-  A non-zero exit is a **hard blocker**: it means the table changed after the human left,
-  or a site was dropped, or a cell carries no record of a human answering. Do not
-  interpret, minimize, or re-derive its findings — and never re-run it with narrower flags
-  to get a cleaner result. Route back to `/larapilot-feature`
-- **Scope reductions** — read `## Scope Reduction` in the plan and every `undecided` cell.
-
-  Present each as what it is: a behavior the increment does **not** implement because
-  nobody decided it. This is the moment the human learns the spec narrowed, so state it
-  plainly rather than folding it into residual risks
-- **Never approve to unblock.** If the human asks to force it through, say what is being
-  waived — cell by cell — and let them use `spec-approve --force` themselves. Do not pass
-  `--force` from this skill
+- **Never approve to unblock** — if the human asks to force it through, say what is being waived, cell by cell, and let them use `spec-approve --force` themselves. Do **not** pass `--force` from this skill
 - Any open review notes
+
+### Decision table diff — format (`decision_tables: YES` only)
+
+Only the rows that **diverge**, as a table, using the **same row numbers** the human answered in `/larapilot-feature` so they recognize their own decisions. Never render the raw YAML at the human here either — see **Presenting the table** in `larapilot-feature`.
+
+```markdown
+🛡️ Robert: **US-012** · 24 of 27 cells delivered as decided · 3 diverge
+
+| # | Site | Decided | Delivered |
+
+| --- | --- | --- | --- |
+| 7 | `app/Http/Resources/PostResource.php:24` | singular kept + `attachments[]` added | `attachments[]` only — **contract break** |
+| 19 | `resources/views/post/show.blade.php:41` | unchanged (ratified) | now renders every file |
+| — | `app/Console/Commands/ExportCommand.php:52` | **never enumerated** | exports all files |
+
+Row 12 (rollback with 2+ files saved) is still open and still blocking.
+```
+
+Matching rows are the one-line counter, never a second table: the diff is what needs the human's eyes. A row with `—` for a number was never enumerated — say so in those words, since that is the class no human has ever seen.
 
 Ask the human: **Approve** or **Request changes** (with feedback).
 
