@@ -104,6 +104,8 @@ Da un progetto si avvia una nuova release indicando un'etichetta identificativa 
 
 Lo snapshot è un requisito, non un dettaglio implementativo: modifiche successive al template non devono alterare la forma delle release già in corso, altrimenti lo storico dei rilasci diventa inattendibile e non è più possibile sapere cosa fosse stato effettivamente richiesto in un rilascio passato.
 
+In fase di creazione, per ciascun ruolo previsto dal processo l'amministratore può indicare un responsabile diverso da quello risolto dalla mappatura di progetto, sovrascrivendo di fatto — solo per questa release — l'assegnazione di default. L'override è un effetto one-shot: non modifica la mappatura del progetto (`ProjectRoleAssignment`) né i default di team (`DefaultRoleAssignment`), e segue lo stesso responsabile risolto dallo snapshot per il resto del ciclo di vita della release.
+
 ### FR-010: Avanzamento sequenziale con un solo step attivo
 
 **MoSCoW:** Must
@@ -406,3 +408,4 @@ Sul fronte costi, con Budget Sensitivity **Relaxed** non è stato aperto un roun
 | Date | Trigger | Summary |
 | --- | --- | --- |
 | 2026-08-12 | larapilot-inception | PRD iniziale: orchestratore del processo di rilascio per team distribuito. Project Kind Personal, target MVP, catena sequenziale stretta, responsabili per ruolo risolti sul progetto, solo tracciamento. Stack Laravel 13 + Livewire 4 + Flux + Fortify su SQLite, dev locale Herd, deploy su server interno. Notifiche, step paralleli, automazione del deploy e multi-team esclusi da questo rilascio. |
+| 2026-08-20 | larapilot-feature US-013 | Chiarito FR-009: in fase di creazione di una release, l'amministratore può sovrascrivere per ruolo il responsabile risolto dalla mappatura di progetto, come effetto one-shot sulla singola release (nessuna scrittura sui default). MoSCoW invariato (Must). |
