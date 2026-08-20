@@ -162,14 +162,20 @@ tasks:
       - PR: preparata in locale; apertura remota solo su richiesta esplicita dell'utente
 
       ## Completion Criteria
-      - [ ] Branch `feature/US-013-responsabile-override-release` esistente in locale
-      - [ ] Titolo e corpo della PR verso `develop` redatti
-      - [ ] Nessun push eseguito
+      - [x] Branch `feature/US-013-responsabile-override-release` esistente in locale
+      - [x] Titolo e corpo della PR verso `develop` redatti
+      - [x] Nessun push eseguito
     type: Impl
-    status: TODO
+    status: DONE
     assignee: Sarah
     estimate_hours: 0.5
     dependencies: {}
+    commit:
+      sha: 651f7b09bee584aa943b4b3cb0d9b2ff4ac92831
+      short_sha: 651f7b0
+      subject: 'chore(US-013): TASK-00 bootstrap feature branch'
+      committed_at: '2026-08-20T12:50:41+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/651f7b09bee584aa943b4b3cb0d9b2ff4ac92831'
   -
     id: TASK-01
     title: 'StartRelease accetta gli override e risolve la mappatura effettiva in una query batch'
@@ -204,21 +210,27 @@ tasks:
       - PR: aggiornare la descrizione locale
 
       ## Completion Criteria
-      - [ ] `handle()` accetta `overrides` con default vuoto e i due chiamanti esistenti non sono stati modificati
-      - [ ] Un override sostituisce integralmente il responsabile di progetto per quel ruolo, senza ripiego
-      - [ ] Un ruolo scoperto coperto da un override valido non compare piu in `RolesWithoutResponsible`
-      - [ ] Un responsabile disattivato sostituito da un override attivo non compare piu in `InactiveResponsibleOnProject`
-      - [ ] Un override verso una persona disattivata e rifiutato con `InactiveResponsibleOnProject`
-      - [ ] Le persone indicate come override si risolvono in una sola query `whereIn`
-      - [ ] Payload dell'evento, enum, Policy, schema e seeder invariati
-      - [ ] `StartReleaseTest.php` passa senza essere stato toccato
-      - [ ] Pint pulito
+      - [x] `handle()` accetta `overrides` con default vuoto e i due chiamanti esistenti non sono stati modificati
+      - [x] Un override sostituisce integralmente il responsabile di progetto per quel ruolo, senza ripiego
+      - [x] Un ruolo scoperto coperto da un override valido non compare piu in `RolesWithoutResponsible`
+      - [x] Un responsabile disattivato sostituito da un override attivo non compare piu in `InactiveResponsibleOnProject`
+      - [x] Un override verso una persona disattivata e rifiutato con `InactiveResponsibleOnProject`
+      - [x] Le persone indicate come override si risolvono in una sola query `whereIn`
+      - [x] Payload dell'evento, enum, Policy, schema e seeder invariati
+      - [x] `StartReleaseTest.php` passa senza essere stato toccato
+      - [x] Pint pulito
     type: Impl
-    status: TODO
+    status: DONE
     assignee: Alex
     estimate_hours: 4
     dependencies:
       - TASK-00
+    commit:
+      sha: aaa4d074a3256d4e5a1a8143e628b28a24ccc988
+      short_sha: aaa4d07
+      subject: 'feat(US-013): TASK-01 risoluzione dei responsabili con override per singola release'
+      committed_at: '2026-08-20T12:53:32+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/aaa4d074a3256d4e5a1a8143e628b28a24ccc988'
   -
     id: TASK-02
     title: "Etichette e messaggi dell'override nel namespace releases"
@@ -586,4 +598,4 @@ tasks:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T10:42:10+00:00'
+updated_at: '2026-08-20T10:53:49+00:00'

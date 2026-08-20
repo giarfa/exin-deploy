@@ -31,6 +31,35 @@ return [
     'blocked_hint_assignments' => 'Assegna i responsabili mancanti',
 
     /*
+     * Responsabile diverso dal default per questa release (US-013).
+     *
+     * Le stringhe insistono su "solo per questa release" perche il gesto somiglia
+     * a quello della pagina dei responsabili di progetto, e la somiglianza e
+     * proprio il rischio: chi sostituisce una persona qui deve sapere che sta
+     * gestendo un'assenza, non correggendo la mappatura.
+     *
+     * Nessuna di queste chiavi porta un conteggio: il riepilogo dei ruoli
+     * bloccanti resta a `blocked_uncovered_roles` e `blocked_inactive_responsibles`,
+     * che hanno gia le forme plurali con la condizione `{0}`. Duplicarle qui
+     * darebbe due fonti per la stessa frase.
+     */
+    'override_heading' => 'Responsabili di questa release',
+    'override_explained' => 'Ogni ruolo parte dal responsabile del progetto. Puoi indicarne un altro per questa sola release — un\'assenza, una sostituzione temporanea — senza modificare la mappatura del progetto.',
+    'override_role_label' => 'Responsabile come :role',
+    // Il default e marcato nell'opzione e non fuori dal select: spostandosi tra le
+    // voci si vede quale si sta abbandonando, che e l'informazione utile.
+    'override_default_option' => ':name (responsabile del progetto)',
+    'override_unassigned_option' => 'Nessuno indicato',
+    'override_inactive_person' => ':name (disattivato)',
+    // Dice cosa fare, non cosa manca: il ruolo scoperto e un fatto del progetto, e
+    // da questa schermata si risolve indicando una persona per questa release.
+    'override_required' => 'Questo ruolo non ha un responsabile sul progetto: indica chi ne risponde per questa release.',
+    // Elenco progetti: il comando resta raggiungibile e questa riga dice perche
+    // valga la pena entrare, invece di rimandare alla pagina dei responsabili.
+    'start_needs_override' => 'Puoi avviare indicando un responsabile per i ruoli scoperti nella schermata di avvio.',
+    'override_note_on_assignments' => 'Questa mappatura e il punto di partenza: all\'avvio di una release il responsabile di ciascun ruolo puo essere sostituito per quel solo rilascio, senza toccare queste righe.',
+
+    /*
      * Conferma dopo l'avvio: la prova visiva che lo snapshot esiste.
      */
     'started_heading' => 'Release :label avviata',
