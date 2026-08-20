@@ -9,155 +9,234 @@ cells:
   - site: "app/Actions/Releases/StartRelease.php:55 (handle())"
     source: grep
     question: "come arriva l'override alla Action: nuovo parametro sempre presente (anche vuoto) o opzionale"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "nuovo parametro sempre presente, come array indicizzato per role_id, con default vuoto — le chiamate esistenti restano valide senza modifiche"
+    human_text: "invariato"
+    decided_by: human
+    ratified: true
 
   - site: "app/Actions/Releases/StartRelease.php:199 (responsibles())"
     source: grep
     question: "per un ruolo con override, la persona indicata sostituisce integralmente quella di progetto, o serve comunque un responsabile di progetto come fallback quando l'override non copre il ruolo"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "l'override sostituisce integralmente il responsabile di progetto per il ruolo overridden — nessun fallback al dato di progetto per quel ruolo"
+    human_text: "completamente"
+    decided_by: human
+    ratified: true
 
   - site: "app/Actions/Releases/StartRelease.php:216 (controllo responsabile disattivato)"
     source: grep
     question: "un override verso una persona disattivata va rifiutato con lo stesso errore InactiveResponsibleOnProject o con un errore dedicato"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "stesso errore InactiveResponsibleOnProject"
+    human_text: "stesso errore"
+    decided_by: human
+    ratified: true
 
   - site: "app/Actions/Releases/StartRelease.php:204 (throw RolesWithoutResponsible)"
     source: grep
     question: "un ruolo senza responsabile di progetto ma coperto da un override fornito in fase di creazione si considera coperto per questa release"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "il ruolo si considera coperto per questa release quando l'override lo copre"
+    human_text: "coperto"
+    decided_by: human
+    ratified: true
 
   - site: "app/Models/Project.php:101 (uncoveredRoles())"
     source: grep
     question: "il banner delle precondizioni, mostrato prima di aprire il form, tiene conto degli override gia scelti (ricalcolo live) o resta calcolato solo sui default di progetto"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "il banner tiene conto degli override gia scelti nel form: un ruolo scoperto a livello di progetto ma con un override valido selezionato non appare piu come bloccante. Il metodo di modello Project::uncoveredRoles() resta invariato; il ricalcolo avviene a livello di componente Livewire, sottraendo i ruoli coperti da override"
+    human_text: "tiene conto"
+    decided_by: human
+    ratified: true
 
   - site: "app/Models/Project.php:136 (inactiveResponsibles())"
     source: grep
-    question: "stessa domanda per i responsabili disattivati: l'override rimuove il blocco mostrato nel banner per quel ruolo, o il banner resta indipendente dagli override"
-    state: undecided
-    proposals: []
+    question: "stessa domanda per i responsabili disattivati: l'override rimuove il blocco nel banner per quel ruolo, o il banner resta indipendente dagli override"
+    state: decided
+    value: "si, un ruolo con responsabile di progetto disattivato ma con un override verso una persona attiva selezionato non appare piu come bloccante. Stessa nota: Project::inactiveResponsibles() resta invariato, il ricalcolo e a livello di componente"
+    human_text: "si"
+    decided_by: human
+    ratified: true
 
   - site: "app/Models/Project.php:172 (startBlocker())"
     source: grep
     question: "il motivo di blocco riusato anche dall'elenco progetti resta invariato (basato sui soli default), dato che l'override si sceglie solo dentro il form di avvio"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "si, Project::startBlocker() resta invariato: e un metodo di modello senza nozione di override, che non esistono a livello di progetto ma solo nello stato effimero del form di avvio"
+    human_text: "si"
+    decided_by: human
+    ratified: true
 
   - site: "resources/views/components/releases/⚡start.blade.php:39 (form)"
     source: grep
     question: "la UI mostra un select per-ruolo sempre visibile con il default preselezionato, oppure un comando esplicito 'sovrascrivi' che rivela il select solo a richiesta"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "select per-ruolo sempre visibile, con il responsabile di default preselezionato"
+    human_text: "default preselezionato"
+    decided_by: human
+    ratified: true
 
   - site: "resources/views/components/releases/⚡start.blade.php:53 (validazione override)"
     source: grep
     question: "quale pool di persone e selezionabile per l'override: stesso pool 'qualsiasi membro attivo' gia usato dalla mappatura di progetto, o un sottoinsieme legato al ruolo"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "stesso pool della mappatura di progetto: qualsiasi membro attivo (piu l'eventuale assegnato corrente se disattivato, per non far sparire la selezione), nessuna restrizione legata al ruolo"
+    human_text: "qualsiasi membro attivo"
+    decided_by: human
+    ratified: true
 
   - site: "resources/views/components/releases/⚡start.blade.php:144 (start(), gestione eccezioni)"
     source: grep
-    question: "per i ruoli NON coperti da un override, il messaggio di rifiuto post-submit (ruoli scoperti / responsabili disattivati) resta identico a oggi"
-    state: undecided
-    proposals: []
+    question: "per i ruoli NON coperti da override, il messaggio di rifiuto post-submit resta identico a oggi"
+    state: decided
+    value: "identico a oggi per i ruoli non coperti da override"
+    human_text: "identico"
+    decided_by: human
+    ratified: true
 
   - site: "app/Exceptions/RolesWithoutResponsible.php:19"
     source: grep
-    question: "la forma dell'eccezione (elenco nomi ruolo scoperti) cambia per escludere i ruoli coperti da override, o resta come oggi (calcolata solo sui default di progetto)"
-    state: undecided
-    proposals: []
+    question: "la forma dell'eccezione cambia per escludere i ruoli coperti da override, o resta come oggi (calcolata solo sui default di progetto)"
+    state: decided
+    value: "cambia: l'elenco dei ruoli scoperti nell'eccezione esclude i ruoli per cui e stato fornito un override valido"
+    human_text: "cambia"
+    decided_by: human
+    ratified: true
 
   - site: "app/Exceptions/InactiveResponsibleOnProject.php:20"
     source: grep
     question: "stessa domanda per questa eccezione: l'elenco dei responsabili disattivati esclude quelli sostituiti da un override"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "si, l'elenco esclude i responsabili disattivati per cui e stato fornito un override verso una persona attiva"
+    human_text: "si"
+    decided_by: human
+    ratified: true
 
   - site: "tests/Feature/Releases/StartReleaseTest.php:97"
     source: grep
     question: "i test esistenti sulla risoluzione dei responsabili (nessun override passato) restano invariati, o la firma dell'Action cambiata richiede un adattamento"
     state: undecided
-    proposals: []
+    proposals_shown_after_oracle: true
+    proposals:
+      - "Le chiamate esistenti restano cosi come sono: il nuovo parametro overrides ha un default vuoto lato firma, zero modifiche al file di test attuale"
+      - "Le chiamate esistenti vengono adattate passando esplicitamente un array vuoto come overrides, per rendere visibile nel test che il percorso senza override e stato scelto deliberatamente"
+      - "Il file viene diviso in due suite distinte: StartReleaseTest.php per il percorso senza override (invariato) e un nuovo StartReleaseOverrideTest.php per gli scenari con override"
 
   - site: "tests/Feature/DatabaseSeederTest.php:73"
     source: grep
-    question: "il test sui dati dimostrativi (nessun ruolo scoperto/disattivato) resta invariato, o deve coprire anche uno scenario con override"
-    state: undecided
-    proposals: []
+    question: "il test sui dati dimostrativi resta invariato, o deve coprire anche uno scenario con override"
+    state: decided
+    value: "il test viene esteso con un'asserzione di regressione che verifica come, in assenza di override, la risoluzione dei responsabili sui progetti seminati resta quella odierna — senza che il seeder stesso introduca dati di esempio con override (vedi cella DatabaseSeeder.php:411)"
+    human_text: "coprire"
+    decided_by: human
+    ratified: true
 
   - site: "tests/Feature/Configuration/ProjectTemplateAssociationTest.php:125"
     source: grep
     question: "questi test su uncoveredRoles() a livello di associazione progetto/template restano fuori dal perimetro di questa spec (nessuna modifica prevista)"
-    state: undecided
-    proposals: []
+    state: out-of-scope
+    scope_note: "test sulla sola associazione progetto/template, non toccano l'avvio release ne gli override: fuori perimetro di US-013"
+    human_text: "fuori perimetro"
+    decided_by: human
 
   - site: "resources/views/components/projects/⚡assignments.blade.php:45"
     source: grep
     question: "la schermata di mappatura ruolo->persona del progetto resta invariata, o deve segnalare che le release possono avere override non visibili qui"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "la schermata segnala (nota informativa) che le singole release possono sovrascrivere questa mappatura in fase di creazione, senza modificarne il comportamento di salvataggio"
+    human_text: "segnalare"
+    decided_by: human
+    ratified: true
 
   - site: "resources/views/components/projects/⚡index.blade.php:325"
     source: grep
     question: "il comando 'avvia release' nell'elenco progetti resta disabilitato secondo i soli default di progetto (con lo stesso motivo di oggi), anche quando un override potrebbe sbloccare l'avvio"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "il comando resta abilitato/raggiungibile anche quando Project::startBlocker() segnala un motivo di blocco per ruoli scoperti o responsabili disattivati: l'utente entra comunque nella schermata di avvio, dove il form obbliga a fornire un override per i ruoli bloccanti prima di poter inviare"
+    human_text: "abitare ma obbligando ad ovverride"
+    decided_by: human
+    ratified: true
 
   - site: "database/migrations/2026_08_12_221632_create_release_steps_table.php:39 (assigned_user_id)"
     source: schema
     question: "lo schema di release_steps richiede una colonna/flag per registrare che un responsabile e stato sovrascritto rispetto al default, o assigned_user_id (che gia accetta qualsiasi utente) e sufficiente"
-    state: undecided
-    proposals: []
+    state: decided-null
+    value: "N/A — nessuna modifica di schema: assigned_user_id gia accetta qualsiasi utente attivo, indipendentemente dalla provenienza (default o override)"
+    human_text: "esistente basta"
+    decided_by: human
+    ratified: true
 
   - site: "app/Actions/Releases/StartRelease.php:142 (payload evento release_avviata)"
     source: implicit
     question: "il payload dell'evento 'release_avviata' nel registro (FR-016) elenca i ruoli sovrascritti rispetto al default, o resta invariato"
-    state: undecided
-    proposals: []
+    state: decided-null
+    value: "N/A — il payload dell'evento release_avviata resta invariato"
+    human_text: "invariato"
+    decided_by: human
+    ratified: true
 
   - site: "app/Enums/ReleaseEventAction.php:20"
     source: implicit
     question: "serve un nuovo caso enum dedicato (es. 'responsabile sovrascritto'), o l'override e parte dello stesso evento ReleaseStarted"
-    state: undecided
-    proposals: []
+    state: decided-null
+    value: "N/A — nessun nuovo caso enum: l'override e parte dello stesso evento ReleaseStarted"
+    human_text: "parte dello stesso evento"
+    decided_by: human
+    ratified: true
 
   - site: "app/Policies/ReleasePolicy.php"
     source: implicit
     question: "specificare un override in fase di creazione richiede un'autorizzazione diversa da quella gia richiesta per avviare una release (solo admin via before()), o resta la stessa"
-    state: undecided
-    proposals: []
+    state: decided-null
+    value: "N/A — nessuna modifica alla Policy: resta la stessa autorizzazione (solo admin) gia richiesta per create"
+    human_text: "resta la stessa"
+    decided_by: human
+    ratified: true
 
   - site: "app/Models/ProjectRoleAssignment.php"
     source: implicit
     question: "scegliere un responsabile diverso per questa release deve anche proporre di aggiornare la mappatura di progetto per il futuro, o e sempre e solo un effetto one-shot sulla singola release senza toccare le tabelle di default"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "effetto one-shot sulla singola release: nessuna scrittura su ProjectRoleAssignment ne su DefaultRoleAssignment, e nessuna proposta di salvarlo come nuovo default"
+    human_text: "one-shot"
+    decided_by: human
+    ratified: true
 
   - site: "resources/views/components/releases/⚡show.blade.php"
     source: implicit
     question: "il dettaglio della release segnala visivamente quali step hanno un responsabile diverso da quello che sarebbe risultato dal default di progetto, o lo storico mostra solo il responsabile risolto senza distinzione dall'origine"
-    state: undecided
-    proposals: []
+    state: decided-null
+    value: "N/A — nessuna distinzione visiva: il dettaglio mostra solo il responsabile risolto, come oggi"
+    human_text: "nessuna distinzione"
+    decided_by: human
+    ratified: true
 
   - site: "database/seeders/DatabaseSeeder.php:411"
     source: implicit
     question: "i dati dimostrativi (FR-018) devono includere almeno una release avviata con un override d'esempio, o restano invariati"
-    state: undecided
-    proposals: []
+    state: decided-null
+    value: "N/A — dati dimostrativi invariati, nessun esempio di override seminato"
+    human_text: "invariati"
+    decided_by: human
+    ratified: true
 
   - site: "lang/it/releases.php"
     source: implicit
     question: "le nuove etichette/messaggi UI per l'override vanno nel namespace releases esistente o in un nuovo namespace dedicato"
-    state: undecided
-    proposals: []
+    state: decided
+    value: "namespace releases esistente"
+    human_text: "esistente"
+    decided_by: human
+    ratified: true
 
   - site: "tests/Feature/Releases/StartReleaseQueryBudgetTest.php:1"
     source: grep
-    question: "la risoluzione degli override deve rispettare lo stesso budget di query gia testato per l'avvio release (nessuna query aggiuntiva per ruolo)"
+    question: "la risoluzione degli override deve rispettare lo stesso budget di query gia testato per l'avvio release (nessuna query aggiuntiva per ruolo), o e accettabile una query in piu per la risoluzione degli utenti indicati come override"
     state: undecided
-    proposals: []
+    proposals_shown_after_oracle: true
+    proposals:
+      - "Stesso budget di oggi: gli utenti overridden vengono risolti in un'unica query batch (whereIn sugli id), sommata a quelle gia esistenti — zero query aggiuntive per ruolo"
+      - "Una singola query batch aggiuntiva e accettata (non piu una per ruolo): si tollera un incremento fisso e limitato del budget totale testato, purche non cresca con il numero di ruoli"
+      - "Il budget query non e vincolante per questa spec: il test esistente viene aggiornato per riflettere il nuovo numero di query, qualunque esso sia, purche costante rispetto al numero di step"
