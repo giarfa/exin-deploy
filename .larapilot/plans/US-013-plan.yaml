@@ -526,21 +526,27 @@ tasks:
       - PR: aggiornare la descrizione locale
 
       ## Completion Criteria
-      - [ ] I tre test aggiornati riflettono il comportamento deciso e passano
-      - [ ] Tutti gli scenari override di schermata sono coperti e passano
-      - [ ] I due test di budget query di schermata continuano a passare
-      - [ ] La nota sulla mappatura di progetto e coperta
-      - [ ] Passi di verifica manuale annotati per la review
-      - [ ] Nessun test di browser, viewport o E2E introdotto
-      - [ ] Pint pulito
+      - [x] I tre test aggiornati riflettono il comportamento deciso e passano
+      - [x] Tutti gli scenari override di schermata sono coperti e passano
+      - [x] I due test di budget query di schermata continuano a passare
+      - [x] La nota sulla mappatura di progetto e coperta
+      - [x] Passi di verifica manuale annotati per la review
+      - [x] Nessun test di browser, viewport o E2E introdotto
+      - [x] Pint pulito
     type: Test
-    status: TODO
+    status: DONE
     assignee: Anne
     estimate_hours: 4
     dependencies:
       - TASK-03
       - TASK-04
       - TASK-05
+    commit:
+      sha: d0d7cfb6b2069339241674d0d70261a49f40335d
+      short_sha: d0d7cfb
+      subject: "test(US-013): TASK-07 scenari di schermata per l'override del responsabile"
+      committed_at: '2026-08-20T13:09:34+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/d0d7cfb6b2069339241674d0d70261a49f40335d'
   -
     id: TASK-08
     title: "Budget query dell'override e regressione dei dati dimostrativi"
@@ -628,4 +634,4 @@ tasks:
       - TASK-06
       - TASK-07
       - TASK-08
-updated_at: '2026-08-20T11:07:23+00:00'
+updated_at: '2026-08-20T11:09:34+00:00'
