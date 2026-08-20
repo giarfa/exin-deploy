@@ -1,0 +1,57 @@
+code: US-013
+title: 'Responsabile diverso dal default per singola release'
+epic:
+  code: EP-003
+  title: 'Esecuzione del rilascio'
+priority: HIGH
+points: 5
+status: 'IN PROGRESS'
+body: |
+  #### US-013: Responsabile diverso dal default per singola release
+
+  **Epic:** EP-003 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+  **Blocked by:** -
+  **Type:** Feature
+  **Traces to:** FR-009 (MoSCoW: Must)
+  **Decision table:** .larapilot/research/decisions/US-013.yaml — 19 decided, 6 decided-null, 0 undecided
+
+  **User Story**
+  Come Release Owner (amministratore),
+  voglio poter indicare, in fase di creazione di una release, un responsabile diverso da quello risolto dalla mappatura di progetto per uno o più ruoli,
+  così che possa gestire eccezioni puntuali (assenze, sostituzioni temporanee) senza modificare la mappatura di progetto o i default di team.
+
+  **Demonstrates**
+  Dopo questa spec, aprendo il form di avvio di una release, ogni ruolo del processo mostra un select con il responsabile di default preselezionato; scegliendo una persona diversa e confermando l'avvio, lo step di quel ruolo viene congelato con il responsabile scelto per l'override, mentre la mappatura di progetto resta invariata. Un ruolo scoperto o con responsabile disattivato può essere sbloccato fornendo un override valido, senza dover prima passare dalla schermata di mappatura del progetto.
+
+  **Acceptance Criteria**
+  - [ ] Il form di avvio mostra un select per-ruolo con il responsabile di default preselezionato, sovrascrivibile — `resources/views/components/releases/⚡start.blade.php:39`
+  - [ ] Il pool selezionabile per l'override è lo stesso della mappatura di progetto (qualsiasi membro attivo, più l'assegnato corrente anche se disattivato) — `⚡start.blade.php:53`
+  - [ ] Un override sostituisce integralmente il responsabile di progetto per quel ruolo, senza fallback al dato di progetto — `app/Actions/Releases/StartRelease.php:199`
+  - [ ] `StartRelease::handle()` accetta un nuovo parametro `overrides` (array `role_id` → `user_id`), sempre presente, con default vuoto — `app/Actions/Releases/StartRelease.php:55`
+  - [ ] Un override verso una persona disattivata è rifiutato con lo stesso errore `InactiveResponsibleOnProject` già usato oggi — `app/Actions/Releases/StartRelease.php:216`
+  - [ ] Un ruolo senza responsabile di progetto ma coperto da un override valido si considera coperto per questa release — `app/Actions/Releases/StartRelease.php:204`
+  - [ ] Il banner delle precondizioni nel form tiene conto degli override già scelti: un ruolo scoperto a livello di progetto con un override valido selezionato non appare più come bloccante — `app/Models/Project.php:101`
+  - [ ] Stessa cosa per i responsabili disattivati: un override verso una persona attiva rimuove il blocco per quel ruolo nel banner — `app/Models/Project.php:136`
+  - [ ] `Project::startBlocker()` resta invariato (decided-null) — `app/Models/Project.php:172`
+  - [ ] Per i ruoli NON coperti da override, il messaggio di rifiuto post-submit resta identico a oggi — `⚡start.blade.php:144`
+  - [ ] `RolesWithoutResponsible` esclude dall'elenco i ruoli coperti da un override valido — `app/Exceptions/RolesWithoutResponsible.php:19`
+  - [ ] `InactiveResponsibleOnProject` esclude i responsabili disattivati sostituiti da un override — `app/Exceptions/InactiveResponsibleOnProject.php:20`
+  - [ ] Il comando "avvia release" nell'elenco progetti resta abilitato/raggiungibile anche con ruoli scoperti o responsabili disattivati sui default; il form obbliga a fornire un override per quei ruoli prima dell'invio — `⚡index.blade.php:325`
+  - [ ] Nessuna modifica di schema: `assigned_user_id` accetta già qualsiasi utente attivo, da default o da override (decided-null) — `database/migrations/2026_08_12_221632_create_release_steps_table.php:39`
+  - [ ] Il payload dell'evento `release_avviata` nel registro resta invariato (decided-null) — `app/Actions/Releases/StartRelease.php:142`
+  - [ ] Nessun nuovo caso enum: l'override è parte dello stesso evento `ReleaseStarted` (decided-null) — `app/Enums/ReleaseEventAction.php:20`
+  - [ ] Nessuna modifica a `ReleasePolicy`: resta richiesta la sola autorizzazione admin già in vigore per `create` (decided-null) — `app/Policies/ReleasePolicy.php`
+  - [ ] L'override è un effetto one-shot sulla singola release: nessuna scrittura su `ProjectRoleAssignment` né su `DefaultRoleAssignment` — `app/Models/ProjectRoleAssignment.php`
+  - [ ] Il dettaglio della release non mostra distinzione visiva per gli step con responsabile overridden (decided-null) — `resources/views/components/releases/⚡show.blade.php`
+  - [ ] I dati dimostrativi del seeder restano invariati, nessun esempio di override seminato (decided-null) — `database/seeders/DatabaseSeeder.php:411`
+  - [ ] Le nuove etichette/messaggi UI per l'override vivono nel namespace `releases` esistente — `lang/it/releases.php`
+  - [ ] `⚡assignments.blade.php` mostra una nota informativa che le release possono sovrascrivere questa mappatura in fase di creazione — `resources/views/components/projects/⚡assignments.blade.php:45`
+  - [ ] `DatabaseSeederTest.php` viene esteso con un'asserzione di regressione: in assenza di override la risoluzione resta quella odierna — `tests/Feature/DatabaseSeederTest.php:73`
+  - [ ] I test sul percorso senza override restano in `StartReleaseTest.php` (invariato); un nuovo `StartReleaseOverrideTest.php` copre gli scenari con override — `tests/Feature/Releases/StartReleaseTest.php:97`
+  - [ ] Gli utenti overridden si risolvono in un'unica query batch aggiuntiva (`whereIn`), senza crescere con il numero di ruoli — `tests/Feature/Releases/StartReleaseQueryBudgetTest.php:1`
+status_history:
+  - status: PLANNED
+    at: '2026-08-20T10:42:10+00:00'
+  - status: 'IN PROGRESS'
+    at: '2026-08-20T10:50:13+00:00'
+rework: false
