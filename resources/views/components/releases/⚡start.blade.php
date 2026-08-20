@@ -16,6 +16,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -73,8 +74,13 @@ new class extends Component
      * congelando una persona che nessuno ha piu indicato, invece di essere
      * rifiutata per ruolo scoperto.
      *
+     * **Sola scrittura del server.** Non e legata a nessun campo, e se il client
+     * potesse riscriverla deciderebbe lui quali scelte contano come sostituzione —
+     * cioe disattiverebbe la protezione appena descritta con un `$set`.
+     *
      * @var array<string, string>
      */
+    #[Locked]
     public array $primedDefaults = [];
 
     /** Release avviata in questa sessione di pagina; `null` prima dell'avvio. */
@@ -109,7 +115,7 @@ new class extends Component
              * dell'insieme selezionabile, e un identificativo arrivato per altra via
              * non deve poter assegnare uno step a chi non e in elenco.
              */
-            'overrides.*' => ['string', Rule::in(array_merge($assignable, [''])) ],
+            'overrides.*' => ['string', Rule::in(array_merge($assignable, ['']))],
         ];
 
         /*
@@ -233,9 +239,8 @@ new class extends Component
     {
         $assignable = $this->assignableUsers->pluck('id')->all();
 
-        return collect($this->overrides)
+        return collect($this->textualChoices($this->overrides))
             ->only($this->processRoles->pluck('id')->all())
-            ->map(fn (mixed $userId): string => (string) $userId)
             ->filter(fn (string $userId, string $roleId): bool => $userId !== ''
                 && $userId !== ($this->primedDefaults[$roleId] ?? '')
                 // Un identificativo fuori dall'insieme selezionabile non vale come
@@ -338,6 +343,10 @@ new class extends Component
     #[Computed]
     public function overridable(): bool
     {
+        // `isUsable()` legge gli step del processo: senza le relazioni in memoria li
+        // rileggerebbe, e questo computed viene valutato a ogni render.
+        $this->preload();
+
         return $this->project->is_active
             && (bool) $this->project->workflowTemplate?->isUsable();
     }
@@ -384,6 +393,35 @@ new class extends Component
      * ricarica le sole relazioni di primo livello e lascerebbe gli step e le
      * persone da rileggere una riga per volta.
      */
+    /**
+     * Riduce le scelte arrivate dal client a `array<string, string>`, scartando
+     * tutto cio che non e testo.
+     *
+     * `$overrides` e legata a `wire:model`, quindi il suo **contenuto** e vincolato
+     * dalla validazione ma la sua **forma** no: un valore annidato non e
+     * selezionabile dall'interfaccia, ed e comunque inviabile. Convertirlo darebbe
+     * la stringa "Array" con un warning, che Laravel promuove a eccezione: un 500
+     * al primo render, cioe **prima** che la validazione possa dire di no. Un
+     * valore non testuale non e una scelta: si scarta, e il ruolo ricade sulle
+     * precondizioni odierne — un ruolo scoperto resta scoperto, e l'invio viene
+     * rifiutato dalla regola che lo esige.
+     *
+     * @param  array<array-key, mixed>  $input
+     * @return array<string, string>
+     */
+    private function textualChoices(array $input): array
+    {
+        $clean = [];
+
+        foreach ($input as $roleId => $userId) {
+            if (is_string($roleId) && is_string($userId)) {
+                $clean[$roleId] = $userId;
+            }
+        }
+
+        return $clean;
+    }
+
     private function preload(): void
     {
         $this->project->loadMissing([
@@ -404,6 +442,7 @@ new class extends Component
     private function primeOverrides(): void
     {
         $defaults = $this->defaultAssignees;
+        $chosen = $this->textualChoices($this->overrides);
 
         $selections = [];
         $primed = [];
@@ -411,11 +450,11 @@ new class extends Component
         foreach ($this->processRoles as $role) {
             $default = (string) ($defaults[$role->id] ?? '');
 
-            $selections[$role->id] = (string) ($this->overrides[$role->id] ?? $default);
+            $selections[$role->id] = $chosen[$role->id] ?? $default;
             // Il valore di partenza gia registrato non si riscrive: e il riferimento
             // rispetto a cui una scelta conta come sostituzione, e aggiornarlo qui
             // trasformerebbe un preselezionato mai toccato in un override.
-            $primed[$role->id] = (string) ($this->primedDefaults[$role->id] ?? $default);
+            $primed[$role->id] = $this->primedDefaults[$role->id] ?? $default;
         }
 
         $this->overrides = $selections;
@@ -432,9 +471,8 @@ new class extends Component
          * ruolo estraneo al processo arriverebbe fino alla Action, che lo
          * scarterebbe in silenzio invece di dirlo qui.
          */
-        $this->overrides = collect($this->overrides)
+        $this->overrides = collect($this->textualChoices($this->overrides))
             ->only($this->processRoles->pluck('id')->all())
-            ->map(fn (mixed $userId): string => (string) $userId)
             ->all();
 
         $validated = $this->validate();
