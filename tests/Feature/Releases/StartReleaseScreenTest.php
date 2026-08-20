@@ -188,21 +188,17 @@ class StartReleaseScreenTest extends TestCase
         $assigned = User::query()->whereKey($project->assignments->first()->user_id)->first();
         $assigned->update(['is_active' => false]);
 
-        $component = Livewire::test('releases.start', ['project' => $project->fresh()]);
-
-        $pool = $component->instance()->assignableUsers->pluck('id');
-
-        $this->assertTrue($pool->contains($outsider->id), 'Ogni membro attivo e selezionabile.');
-        $this->assertTrue(
-            $pool->contains($assigned->id),
-            "L'assegnato corrente resta in elenco anche disattivato: altrimenti sparirebbe mentre lo si sostituisce."
-        );
-        $this->assertFalse(
-            $pool->contains($inactiveOutsider->id),
-            'Un disattivato senza responsabilita su questo progetto non e selezionabile.'
-        );
-
-        $component->assertSee(__('releases.override_inactive_person', ['name' => $assigned->name]));
+        /*
+         * L'insieme si verifica su cio che la pagina rende e non sul computed: e
+         * l'elenco che l'utente vede a dover essere giusto, e un'asserzione sullo
+         * stato interno resterebbe verde anche se la vista ne mostrasse un altro.
+         */
+        Livewire::test('releases.start', ['project' => $project->fresh()])
+            ->assertSee($outsider->name)
+            // L'assegnato corrente resta in elenco anche disattivato, marcato come
+            // tale: altrimenti sparirebbe proprio mentre lo si sta sostituendo.
+            ->assertSee(__('releases.override_inactive_person', ['name' => $assigned->name]))
+            ->assertDontSee($inactiveOutsider->name);
     }
 
     public function test_an_override_on_an_uncovered_role_clears_the_banner_and_enables_the_submit(): void
@@ -219,18 +215,14 @@ class StartReleaseScreenTest extends TestCase
 
         $substitute = User::factory()->create();
 
-        $component = Livewire::test('releases.start', ['project' => $project->fresh()]);
-
-        $this->assertNotNull($component->instance()->blockingReason);
-
-        $component->set('overrides.'.$orphan->id, $substitute->id);
-
-        $this->assertNull(
-            $component->instance()->blockingReason,
-            'Un ruolo scoperto con un override valido non e piu un blocco.'
-        );
-
-        $component->assertSee(__('releases.precondition_roles_ok'));
+        Livewire::test('releases.start', ['project' => $project->fresh()])
+            ->assertSee(__('releases.blocked_heading'))
+            ->set('overrides.'.$orphan->id, $substitute->id)
+            // Il riquadro torna a essere quello delle precondizioni: un ruolo
+            // scoperto con un override valido non e piu un blocco.
+            ->assertDontSee(__('releases.blocked_heading'))
+            ->assertSee(__('releases.preconditions_heading'))
+            ->assertSee(__('releases.precondition_roles_ok'));
     }
 
     public function test_an_override_over_an_inactive_project_responsible_clears_the_banner(): void
@@ -243,13 +235,11 @@ class StartReleaseScreenTest extends TestCase
 
         $substitute = User::factory()->create();
 
-        $component = Livewire::test('releases.start', ['project' => $project->fresh()]);
-
-        $this->assertNotNull($component->instance()->blockingReason);
-
-        $component->set('overrides.'.$assignment->role_id, $substitute->id);
-
-        $this->assertNull($component->instance()->blockingReason);
+        Livewire::test('releases.start', ['project' => $project->fresh()])
+            ->assertSee(__('releases.blocked_heading'))
+            ->set('overrides.'.$assignment->role_id, $substitute->id)
+            ->assertDontSee(__('releases.blocked_heading'))
+            ->assertSee(__('releases.precondition_roles_ok'));
     }
 
     public function test_the_submit_is_refused_while_a_blocking_role_has_no_override(): void

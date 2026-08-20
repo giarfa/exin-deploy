@@ -176,6 +176,14 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   primo. Ogni schermata operativa ha quindi qualcosa da mostrare senza dover ricostruire uno
   scenario a mano. I rilasci sono prodotti chiamando le Action reali e non scrivendo righe:
   il registro delle transizioni che ne risulta e quello che il processo produce davvero.
+- **Responsabile diverso dal default per singola release** (US-013, FR-009): in fase di
+  creazione di una release il responsabile di ciascun ruolo del processo e sovrascrivibile
+  per quel solo rilascio, senza toccare la mappatura del progetto ne i default di team. Un
+  ruolo scoperto o con responsabile disattivato si sblocca da qui, indicando chi ne risponde
+  per questa release: il comando di avvio nell'elenco progetti resta quindi raggiungibile in
+  quei due casi, e il modulo obbliga a fornire la sostituzione prima dell'invio. Il pool
+  selezionabile e lo stesso della mappatura di progetto, e un override verso una persona
+  disattivata viene rifiutato con lo stesso messaggio di sempre.
 - Documentazione baseline: README con avvio via Herd, nota architetturale sulla separazione
   fra definizione e istanza, questo changelog.
 
