@@ -29,3 +29,12 @@ Thumbs.db
 # Database SQLite (file locale, mai in versione — WAL genera anche -wal e -shm)
 /database/*.sqlite
 /database/*.sqlite-*
+
+# Impostazioni Claude Code locali: gli hook puntano a percorsi assoluti della macchina
+# di chi le ha scritte, quindi non sono condivisibili. Skill e .claude/CLAUDE.md restano
+# in versione, perche quelle valgono per tutti.
+/.claude/settings.json
+
+# Snapshot datati di graphify: duplicano il grafo vivo nella radice di graphify-out.
+# Il grafo e la cache AST restano in versione, le copie a data no.
+/graphify-out/20*/
