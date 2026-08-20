@@ -9,12 +9,17 @@ use RuntimeException;
 
 /**
  * Non si avvia una release quando un ruolo previsto dal processo non ha un
- * responsabile sul progetto.
+ * responsabile.
  *
  * Avviarla lo stesso produrrebbe uno step che nessuno puo chiudere, e il buco
  * emergerebbe solo quando la catena ci arriva — cioe nel momento peggiore. I
  * ruoli scoperti sono **nominati**: sapere che "manca un responsabile" senza
  * sapere quale non aiuta a risolverlo.
+ *
+ * L'elenco e calcolato sulla mappatura **effettiva**, cioe al netto degli
+ * override indicati in fase di creazione (US-013): un ruolo senza responsabile
+ * di progetto ma coperto da un override valido non compare qui. Nomina quindi i
+ * soli ruoli davvero da risolvere, e non quelli che chi avvia ha appena risolto.
  */
 class RolesWithoutResponsible extends RuntimeException
 {
