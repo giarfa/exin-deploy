@@ -284,5 +284,18 @@ new class extends Component
         </form>
 
         <flux:text class="mt-6 text-xs">{{ __('projects.defaults_note') }}</flux:text>
+
+        {{-- Questa mappatura non e l'ultima parola: chi avvia una release puo
+             sostituire un responsabile per quel solo rilascio. Detto qui, una
+             persona diversa su uno step si legge come eccezione voluta e non come
+             mappatura andata storta.
+
+             La chiave vive nel namespace `releases` e non in `projects` per scelta:
+             e il vocabolario dell'override, e tenerlo in un posto solo evita due
+             formulazioni della stessa regola. --}}
+        <flux:text class="mt-2 inline-flex items-start gap-1.5 text-xs">
+            <flux:icon name="information-circle" variant="mini" class="mt-0.5 size-4 shrink-0" />
+            {{ __('releases.override_note_on_assignments') }}
+        </flux:text>
     @endif
 </div>
