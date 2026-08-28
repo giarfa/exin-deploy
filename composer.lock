@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "../larapilot",
-                "reference": "f329d2f3c0eb0ddf0ddd49407caf76da7c19cf51"
+                "reference": "2b0713852a4ebefe1c156905e92b795b411648bd"
             },
             "require": {
                 "illuminate/console": "^12.0|^13.0",

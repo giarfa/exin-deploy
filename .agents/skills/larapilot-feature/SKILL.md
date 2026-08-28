@@ -70,13 +70,20 @@ Before asking anything, enumerate the **sites** where this feature breaks an ass
 Sources, in this order:
 
 1. **Schema** — Boost `Database Schema`: columns, FKs, unique/nullable constraints on the entities in scope; **Mike** reads cardinality, identity, and cascade implications
-2. **Code** — over `data.workdir`, grep the symbols that carry the assumption: `rg -n --stats '<symbol>' app/ routes/ resources/views/ database/ tests/ lang/`, where `<symbol>` covers singular/plural field names, relation names, DB columns, payload keys, and Blade/JSON accessors involved in the change
+2. **Code** — over `data.workdir`, grep the symbols that carry the assumption: `rg -n --stats '<symbol>' app/ routes/ resources/views/ database/ tests/ lang/`. `<symbol>` is not "the terms that sound relevant to the change" — it is a **closure over the artifacts read in step 1**, and it is the only thing that makes the enumeration reproducible:
+   - for every table the schema read touched: the **table name** and every **FK column** on it
+   - for every model on that path: the **class name**, its **relation method names**, its **factory** and its **policy**
+   - for every exception, event, or action class on that path: the **class name**
+   - singular/plural field names, payload keys, and Blade/JSON accessors for the fields involved
+   - **both sides of the assumption, not only the side the request talks about.** The request is written from the *action* that breaks the assumption (`StartRelease`); the assumption is carried by the *entities* that encode it (`ProjectRoleAssignment`, `DefaultRoleAssignment`). A symbol list with only the action side reaches a fraction of the surface and looks complete from inside the session that wrote it
 3. **Routes** — `php artisan route:list --json` for public and API surfaces
 4. **Implicit surfaces** — check these even when grep does not reach them: API contract, entity duplication, export/feed/sitemap, `og:image` and single-preview slots, search index, delete cascade, import/seeding, permissions, cache invalidation, notifications
 
+**Every file in the table must be reachable by at least one recorded symbol.** If you found a site some other way — reading a model, following an import, recognizing a screen — the term that found it goes into `symbols` before the site goes into `cells`. `decisions-check` reports a cell no recorded symbol reaches (`DECISION_SYMBOL_UNREACHED`): an enumeration nobody can re-run is not evidence, and, worse, drop detection re-runs *this* list — so a term you used and did not record leaves its whole surface invisible to the gate as well.
+
 **One occurrence = one row.** Do not merge rows and do not filter by relevance: prioritization is a separate, ratified step (see 1b). A row nobody looks at is a row nobody decided — that is the state the table exists to make visible.
 
-**Nothing downstream may shrink this list.** The acceptance-criteria aggregation in §2 collapses cells into a few criteria; it never removes a cell. Dropping a row because it will "probably come back unchanged" *is* deciding it, and the tail it lands on — `tests/`, factories, seeders, policies, adjacent models — is the largest and least visible part of the enumeration. `larapilot:decisions-check` re-runs this grep with the `symbols` the table itself records and reports every file with a live hit and no cell (`DECISION_SITE_DROPPED`), so a pruned tail comes back as findings rather than as a shorter table.
+**Nothing downstream may shrink this list.** The acceptance-criteria aggregation in §2 collapses cells into a few criteria; it never removes a cell. Dropping a row because it will "probably come back unchanged" *is* deciding it, and the tail it lands on — `tests/`, factories, seeders, policies, adjacent models — is the largest and least visible part of the enumeration. A test that exercises a *neighbouring* flow over the same symbol is a site, not a distraction: it is precisely where "unchanged on purpose" gets proven, and "this test is not about the feature" is the sentence that drops it. `larapilot:decisions-check` re-runs this grep with the `symbols` the table itself records and reports every file with a live hit and no cell (`DECISION_SITE_DROPPED`), so a pruned tail comes back as findings rather than as a shorter table.
 
 Write the table to `{paths.research}/decisions/{code}.yaml`:
 
@@ -173,10 +180,12 @@ The order is binding: **1a always precedes 1b.** An oracle collected after seein
 
 The YAML is the artifact, **not** what the human reads. Never paste it at them: a format built for `plan` to parse is a format that hides the one thing the human is here for. Render the table in chat instead.
 
+**Open with the two numbers side by side** — `44 files matched · 20 have a cell` — taken from the `--stats` line of the grep you just ran and from the table itself. A cell count alone cannot show what was left out; the gap can be legitimate (a symbol that also appears in unrelated code), and when it is, say why in one line. It is the human's gap to accept, never yours to close in silence.
+
 Number the rows **1..N by their position in `cells`** and keep that numbering stable for the whole session, so the human can answer `4, 9 → unchanged` instead of retyping file paths. Group the rows by surface — schema, API contract, UI/views, commands and jobs, tests, implicit — and give each group its own small table with its own count. Thirty rows in one block is a wall; the same thirty in six labelled groups is a review.
 
 ```markdown
-🔎 Tom: **US-012 — attachment: cardinality 1 → N** · 31 sites · 31 open
+🔎 Tom: **US-012 — attachment: cardinality 1 → N** · 34 files matched · 31 sites · 31 open
 
 **API contract** (3)
 
