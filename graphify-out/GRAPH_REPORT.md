@@ -1,16 +1,16 @@
-# Graph Report - exin-deploy  (2026-08-20)
+# Graph Report - exin-deploy  (2026-08-28)
 
 ## Corpus Check
-- 575 files · ~509,822 words
+- 574 files · ~502,531 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5415 nodes · 7745 edges · 480 communities (420 shown, 60 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.8)
+- 5390 nodes · 7600 edges · 472 communities (418 shown, 54 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 31 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `80a1377c`
+- Built from commit: `00a0a448`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,14 +21,14 @@
 - Illuminate\Support\Facades\Schema
 - FortifyServiceProvider.php
 - User
-- Release
-- WellFormedLink
+- ReleaseStep
+- WellFormedLinkTest
 - ReleaseEventAppendOnlyTest
-- Illuminate\Support\Facades\Validator
+- LoginTest
 - CLAUDE.md
+- StartReleaseTest.php
+- Illuminate\Database\Eloquent\Relations\BelongsTo
 - Project
-- Illuminate\Database\Eloquent\Concerns\HasUuids
-- Role
 - CloseStepTest
 - AGENTS.md
 - Larapilot Shared Runtime (Core)
@@ -38,12 +38,12 @@
 - TwoFactorTest
 - MyStepsScreenTest
 - StartReleaseScreenTest
-- Illuminate\Database\Eloquent\Relations\BelongsTo
+- DefaultAssignmentsTest
 - devDependencies
 - CloseStepScreenTest
 - ReleaseDetailScreenTest
-- StartReleaseTest
-- Illuminate\Database\Eloquent\Builder
+- UserPolicy
+- DefaultAssignmentPrecompilationTest
 - StepDefinition
 - scripts
 - Functional Requirements
@@ -61,7 +61,7 @@
 - Larapilot — Ship & Deploy
 - SaveStepValuesTest
 - Larapilot — Ship & Deploy
-- ReleasePolicyTest
+- ReleasePolicy
 - Larapilot — Ship & Deploy
 - FieldDefinitionFactory
 - Larapilot — Ship & Deploy
@@ -84,9 +84,9 @@
 - config
 - ⚡fields.blade.php
 - ⚡steps.blade.php
-- ReleaseEventPolicyTest
-- StartReleaseQueryBudgetTest
-- ReleaseEventIsAppendOnly
+- Bin
+- .projectWith
+- ReleaseEvent
 - Rules
 - Rules
 - roles/⚡index.blade.php
@@ -119,7 +119,6 @@
 - Larapilot Runtime — Discovery
 - UX & Frontend Design _(Elise owns)_
 - Larapilot — Bug Report
-- StartReleaseOverrideTest
 - Laravel Fortify Development
 - Laravel Fortify Development
 - Notifications (`settings.notifications`)
@@ -151,7 +150,6 @@
 - Larapilot — Backstage Integration
 - Larapilot — Backstage Integration
 - Larapilot — Backstage Integration
-- MemberManagementTest
 - Larapilot — Spec Planning
 - Tailwind CSS Development
 - Larapilot — Spec Planning
@@ -177,7 +175,6 @@
 - Architecture Best Practices
 - .agents/skills/laravel-best-practices/SKILL.md
 - Security Best Practices
-- Illuminate\Database\Eloquent\Relations\HasMany
 - Detection Checklist
 - Process
 - Larapilot — External frontend repo
@@ -234,12 +231,10 @@
 - Architecture Best Practices
 - .pi/skills/laravel-best-practices/SKILL.md
 - Security Best Practices
-- WellFormedLinkTest
 - Flux UI Development
 - Queue & Job Best Practices
 - User.php
 - WorkflowTemplatePolicy
-- AppServiceProvider
 - Flux UI Development
 - Queue & Job Best Practices
 - Queue & Job Best Practices
@@ -285,7 +280,6 @@
 - Advanced Query Patterns
 - Database Performance Best Practices
 - Events & Notifications Best Practices
-- BladeComponentAttributesTest
 - Larapilot — Product Inception
 - Caching Best Practices
 - Eloquent Best Practices
@@ -348,7 +342,6 @@
 - Testing Best Practices
 - Tailwind CSS — component & layout patterns
 - US-001 — Accesso allo strumento e gestione dei membri del team
-- US-013 — Responsabile diverso dal default per singola release
 - Blade & Views Best Practices
 - Error Handling Best Practices
 - Task Scheduling Best Practices
@@ -440,7 +433,6 @@
 - Views
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
-- dev
 - Bootstrap 5 — source index
 - Tailwind CSS — source index
 - Registro delle segnalazioni
@@ -457,89 +449,85 @@
 - usage/README.md
 
 ## God Nodes (most connected - your core abstractions)
-1. `User` - 407 edges
-2. `Project` - 155 edges
-3. `Release` - 151 edges
-4. `ReleaseStep` - 151 edges
-5. `WorkflowTemplate` - 134 edges
-6. `Role` - 129 edges
-7. `TestCase` - 122 edges
-8. `StepDefinition` - 92 edges
-9. `ReleaseEvent` - 79 edges
-10. `ProjectRoleAssignment` - 75 edges
+1. `User` - 380 edges
+2. `Project` - 151 edges
+3. `ReleaseStep` - 149 edges
+4. `Release` - 142 edges
+5. `WorkflowTemplate` - 132 edges
+6. `TestCase` - 122 edges
+7. `Role` - 118 edges
+8. `StepDefinition` - 90 edges
+9. `ReleaseEvent` - 76 edges
+10. `ProjectRoleAssignment` - 63 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `StartReleaseOverrideTest` --references--> `StartRelease`  [EXTRACTED]
-  tests/Feature/Releases/StartReleaseOverrideTest.php → app/Actions/Releases/StartRelease.php
-- `StartReleaseTest` --references--> `StartRelease`  [EXTRACTED]
-  tests/Feature/Releases/StartReleaseTest.php → app/Actions/Releases/StartRelease.php
 - `FieldDefinitionManagementTest` --references--> `StepDefinition`  [EXTRACTED]
   tests/Feature/Configuration/FieldDefinitionManagementTest.php → app/Models/StepDefinition.php
-- `StartReleaseOverrideTest` --references--> `User`  [EXTRACTED]
-  tests/Feature/Releases/StartReleaseOverrideTest.php → app/Models/User.php
 - `StartReleaseTest` --references--> `User`  [EXTRACTED]
   tests/Feature/Releases/StartReleaseTest.php → app/Models/User.php
+- `FieldDefinitionManagementTest` --references--> `WorkflowTemplate`  [EXTRACTED]
+  tests/Feature/Configuration/FieldDefinitionManagementTest.php → app/Models/WorkflowTemplate.php
+- `StepDefinitionManagementTest` --references--> `WorkflowTemplate`  [EXTRACTED]
+  tests/Feature/Configuration/StepDefinitionManagementTest.php → app/Models/WorkflowTemplate.php
+- `StartReleaseTest` --references--> `StartRelease`  [EXTRACTED]
+  tests/Feature/Releases/StartReleaseTest.php → app/Actions/Releases/StartRelease.php
 
 ## Import Cycles
 - None detected.
 
-## Communities (480 total, 60 thin omitted)
+## Communities (472 total, 54 thin omitted)
 
 ### Community 0 - "TestCase"
 Cohesion: 0.08
 Nodes (17): Illuminate\Database\Eloquent\Collection, Illuminate\Database\Eloquent\ModelNotFoundException, Illuminate\Database\Events\QueryExecuted, Illuminate\Database\QueryException, Illuminate\Foundation\Testing\RefreshDatabase, Illuminate\Foundation\Testing\TestCase, Illuminate\Support\Facades\DB, Illuminate\Support\Facades\Gate (+9 more)
 
 ### Community 1 - "WorkflowTemplate"
-Cohesion: 0.05
+Cohesion: 0.06
 Nodes (9): SetDefaultWorkflowTemplate, InactiveTemplateCannotBeDefault, self, WorkflowTemplate, DefaultWorkflowTemplateTest, ProjectTemplateAssociationTest, TemplateUsabilityTest, WorkflowTemplateManagementTest (+1 more)
 
 ### Community 2 - "Illuminate\Database\Eloquent\Factories\Factory"
-Cohesion: 0.11
-Nodes (7): DefaultRoleAssignmentFactory, ProjectRoleAssignmentFactory, static, ReleaseFactory, static, RoleFactory, Illuminate\Database\Eloquent\Factories\Factory
+Cohesion: 0.10
+Nodes (8): DefaultRoleAssignmentFactory, static, ReleaseFactory, static, RoleFactory, static, StepDefinitionFactory, Illuminate\Database\Eloquent\Factories\Factory
 
 ### Community 3 - "Illuminate\Support\Facades\Schema"
 Cohesion: 0.06
 Nodes (3): Illuminate\Database\Migrations\Migration, Illuminate\Database\Schema\Blueprint, Illuminate\Support\Facades\Schema
 
 ### Community 4 - "FortifyServiceProvider.php"
-Cohesion: 0.13
-Nodes (13): ResetUserPassword, UpdateUserPassword, UpdateUserProfileInformation, Illuminate\Cache\RateLimiting\Limit, Illuminate\Contracts\Auth\MustVerifyEmail, Illuminate\Support\Facades\RateLimiter, Illuminate\Validation\Rule, Illuminate\Validation\ValidationException (+5 more)
+Cohesion: 0.11
+Nodes (14): ResetUserPassword, UpdateUserPassword, UpdateUserProfileInformation, Illuminate\Cache\RateLimiting\Limit, Illuminate\Contracts\Auth\MustVerifyEmail, Illuminate\Support\Facades\Hash, Illuminate\Support\Facades\RateLimiter, Illuminate\Validation\Rule (+6 more)
 
 ### Community 5 - "User"
 Cohesion: 0.04
-Nodes (12): User, DefaultRoleAssignmentPolicy, ProjectPolicy, ReleaseEventPolicy, ReleasePolicy, RolePolicy, UserPolicy, Illuminate\Foundation\Auth\User (+4 more)
+Nodes (10): User, DefaultRoleAssignmentPolicy, ProjectPolicy, ReleaseEventPolicy, RolePolicy, Illuminate\Foundation\Auth\User, ConfigurationPolicyTest, MemberManagementTest (+2 more)
 
-### Community 6 - "Release"
-Cohesion: 0.03
-Nodes (25): CloseStep, RecordUnauthorizedStepAttempt, SaveStepValues, self, StepAlreadyClosed, self, StepIsNotOpen, self (+17 more)
+### Community 6 - "ReleaseStep"
+Cohesion: 0.04
+Nodes (14): CloseStep, SaveStepValues, self, StepAlreadyClosed, self, StepIsNotOpen, Release, ReleaseStep (+6 more)
 
-### Community 7 - "WellFormedLink"
-Cohesion: 0.27
-Nodes (6): AssignableUser, WellFormedLink, Closure, Illuminate\Contracts\Validation\ValidationRule, Illuminate\Support\Arr, Illuminate\Translation\PotentiallyTranslatedString
+### Community 7 - "WellFormedLinkTest"
+Cohesion: 0.05
+Nodes (17): AppServiceProvider, FortifyServiceProvider, AssignableUser, WellFormedLink, Closure, Illuminate\Contracts\Validation\Rule, Illuminate\Contracts\Validation\ValidationRule, Illuminate\Support\Arr (+9 more)
 
 ### Community 8 - "ReleaseEventAppendOnlyTest"
 Cohesion: 0.14
 Nodes (4): static, ReleaseEventFactory, ReleaseEventAction, ReleaseEventAppendOnlyTest
 
-### Community 9 - "Illuminate\Support\Facades\Validator"
-Cohesion: 0.18
-Nodes (5): Illuminate\Contracts\Validation\Rule, Illuminate\Support\Facades\Validator, Illuminate\Validation\Rules\Password, PHPUnit\Framework\Attributes\DataProvider, PasswordPolicyTest
-
 ### Community 10 - "CLAUDE.md"
 Cohesion: 0.05
 Nodes (40): APIs & Eloquent Resources, Application Structure & Architecture, Artifacts live in the repo, Artisan, CLI contract, Conventions, Deployment, Do Things the Laravel Way (+32 more)
 
-### Community 11 - "Project"
-Cohesion: 0.05
-Nodes (17): StartRelease, InactiveProjectCannotStartRelease, self, InactiveResponsibleOnProject, self, self, ProjectWithoutUsableTemplate, self (+9 more)
+### Community 11 - "StartReleaseTest.php"
+Cohesion: 0.07
+Nodes (15): StartRelease, InactiveProjectCannotStartRelease, self, InactiveResponsibleOnProject, self, self, ProjectWithoutUsableTemplate, self (+7 more)
 
-### Community 12 - "Illuminate\Database\Eloquent\Concerns\HasUuids"
-Cohesion: 0.33
-Nodes (6): Illuminate\Database\Eloquent\Attributes\Fillable, Illuminate\Database\Eloquent\Attributes\Scope, Illuminate\Database\Eloquent\Concerns\HasUuids, Illuminate\Database\Eloquent\Factories\HasFactory, Illuminate\Database\Eloquent\Model, Illuminate\Database\Eloquent\Relations\HasOne
+### Community 12 - "Illuminate\Database\Eloquent\Relations\BelongsTo"
+Cohesion: 0.06
+Nodes (9): Illuminate\Database\Eloquent\Attributes\Fillable, Illuminate\Database\Eloquent\Attributes\Scope, Illuminate\Database\Eloquent\Builder, Illuminate\Database\Eloquent\Concerns\HasUuids, Illuminate\Database\Eloquent\Factories\HasFactory, Illuminate\Database\Eloquent\Model, Illuminate\Database\Eloquent\Relations\BelongsTo, Illuminate\Database\Eloquent\Relations\HasMany (+1 more)
 
-### Community 13 - "Role"
+### Community 13 - "Project"
 Cohesion: 0.04
-Nodes (10): CreateProject, DefaultRoleAssignment, ProjectRoleAssignment, Role, DefaultAssignmentPrecompilationTest, DefaultAssignmentsTest, ProjectAssignmentsTest, RoleManagementTest (+2 more)
+Nodes (12): CreateProject, DefaultRoleAssignment, Project, ProjectRoleAssignment, Role, ProjectRoleAssignmentFactory, ProjectAssignmentsTest, ProjectManagementTest (+4 more)
 
 ### Community 14 - "CloseStepTest"
 Cohesion: 0.18
@@ -557,6 +545,10 @@ Nodes (30): Agent Persona, Assumptions and Questions, Auto-approve (`settings.au
 Cohesion: 0.09
 Nodes (6): static, ReleaseStepFieldFactory, FieldType, FieldDefinitionManagementTest, FieldTypeTest, ReleaseStepFieldTest
 
+### Community 19 - "ReleaseStepPolicyTest"
+Cohesion: 0.08
+Nodes (5): Illuminate\Support\Facades\Process, DecisionGateTest, ReleaseEventPolicyTest, ReleasePolicyTest, ReleaseStepPolicyTest
+
 ### Community 20 - "TwoFactorTest"
 Cohesion: 0.14
 Nodes (5): Illuminate\Support\Facades\Cache, Laravel\Fortify\Features, Laravel\Fortify\Fortify, PragmaRX\Google2FA\Google2FA, TwoFactorTest
@@ -566,12 +558,12 @@ Cohesion: 0.11
 Nodes (17): concurrently, laravel-vite-plugin, devDependencies, concurrently, laravel-vite-plugin, tailwindcss, @tailwindcss/vite, vite (+9 more)
 
 ### Community 29 - "StepDefinition"
-Cohesion: 0.07
-Nodes (6): FieldDefinition, StepDefinition, StepDefinitionManagementTest, WorkflowSchemaConstraintsTest, OrderedByPositionTest, StepDefinitionTest
+Cohesion: 0.06
+Nodes (7): FieldDefinition, StepDefinition, Illuminate\Support\Collection, StepDefinitionManagementTest, WorkflowSchemaConstraintsTest, OrderedByPositionTest, StepDefinitionTest
 
 ### Community 30 - "scripts"
-Cohesion: 0.14
-Nodes (14): scripts, analyse, lint, lint:check, post-autoload-dump, post-update-cmd, pre-package-uninstall, test (+6 more)
+Cohesion: 0.12
+Nodes (17): scripts, analyse, dev, lint, lint:check, post-autoload-dump, post-update-cmd, pre-package-uninstall (+9 more)
 
 ### Community 31 - "Functional Requirements"
 Cohesion: 0.07
@@ -590,8 +582,8 @@ Cohesion: 0.07
 Nodes (28): Categories, Choices snapshot, Deadlines & drift, Decision gate _(when uncertain)_, Developer Portal — Backstage _(Matt owns — integration surface)_, Epics & parallel work, How to apply a PRD update, Larapilot Runtime — Ops & Lifecycle (+20 more)
 
 ### Community 36 - "DatabaseSeeder.php"
-Cohesion: 0.21
-Nodes (4): Carbon\CarbonInterface, DatabaseSeeder, Illuminate\Database\Console\Seeds\WithoutModelEvents, Illuminate\Database\Seeder
+Cohesion: 0.26
+Nodes (3): DatabaseSeeder, Illuminate\Database\Console\Seeds\WithoutModelEvents, Illuminate\Database\Seeder
 
 ### Community 37 - "Livewire Development"
 Cohesion: 0.08
@@ -651,7 +643,7 @@ Nodes (9): require-dev, fakerphp/faker, larastan/larastan, laravel/pail, laravel
 
 ### Community 58 - "Larapilot — Feature / Evolutiva"
 Cohesion: 0.10
-Nodes (19): 0.5 Decision surfaces (Tom + Mike — deterministic enumeration), 0. Context load, 1.c Discovery interview (AskQuestion — max 3 per round, skippable), 1. Interviews — two passes, in this order, 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+11 more)
+Nodes (20): 0. Context load, 0b. Decision surfaces (Tom + Mike — deterministic enumeration) — **experimental, opt-in**, 1. Interviews — two passes, in this order (`decision_tables: YES` only), 1c. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+12 more)
 
 ### Community 59 - "OrderedByPosition.php"
 Cohesion: 0.54
@@ -671,7 +663,7 @@ Nodes (19): Aesthetic Guidelines, Config & CLI, Elise — accessibility (WCAG 2.
 
 ### Community 64 - "Larapilot — Feature / Evolutiva"
 Cohesion: 0.10
-Nodes (19): 0.5 Decision surfaces (Tom + Mike — deterministic enumeration), 0. Context load, 1.c Discovery interview (AskQuestion — max 3 per round, skippable), 1. Interviews — two passes, in this order, 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+11 more)
+Nodes (20): 0. Context load, 0b. Decision surfaces (Tom + Mike — deterministic enumeration) — **experimental, opt-in**, 1. Interviews — two passes, in this order (`decision_tables: YES` only), 1c. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+12 more)
 
 ### Community 65 - "Rules"
 Cohesion: 0.10
@@ -688,6 +680,10 @@ Nodes (6): closeForm, delete(, moveDown(, moveUp(, openCreateForm, openEditForm(
 ### Community 68 - "⚡steps.blade.php"
 Cohesion: 0.29
 Nodes (6): closeForm, delete(, moveDown(, moveUp(, openCreateForm, openEditForm(
+
+### Community 71 - "ReleaseEvent"
+Cohesion: 0.09
+Nodes (11): RecordUnauthorizedStepAttempt, self, ReleaseEventIsAppendOnly, ReleaseEvent, ReleaseStepField, Illuminate\Support\Carbon, Illuminate\Support\Facades\File, Illuminate\Support\Facades\Route (+3 more)
 
 ### Community 72 - "Rules"
 Cohesion: 0.10
@@ -743,7 +739,7 @@ Nodes (19): Aesthetic Guidelines, Config & CLI, Elise — accessibility (WCAG 2.
 
 ### Community 134 - "Larapilot — Feature / Evolutiva"
 Cohesion: 0.10
-Nodes (19): 0.5 Decision surfaces (Tom + Mike — deterministic enumeration), 0. Context load, 1.c Discovery interview (AskQuestion — max 3 per round, skippable), 1. Interviews — two passes, in this order, 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+11 more)
+Nodes (20): 0. Context load, 0b. Decision surfaces (Tom + Mike — deterministic enumeration) — **experimental, opt-in**, 1. Interviews — two passes, in this order (`decision_tables: YES` only), 1c. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+12 more)
 
 ### Community 135 - "Larapilot — Bug Report"
 Cohesion: 0.11
@@ -882,8 +878,8 @@ Cohesion: 0.13
 Nodes (14): 0. Read current state, 1. Catalog identity (Matt), 2. Persist identity, 3. Generate, 4. Register in Backstage, 5. Keep it fresh (Jack — optional), Config & CLI, Larapilot — Backstage Integration (+6 more)
 
 ### Community 170 - "WorkflowTemplateFactory"
-Cohesion: 0.17
-Nodes (6): static, ProjectFactory, static, StepDefinitionFactory, static, WorkflowTemplateFactory
+Cohesion: 0.24
+Nodes (4): static, ProjectFactory, static, WorkflowTemplateFactory
 
 ### Community 171 - "Larapilot — Backstage Integration"
 Cohesion: 0.13
@@ -906,16 +902,16 @@ Cohesion: 0.13
 Nodes (14): 0. Read current state, 1. Catalog identity (Matt), 2. Persist identity, 3. Generate, 4. Register in Backstage, 5. Keep it fresh (Jack — optional), Config & CLI, Larapilot — Backstage Integration (+6 more)
 
 ### Community 177 - "Larapilot — Spec Planning"
-Cohesion: 0.14
-Nodes (13): Config & CLI, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec, Stage 1 — Load context (parallel) (+5 more)
+Cohesion: 0.13
+Nodes (14): Config & CLI, Decision table (read-only here) — `decision_tables: YES` only, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec (+6 more)
 
 ### Community 178 - "Tailwind CSS Development"
 Cohesion: 0.14
 Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
 
 ### Community 179 - "Larapilot — Spec Planning"
-Cohesion: 0.14
-Nodes (13): Config & CLI, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec, Stage 1 — Load context (parallel) (+5 more)
+Cohesion: 0.13
+Nodes (14): Config & CLI, Decision table (read-only here) — `decision_tables: YES` only, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec (+6 more)
 
 ### Community 180 - "Tailwind CSS Development"
 Cohesion: 0.14
@@ -954,8 +950,8 @@ Cohesion: 0.14
 Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
 
 ### Community 189 - "Larapilot — Spec Planning"
-Cohesion: 0.14
-Nodes (13): Config & CLI, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec, Stage 1 — Load context (parallel) (+5 more)
+Cohesion: 0.13
+Nodes (14): Config & CLI, Decision table (read-only here) — `decision_tables: YES` only, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec (+6 more)
 
 ### Community 190 - "Tailwind CSS Development"
 Cohesion: 0.14
@@ -1241,10 +1237,6 @@ Nodes (10): Always Implement `failed()`, Batch Related Jobs, Implement `ShouldBe
 Cohesion: 0.25
 Nodes (5): static, UserFactory, Illuminate\Database\Eloquent\Attributes\Hidden, Illuminate\Notifications\Notifiable, Laravel\Fortify\TwoFactorAuthenticatable
 
-### Community 264 - "AppServiceProvider"
-Cohesion: 0.25
-Nodes (3): AppServiceProvider, FortifyServiceProvider, Illuminate\Support\ServiceProvider
-
 ### Community 265 - "Flux UI Development"
 Cohesion: 0.18
 Nodes (10): Available Components (Free Edition), Basic Usage, Common Patterns, Common Pitfalls, Documentation, Flux UI Development, Form Fields, Icons (+2 more)
@@ -1290,8 +1282,8 @@ Cohesion: 0.20
 Nodes (9): Config & CLI, Execution, Larapilot — Autopilot, Laravel, Output Economy, Safety, Selection Rules, Shared Runtime (+1 more)
 
 ### Community 276 - "Larapilot — Spec Review (Human Gate)"
-Cohesion: 0.20
-Nodes (9): Approval, Config & CLI, Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules, Shared Runtime (+1 more)
+Cohesion: 0.18
+Nodes (10): Approval, Config & CLI, Decision table diff — format (`decision_tables: YES` only), Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules (+2 more)
 
 ### Community 277 - "Advanced Query Patterns"
 Cohesion: 0.20
@@ -1310,8 +1302,8 @@ Cohesion: 0.20
 Nodes (9): Config & CLI, Execution, Larapilot — Autopilot, Laravel, Output Economy, Safety, Selection Rules, Shared Runtime (+1 more)
 
 ### Community 281 - "Larapilot — Spec Review (Human Gate)"
-Cohesion: 0.20
-Nodes (9): Approval, Config & CLI, Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules, Shared Runtime (+1 more)
+Cohesion: 0.18
+Nodes (10): Approval, Config & CLI, Decision table diff — format (`decision_tables: YES` only), Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules (+2 more)
 
 ### Community 282 - "Advanced Query Patterns"
 Cohesion: 0.20
@@ -1410,8 +1402,8 @@ Cohesion: 0.20
 Nodes (9): Config & CLI, Execution, Larapilot — Autopilot, Laravel, Output Economy, Safety, Selection Rules, Shared Runtime (+1 more)
 
 ### Community 306 - "Larapilot — Spec Review (Human Gate)"
-Cohesion: 0.20
-Nodes (9): Approval, Config & CLI, Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules, Shared Runtime (+1 more)
+Cohesion: 0.18
+Nodes (10): Approval, Config & CLI, Decision table diff — format (`decision_tables: YES` only), Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules (+2 more)
 
 ### Community 307 - "Advanced Query Patterns"
 Cohesion: 0.20
@@ -1673,10 +1665,6 @@ Nodes (7): App shell (sidebar layout), Common utilities, Dark mode, Marketing si
 Cohesion: 0.25
 Nodes (7): Fuori perimetro, da tracciare, Lars (security), Note per la verifica umana, Parent actions, Robert (code review), Scoperte da conservare, US-001 — Accesso allo strumento e gestione dei membri del team
 
-### Community 373 - "US-013 — Responsabile diverso dal default per singola release"
-Cohesion: 0.25
-Nodes (7): Da verificare a mano in accettazione, Fuori perimetro presente nel diff, Lars (security), Nota sull'ambiente, Parent actions, Robert (code review), US-013 — Responsabile diverso dal default per singola release
-
 ### Community 374 - "Blade & Views Best Practices"
 Cohesion: 0.25
 Nodes (7): Blade & Views Best Practices, Prefer Blade Components Over `@include`, Use `$attributes->merge()` in Component Templates, Use `@aware` for Deeply Nested Component Props, Use Blade Fragments for Partial Re-Renders (htmx/Turbo), Use `@pushOnce` for Per-Component Scripts, Use View Composers for Shared View Data
@@ -1914,8 +1902,8 @@ Cohesion: 0.33
 Nodes (5): Consegna manuale ad Anne, Lars (security), Parent actions, Revisione di implementazione — US-007, Robert (code review)
 
 ### Community 434 - "Components Releases"
-Cohesion: 0.40
-Nodes (4): Components Releases, Il dettaglio della release e l'unico percorso che legge workflow_templates, Il modulo di avvio ricalcola le precondizioni su un clone, non su una copia della regola, L'elenco delle release: una sola tabella responsive, due ordinamenti, nessuna paginazione
+Cohesion: 0.50
+Nodes (3): Components Releases, Il dettaglio della release e l'unico percorso che legge workflow_templates, L'elenco delle release: una sola tabella responsive, due ordinamenti, nessuna paginazione
 
 ### Community 435 - "Client Materials"
 Cohesion: 0.40
@@ -2001,29 +1989,25 @@ Nodes (3): Contenuto, Note, US-008: Dettaglio della release con catena e informa
 Cohesion: 0.50
 Nodes (3): Legacy parity, Reference products, Research
 
-### Community 465 - "dev"
-Cohesion: 0.67
-Nodes (3): dev, Composer\\Config::disableProcessTimeout, npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others
-
 ## Knowledge Gaps
-- **3088 isolated node(s):** `/Users/apollastri/Library/Application Support/Herd/bin/php85`, `php`, `php`, `Controller`, `$schema` (+3083 more)
+- **3085 isolated node(s):** `/Users/apollastri/Library/Application Support/Herd/bin/php85`, `php`, `php`, `Controller`, `$schema` (+3080 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **60 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **54 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `User` connect `User` to `TestCase`, `WorkflowTemplate`, `Illuminate\Database\Eloquent\Factories\Factory`, `FortifyServiceProvider.php`, `Release`, `User.php`, `WorkflowTemplatePolicy`, `AppServiceProvider`, `WellFormedLink`, `Project`, `Illuminate\Database\Eloquent\Concerns\HasUuids`, `ReleaseEventAppendOnlyTest`, `Role`, `CloseStepTest`, `StartReleaseOverrideTest`, `FieldType`, `ReleaseIndexScreenTest`, `ReleaseStepPolicyTest`, `TwoFactorTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `CloseStepScreenTest`, `ReleaseDetailScreenTest`, `StartReleaseTest`, `Illuminate\Database\Eloquent\Builder`, `StepDefinition`, `ReleaseLogScreenTest`, `DatabaseSeeder.php`, `.projectReadyToRelease`, `SaveStepValuesTest`, `ReleasePolicyTest`, `MemberManagementTest`, `MyStepsQueryBudgetTest`, `ReleaseDetailQueryBudgetTest`, `ReleaseIndexQueryBudgetTest`, `ReleaseStepPolicy`, `ReleaseEventPolicyTest`, `StartReleaseQueryBudgetTest`, `Illuminate\Database\Eloquent\Relations\HasMany`, `ReleaseLogQueryBudgetTest`, `PasswordResetTest.php`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `WorkflowTemplate` connect `WorkflowTemplate` to `TestCase`, `Illuminate\Database\Eloquent\Factories\Factory`, `User`, `Release`, `WorkflowTemplatePolicy`, `Project`, `Illuminate\Database\Eloquent\Concerns\HasUuids`, `Role`, `StartReleaseOverrideTest`, `FieldType`, `StartReleaseScreenTest`, `StartReleaseTest`, `Illuminate\Database\Eloquent\Builder`, `StepDefinition`, `DatabaseSeeder.php`, `.projectReadyToRelease`, `WorkflowTemplateFactory`, `ReleasePolicyTest`, `StartReleaseQueryBudgetTest`, `Illuminate\Database\Eloquent\Relations\HasMany`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **Why does `TestCase` connect `TestCase` to `WorkflowTemplate`, `WellFormedLinkTest`, `User`, `Release`, `ReleaseEventAppendOnlyTest`, `Illuminate\Support\Facades\Validator`, `Project`, `Role`, `CloseStepTest`, `StartReleaseOverrideTest`, `FieldType`, `ReleaseIndexScreenTest`, `ReleaseStepPolicyTest`, `TwoFactorTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `CloseStepScreenTest`, `ReleaseDetailScreenTest`, `StartReleaseTest`, `StepDefinition`, `ReleaseLogScreenTest`, `DatabaseSeeder.php`, `.projectReadyToRelease`, `SaveStepValuesTest`, `ReleasePolicyTest`, `MemberManagementTest`, `MyStepsQueryBudgetTest`, `ReleaseDetailQueryBudgetTest`, `BladeComponentAttributesTest`, `ReleaseIndexQueryBudgetTest`, `ReleaseEventPolicyTest`, `StartReleaseQueryBudgetTest`, `ReleaseLogQueryBudgetTest`, `PasswordResetTest.php`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `User` connect `User` to `TestCase`, `WorkflowTemplate`, `Illuminate\Database\Eloquent\Factories\Factory`, `FortifyServiceProvider.php`, `ReleaseStep`, `User.php`, `WorkflowTemplatePolicy`, `WellFormedLinkTest`, `ReleaseEventAppendOnlyTest`, `StartReleaseTest.php`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Project`, `LoginTest`, `CloseStepTest`, `FieldType`, `ReleaseIndexScreenTest`, `ReleaseStepPolicyTest`, `TwoFactorTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `DefaultAssignmentsTest`, `CloseStepScreenTest`, `ReleaseDetailScreenTest`, `UserPolicy`, `DefaultAssignmentPrecompilationTest`, `StepDefinition`, `ReleaseLogScreenTest`, `DatabaseSeeder.php`, `.projectReadyToRelease`, `SaveStepValuesTest`, `ReleasePolicy`, `MyStepsQueryBudgetTest`, `ReleaseDetailQueryBudgetTest`, `ReleaseIndexQueryBudgetTest`, `ReleaseStepPolicy`, `.projectWith`, `ReleaseEvent`, `ReleaseLogQueryBudgetTest`, `PasswordResetTest.php`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+- **Why does `TestCase` connect `TestCase` to `WorkflowTemplate`, `FortifyServiceProvider.php`, `User`, `ReleaseStep`, `WellFormedLinkTest`, `ReleaseEventAppendOnlyTest`, `LoginTest`, `StartReleaseTest.php`, `Project`, `CloseStepTest`, `FieldType`, `ReleaseIndexScreenTest`, `ReleaseStepPolicyTest`, `TwoFactorTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `DefaultAssignmentsTest`, `CloseStepScreenTest`, `ReleaseDetailScreenTest`, `DefaultAssignmentPrecompilationTest`, `StepDefinition`, `ReleaseLogScreenTest`, `.projectReadyToRelease`, `SaveStepValuesTest`, `MyStepsQueryBudgetTest`, `ReleaseDetailQueryBudgetTest`, `ReleaseIndexQueryBudgetTest`, `.projectWith`, `ReleaseEvent`, `ReleaseLogQueryBudgetTest`, `PasswordResetTest.php`?**
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+- **Why does `WorkflowTemplate` connect `WorkflowTemplate` to `TestCase`, `Illuminate\Database\Eloquent\Factories\Factory`, `DatabaseSeeder.php`, `User`, `ReleaseStep`, `WorkflowTemplatePolicy`, `ReleaseEvent`, `.projectReadyToRelease`, `WorkflowTemplateFactory`, `StartReleaseTest.php`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Project`, `.projectWith`, `FieldType`, `ReleaseStepPolicyTest`, `StartReleaseScreenTest`, `StepDefinition`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `/Users/apollastri/Library/Application Support/Herd/bin/php85`, `php`, `php` to the rest of the system?**
-  _3088 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _3085 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `TestCase` be split into smaller, more focused modules?**
-  _Cohesion score 0.0847457627118644 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07902973395931143 - nodes in this community are weakly interconnected._
 - **Should `WorkflowTemplate` be split into smaller, more focused modules?**
-  _Cohesion score 0.0539906103286385 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.056692242114237 - nodes in this community are weakly interconnected._
 - **Should `Illuminate\Database\Eloquent\Factories\Factory` be split into smaller, more focused modules?**
-  _Cohesion score 0.11255411255411256 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
