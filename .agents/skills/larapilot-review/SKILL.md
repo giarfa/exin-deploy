@@ -73,17 +73,21 @@ Only the rows that **diverge**, as a table, using the **same row numbers** the h
 ```markdown
 🛡️ Robert: **US-012** · 24 of 27 cells delivered as decided · 3 diverge
 
-| # | Site | Decided | Delivered |
+| # | Site | AC | Decided | Delivered |
 
-| --- | --- | --- | --- |
-| 7 | `app/Http/Resources/PostResource.php:24` | singular kept + `attachments[]` added | `attachments[]` only — **contract break** |
-| 19 | `resources/views/post/show.blade.php:41` | unchanged (ratified) | now renders every file |
-| — | `app/Console/Commands/ExportCommand.php:52` | **never enumerated** | exports all files |
+| --- | --- | --- | --- | --- |
+| 7 | `app/Http/Resources/PostResource.php:24` | AC-2 | singular kept + `attachments[]` added | `attachments[]` only — **contract break** |
+| 19 | `resources/views/post/show.blade.php:41` | AC-9 | unchanged (ratified) | now renders every file |
+| 14 | `app/Services/PostCache.php:71` | internal | invalidate on attach/detach | no test covers it |
+| — | `app/Console/Commands/ExportCommand.php:52` | — | **never enumerated** | exports all files |
 
+Diverging cells affect **AC-2** and **AC-9** — those are the criteria to re-test.
 Row 12 (rollback with 2+ files saved) is still open and still blocking.
 ```
 
 Matching rows are the one-line counter, never a second table: the diff is what needs the human's eyes. A row with `—` for a number was never enumerated — say so in those words, since that is the class no human has ever seen.
+
+**Name the affected AC, not only the rows.** Cells aggregate onto criteria (`ac: AC-n`), so a diverging cell invalidates the sign-off on whatever criterion covers it — that is the line the functional analyst acts on, and it is one line, not a re-reading of the table. A cell with `ac: internal` diverges when the test its `verify_note` promised does not exist: report it as a missing verification, not as a missing AC.
 
 Ask the human: **Approve** or **Request changes** (with feedback).
 

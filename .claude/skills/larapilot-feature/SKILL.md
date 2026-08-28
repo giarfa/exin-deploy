@@ -99,6 +99,8 @@ cells:
     decided_by: human         # human | proposal
 
     ratified: true
+    ac: AC-3                  # the acceptance criterion that verifies this cell
+
   - site: "entity duplication"
     source: implicit
     question: "are files copied or referenced"
@@ -115,6 +117,19 @@ cells:
     human_text: "lascia come sta, mostra il primario"
     decided_by: human
     ratified: true
+    ac: AC-9                  # non-regression criterion, shared with the other unchanged views
+
+  - site: "app/Services/PostCache.php:71"
+    source: implicit
+    question: "when the cache is invalidated"
+    state: decided
+    value: "invalidate on attach and detach"
+    human_text: "la cache si deve aggiornare, non mi interessa come"
+    decided_by: human
+    ratified: true
+    ac: internal              # nothing an analyst can observe from outside
+
+    verify_note: "automated test in the task that touches the cache"
   - site: "app/Console/Commands/ReindexCommand.php:88"
     source: grep
     question: "how the search index treats N files"
@@ -125,6 +140,7 @@ cells:
 
 - **`symbols` and `scope` are load-bearing, not metadata** — they are what lets the enumeration be *reproduced* by someone who was not in the session, and an enumeration that cannot be reproduced cannot be trusted. Record the grep terms verbatim
 - **`human_text` carries the human's own words**, not a tidied restatement — it is the only evidence in the file that a human answered at all. When the human accepts a proposal from 1b verbatim, that is `decided_by: proposal` + `ratified: true`, not `human`
+- **`ac` is what keeps the table readable downstream** — every `decided` and `decided-null` cell names the acceptance criterion that verifies it (`AC-n`), or `internal` plus a `verify_note` when there is nothing to verify by hand. Many cells map to one criterion: that aggregation is what turns a site-level enumeration into a list a functional analyst can test (see §2)
 - **`out-of-scope` is a human state only** — it means the product owner cut the site from this spec. No downstream skill may set it (see **Single writer** below)
 - **The three states are the point** — `decided-null` is a decision that nothing changes here; `undecided` is a hole. Prose cannot represent the difference, a table can, and that difference is the auditable, re-runnable part of the method
 
@@ -239,7 +255,18 @@ When **John** or **Andrew** join: note architectural constraints (tenancy, panel
 
 Draft INVEST-compliant criteria in chat for user confirmation before persisting. Include happy path, error case, and edge case minimum.
 
-When `decision_tables` is `YES`: **derive AC from the decision table, not from the request text.** Every `decided` and `decided-null` cell becomes one AC line citing its site — that citation is what makes the criterion checkable at review time. Do not paraphrase several cells into one AC line: one cell, one line, or the trace is lost.
+When `decision_tables` is `YES`: **derive AC from the decision table, not from the request text — but aggregate, do not transcribe.** The enumeration in 0b is deterministic and site-level, so a table routinely holds thirty rows; one AC per row yields a list only a developer can read, and the person who signs the spec off is a functional analyst. The trace does not live in the AC text: it lives in the cell's `ac` field, where `decisions-check` can verify it both ways.
+
+**One AC = one behaviour observable from outside the application** — a screen, an API response, an exported file, a mail, a permission denied. Write it from `human_text` (the product owner's own words, already in the table), never from `site`.
+
+- **No `path:line` inside an AC.** Sites stay in the table and in the review diff, read by someone who opens the code
+- **Every `decided` / `decided-null` cell carries `ac`** — `AC-n`, or `internal` + `verify_note` when the decision has no observable effect (cache invalidation, reindex, internal payload, seeding). `internal` cells never become AC: they become an automated-test obligation on the task that implements them, named in the plan
+- **`decided-null` cells aggregate into non-regression criteria** — a few per surface ("the detail page still shows only the primary file"), never one each. In a total enumeration they are the largest single source of noise
+- **Target 6–15 AC per spec, whatever the cell count.** Above that the signal is not "too granular", it is that the story is too large: go back to Round 2 with Mark and honor `settings.backlog`
+- **Number them `AC-1..AC-n`** and keep the numbers stable once persisted — the coverage line, the plan tasks, and the review diff all cite them
+- **Confirm the mapping, not only the list** — when presenting the AC in chat, show which numbered rows each criterion covers (`AC-3 ← #1,#7`), so the human can see that a decision they made did not quietly lose its criterion. Same numbering as 1a, so they recognize their own answers
+
+`larapilot:decisions-check` enforces both directions: a closed cell with no `ac` is a decision no acceptance criterion verifies, and an `AC-n` in the spec body with no cell behind it is a criterion nobody was asked about. The second direction is the one a citation inside the AC line could never catch.
 
 For every `undecided` cell left after 1b, open a single blocking comment so the workflow engine — not a convention — holds the gate:
 
@@ -250,7 +277,7 @@ php artisan larapilot:spec-comment US-XXX --blocks-merge --author=Tom \
 
 `spec-approve` refuses while `[blocks-merge]` comments are open, so no new command is needed. Never resolve that comment on the human's behalf, and never close it with `--force` to unblock delivery: a table whose blockers get forced is documentation, and documentation is exactly what this artifact is not.
 
-When `decision_tables` is `NO`, AC come from the request, the PRD, and the discovery interview as usual — no `Decision table:` line, no cell-derived AC lines, no blocking comment.
+When `decision_tables` is `NO`, AC come from the request, the PRD, and the discovery interview as usual — plain unnumbered bullets, no `Decision table:` line, no `Decision coverage:` line, no blocking comment.
 
 ### 3. PRD sync (when scope changes)
 
@@ -310,14 +337,17 @@ specs:
       After implementing this spec, [observable verification].
 
       **Acceptance Criteria**
-      - [ ] [Happy path]
-      - [ ] [Error case]
-      - [ ] [Edge case]
-      - [ ] [Decided cell] — {site} → {value}
-      - [ ] [Decided-null cell] — {site} → behavior unchanged (ratified)
+      - [ ] AC-1 — [Happy path, in the language the analyst tests in]
+      - [ ] AC-2 — [Error case]
+      - [ ] AC-3 — [Edge case]
+      - [ ] AC-4 — [Non-regression: what stays exactly as it is]
+
+      **Decision coverage:** AC-1 ← #4,#5 · AC-2 ← #2 · AC-3 ← #1,#7 · AC-4 ← #11,#19 · internal ← #14,#22
 ```
 
-The `**Decision table:**` line and the two cell-derived AC lines belong to `decision_tables: YES` only — with the setting `NO`, omit all three from the body entirely.
+The `**Decision table:**` and `**Decision coverage:**` lines, and the `AC-n` numbering they cite, belong to `decision_tables: YES` only — with the setting `NO`, write plain unnumbered AC bullets and omit both lines.
+
+The coverage line accounts for **every** closed cell exactly once, `internal` ones included. It is the human-readable echo of the `ac` fields, not a second source of truth: `decisions-check` reads the mapping from the table and the ids from the `- [ ] AC-n` lines, so the three have to agree.
 
 Validate → `spec-add` → delete temp file. When `decision_tables` is `YES`, the decision-table YAML is **committed** alongside the spec: it is the second encoding of intent, and it only earns its keep if `plan` and `review` can read it later.
 
@@ -342,6 +372,8 @@ Offer clearly:
 - Do not enumerate decision sites with an LLM when an artifact can be grepped, queried, or listed — generative enumeration is for behavioral cells only, where no artifact bounds the space
 - Do not present the table and the proposals in the same message — that collapses 1a into 1b and turns the oracle into a ratification
 - Do not show the human raw YAML, a cell count, or a prose summary in place of the grouped table — an unreadable presentation of a total enumeration decides the open cells by attrition, which is the same outcome the table exists to prevent
+- Do not emit one AC per cell, and never put a `path:line` inside an AC — a criterion the functional analyst cannot read is a criterion nobody tests; the trace belongs in the cell's `ac` field, which is checkable, not in the criterion text, which is not
+- Do not empty the AC list by marking behavioural cells `internal` — it is for cells with nothing observable, it costs a `verify_note`, and review sees how many there are
 - Do not write a bulk answer into the YAML without echoing it back first — the human must be able to see a misparse before it becomes a recorded decision
 
 ## Example — process interview (`decision_tables: NO`, the default)
@@ -376,6 +408,8 @@ Offer clearly:
 
 **1b — proposals, three each.** One block per open cell, lettered. API shape → singular kept + array added / versioned breaking change / array only with a `primary` flag. Ordering → incidental (no column) / persisted position / upload timestamp. The human ratifies two; rollback stays `undecided` because it is a data-loss decision the product owner has not made.
 
-**Blocker:** one `spec-comment --blocks-merge` naming the rollback cell. `US-012` is persisted with 30 AC lines citing sites; `spec-approve` will refuse until the cell closes.
+**2 — AC (Tom).** The 28 closed cells aggregate into **9 AC**: 6 behavioural (multi-upload, payload shape, export, preview slot, permissions, ordering) and 3 non-regression from the `decided-null` rows. Five cells — cache invalidation, reindex, two seeders, an internal DTO — take `ac: internal` with a verify note and never reach the AC list. Tom shows the mapping (`AC-2 ← #1,#7`) alongside the criteria, so the human can check that every answer they gave is still verified by some criterion.
+
+**Blocker:** one `spec-comment --blocks-merge` naming the rollback cell. `US-012` is persisted with 9 numbered AC and a coverage line accounting for all 28 closed cells; `spec-approve` will refuse until the open cell closes.
 
 **Note what the table found that the request did not contain:** the API contract break, the duplication semantics, the single-preview slot that must now pick one file, and the only irreversible cell in the whole change — which file survives a rollback.

@@ -59,6 +59,7 @@ The table is written only by `/larapilot-feature` — see **Single writer** ther
 1. **Do not plan around an `undecided` cell** — if any task would touch a site whose cell is `undecided` (or `decided_by: proposal` with `ratified: false`), stop and route back to `/larapilot-feature` for that cell. Do not answer it here: this skill has no human gate, so a cell filled in planning is a cell the LLM decided for itself
 2. **Re-verify the enumeration** — re-run the grep and schema read from the table's `sources`; sites that appeared after the spec was written are new cells, not details. Report them and route back, do not append answers
 3. **Map cells to tasks** — every `decided` cell names the task that implements it; every `decided-null` cell is stated as an explicit non-change in `plan_body`, so a later diff can tell "unchanged on purpose" from "forgotten"
+4. **Carry the acceptance mapping into the tasks** — a cell's `ac` field says which criterion verifies it (many cells share one, see **Acceptance criteria** in `larapilot-feature`). Name the `AC-n` a task delivers in its description, and for cells with `ac: internal` make the automated test named in their `verify_note` part of that task's Definition of Done — those cells have no manual criterion behind them, so the test is the only thing that verifies them
 
 **When an open cell blocks progress, narrow — do not decide.** The legal move is to shrink the spec so the site goes untouched, and to say so in `plan_body`:
 
