@@ -79,7 +79,9 @@ Sources, in this order:
 3. **Routes** — `php artisan route:list --json` for public and API surfaces
 4. **Implicit surfaces** — check these even when grep does not reach them: API contract, entity duplication, export/feed/sitemap, `og:image` and single-preview slots, search index, delete cascade, import/seeding, permissions, cache invalidation, notifications
 
-**Every file in the table must be reachable by at least one recorded symbol.** If you found a site some other way — reading a model, following an import, recognizing a screen — the term that found it goes into `symbols` before the site goes into `cells`. `decisions-check` reports a cell no recorded symbol reaches (`DECISION_SYMBOL_UNREACHED`): an enumeration nobody can re-run is not evidence, and, worse, drop detection re-runs *this* list — so a term you used and did not record leaves its whole surface invisible to the gate as well.
+**Every row on a file names the symbols that found it.** The table-level `symbols` list says what the grep was; the cell's own `symbols` say which of those terms hit *that* site (`symbols: ["attachment_id", "->attachment"]`, verbatim, a subset of the table list). Write them as you enumerate — they are a by-product of the grep you already ran, and reconstructing them afterwards is guesswork. Rows whose `site` is prose (`entity duplication`, a table name) carry none: nothing was grepped to find them.
+
+That per-row attribution is what makes the enumeration re-derivable rather than merely re-readable: it says which term reaches which site, so a reviewer can re-run one symbol and check its rows instead of re-running the whole list and eyeballing a count. If you found a site some other way — reading a model, following an import, recognizing a screen — the term that found it goes into `symbols` (both levels) before the site goes into `cells`. `decisions-check` reports the three ways this fails: a cell that names no symbol (`DECISION_CELL_SYMBOLS_MISSING`), one the table does not record (`DECISION_CELL_SYMBOL_UNDECLARED`), and one that does not occur at the site (`DECISION_CELL_SYMBOL_ABSENT`) — plus a file no recorded symbol reaches at all (`DECISION_SYMBOL_UNREACHED`). An enumeration nobody can re-run is not evidence, and, worse, drop detection re-runs *this* list — so a term you used and did not record leaves its whole surface invisible to the gate as well.
 
 **One occurrence = one row.** Do not merge rows and do not filter by relevance: prioritization is a separate, ratified step (see 1b). A row nobody looks at is a row nobody decided — that is the state the table exists to make visible.
 
@@ -99,6 +101,8 @@ cells:
   - site: "app/Http/Resources/PostResource.php:24"
     source: grep              # grep | schema | route | implicit
 
+    symbols: ["attachment_id", "attachment:"]   # the recorded terms that hit THIS site
+
     question: "payload shape for the field"
     state: decided            # decided | decided-null | undecided | out-of-scope
 
@@ -112,6 +116,8 @@ cells:
 
   - site: "entity duplication"
     source: implicit
+    # prose site: nothing grepped it, so it carries no `symbols`
+
     question: "are files copied or referenced"
     state: undecided          # → blocks approval
 
@@ -119,6 +125,7 @@ cells:
 
   - site: "resources/views/post/show.blade.php:41"
     source: grep
+    symbols: ["->attachment"]
     question: "which files are rendered"
     state: decided-null       # explicit decision: behavior unchanged
 
@@ -130,6 +137,8 @@ cells:
 
   - site: "app/Services/PostCache.php:71"
     source: implicit
+    symbols: ["->attachment"]   # found implicitly, but the term is there and must be recorded
+
     question: "when the cache is invalidated"
     state: decided
     value: "invalidate on attach and detach"
@@ -141,13 +150,14 @@ cells:
     verify_note: "automated test in the task that touches the cache"
   - site: "app/Console/Commands/ReindexCommand.php:88"
     source: grep
+    symbols: ["attachment_id"]
     question: "how the search index treats N files"
     state: out-of-scope       # human cut it from this spec — NOT an agent move
 
     scope_note: "deferred to US-014; AC removed from this spec"
 ```
 
-- **`symbols` and `scope` are load-bearing, not metadata** — they are what lets the enumeration be *reproduced* by someone who was not in the session, and an enumeration that cannot be reproduced cannot be trusted. Record the grep terms verbatim
+- **`symbols` and `scope` are load-bearing, not metadata** — they are what lets the enumeration be *reproduced* by someone who was not in the session, and an enumeration that cannot be reproduced cannot be trusted. Record the grep terms verbatim, at **both levels**: the table's list is the grep, the cell's list is which of those terms hit that row's site. The cell list must be a subset of the table list and must actually occur at the site — `decisions-check` re-greps both, so an attribution invented after the fact fails rather than passes
 - **`human_text` carries the human's own words**, not a tidied restatement — it is the only evidence in the file that a human answered at all. When the human accepts a proposal from 1b verbatim, that is `decided_by: proposal` + `ratified: true`, not `human`
 - **`ac` is what keeps the table readable downstream** — every `decided` and `decided-null` cell names the acceptance criterion that verifies it (`AC-n`), or `internal` plus a `verify_note` when there is nothing to verify by hand. Many cells map to one criterion: that aggregation is what turns a site-level enumeration into a list a functional analyst can test (see §2)
 - **`out-of-scope` is a human state only** — it means the product owner cut the site from this spec. No downstream skill may set it (see **Single writer** below)
@@ -383,6 +393,7 @@ Offer clearly:
 - Do not fill domain cells on the human's behalf, not even when the answer looks obvious — an obvious cell is a **ratified** `decided-null`, not a skipped cell
 - Treat the prohibitions in this file as conventions and `larapilot:decisions-check` as the enforcement — run it before handing off; a convention that is never checked is a convention that erodes, and the erosion is invisible from inside the session that causes it
 - Do not enumerate decision sites with an LLM when an artifact can be grepped, queried, or listed — generative enumeration is for behavioral cells only, where no artifact bounds the space
+- Do not leave a row on a file without its own `symbols`, and do not back-fill them by guessing which term probably matched — the attribution records how the row was found, so one written after the fact records nothing and `decisions-check` re-greps it anyway
 - Do not present the table and the proposals in the same message — that collapses 1a into 1b and turns the oracle into a ratification
 - Do not show the human raw YAML, a cell count, or a prose summary in place of the grouped table — an unreadable presentation of a total enumeration decides the open cells by attrition, which is the same outcome the table exists to prevent
 - Do not prune the enumeration tail (`tests/`, factories, seeders, policies, adjacent models) because those rows will end up `decided-null` — that class is the largest in the table and the reason the non-regression criteria exist; the AC list aggregates it, 0b does not drop it
@@ -416,7 +427,7 @@ Offer clearly:
 
 **Context:** custom CMS; entities currently hold at most one attachment.
 
-**0b — enumeration.** `Database Schema` reports `attachment_id` (nullable FK, no position column). `rg 'attachment_id|->attachment|attachment:'` returns 19 hits across `app/`, `resources/views/`, `routes/`, `database/`, `tests/`. `route:list` adds two API endpoints. Implicit surfaces add entity duplication, `og:image`, export feed, search index, delete cascade, permissions. Table: **31 rows**, all empty.
+**0b — enumeration.** `Database Schema` reports `attachment_id` (nullable FK, no position column). `rg 'attachment_id|->attachment|attachment:'` returns 19 hits across `app/`, `resources/views/`, `routes/`, `database/`, `tests/`. `route:list` adds two API endpoints. Implicit surfaces add entity duplication, `og:image`, export feed, search index, delete cascade, permissions. Each row records the terms that hit it (`attachment_id` for the schema and command rows, `->attachment` for the views); the six implicit rows that are prose carry none. Table: **31 rows**, all empty.
 
 **1a — oracle, no options.** The 31 rows go out as six numbered groups (schema 4, API contract 3, UI/views 7, commands and jobs 5, tests 6, implicit 6), with row 12 flagged as the only irreversible one. The human answers in three bulk messages by number; Tom echoes each batch back before writing it. 22 rows land as `decided`, 6 as `decided-null`. Three stay open: API payload shape, ordering semantics, rollback with 2+ files already saved.
 
