@@ -13,6 +13,7 @@ settings:
   notify_slack: false
   notify_discord: false
   notify_telegram: false
+  decision_tables: true
 frontend:
   repo_path: null
   stack: null
