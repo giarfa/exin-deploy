@@ -76,6 +76,8 @@ Sources, in this order:
 
 **One occurrence = one row.** Do not merge rows and do not filter by relevance: prioritization is a separate, ratified step (see 1b). A row nobody looks at is a row nobody decided — that is the state the table exists to make visible.
 
+**Nothing downstream may shrink this list.** The acceptance-criteria aggregation in §2 collapses cells into a few criteria; it never removes a cell. Dropping a row because it will "probably come back unchanged" *is* deciding it, and the tail it lands on — `tests/`, factories, seeders, policies, adjacent models — is the largest and least visible part of the enumeration. `larapilot:decisions-check` re-runs this grep with the `symbols` the table itself records and reports every file with a live hit and no cell (`DECISION_SITE_DROPPED`), so a pruned tail comes back as findings rather than as a shorter table.
+
 Write the table to `{paths.research}/decisions/{code}.yaml`:
 
 ```yaml
@@ -159,7 +161,7 @@ php artisan larapilot:decisions-check --spec={code} --base=develop   # must exit
 
 ```
 
-The order in that block is load-bearing: the checker anchors enumeration time to the commit that wrote the table, so run it **after** the commit. Run it before, and drop detection has no anchor, abstains, and says so in `notes` — an exit 0 that proves nothing.
+The order in that block is load-bearing: the checker anchors enumeration time to the commit that wrote the table, so run it **after** the commit. Run it before and drop detection has no anchor — it falls back to the working tree and lists any file with a live hit and no cell in `notes`, as a warning. Read those notes: an exit 0 from an unanchored run proves less than an anchored one, and at that moment a pruned enumeration is still one edit away from being fixed.
 
 If a cell needs deciding once implementation is under way, the legal path is to come **back here**, with the human, and land the answer as a new commit outside the feature branch. There is no legal path that fills a cell mid-flight.
 
@@ -255,14 +257,16 @@ When **John** or **Andrew** join: note architectural constraints (tenancy, panel
 
 Draft INVEST-compliant criteria in chat for user confirmation before persisting. Include happy path, error case, and edge case minimum.
 
-When `decision_tables` is `YES`: **derive AC from the decision table, not from the request text — but aggregate, do not transcribe.** The enumeration in 0b is deterministic and site-level, so a table routinely holds thirty rows; one AC per row yields a list only a developer can read, and the person who signs the spec off is a functional analyst. The trace does not live in the AC text: it lives in the cell's `ac` field, where `decisions-check` can verify it both ways.
+When `decision_tables` is `YES`: **derive AC from the decision table, not from the request text — but aggregate, do not transcribe.** The enumeration in 0b is deterministic and site-level, so a total enumeration over a mature codebase runs to many tens of rows **and stays that size**; one AC per row yields a list only a developer can read, and the person who signs the spec off is a functional analyst. The trace does not live in the AC text: it lives in the cell's `ac` field, where `decisions-check` can verify it both ways.
+
+**The aggregation is downstream: it changes how many criteria you write, never how many cells you enumerate.** Every rule below is about the AC list. None of them is a reason to have enumerated less in 0b.
 
 **One AC = one behaviour observable from outside the application** — a screen, an API response, an exported file, a mail, a permission denied. Write it from `human_text` (the product owner's own words, already in the table), never from `site`.
 
 - **No `path:line` inside an AC.** Sites stay in the table and in the review diff, read by someone who opens the code
 - **Every `decided` / `decided-null` cell carries `ac`** — `AC-n`, or `internal` + `verify_note` when the decision has no observable effect (cache invalidation, reindex, internal payload, seeding). `internal` cells never become AC: they become an automated-test obligation on the task that implements them, named in the plan
-- **`decided-null` cells aggregate into non-regression criteria** — a few per surface ("the detail page still shows only the primary file"), never one each. In a total enumeration they are the largest single source of noise
-- **Target 6–15 AC per spec, whatever the cell count.** Above that the signal is not "too granular", it is that the story is too large: go back to Round 2 with Mark and honor `settings.backlog`
+- **`decided-null` cells aggregate into non-regression criteria** — a few per surface ("the detail page still shows only the primary file"), never one each. They are the largest class in a total enumeration — that is why they aggregate *here*, and exactly why they all stay in the table: `tests/`, factories, seeders, and adjacent models are the sites where "unchanged on purpose" is worth recording
+- **Target 6–15 AC per spec, whatever the cell count — the threshold is on criteria only.** A cell count in the tens is normal for a small change on a mature codebase and is never evidence about story size. When the *criteria* pass 15, the signal is not "too granular", it is that the story is too large: go back to Round 2 with Mark and honor `settings.backlog`
 - **Number them `AC-1..AC-n`** and keep the numbers stable once persisted — the coverage line, the plan tasks, and the review diff all cite them
 - **Confirm the mapping, not only the list** — when presenting the AC in chat, show which numbered rows each criterion covers (`AC-3 ← #1,#7`), so the human can see that a decision they made did not quietly lose its criterion. Same numbering as 1a, so they recognize their own answers
 
@@ -372,6 +376,7 @@ Offer clearly:
 - Do not enumerate decision sites with an LLM when an artifact can be grepped, queried, or listed — generative enumeration is for behavioral cells only, where no artifact bounds the space
 - Do not present the table and the proposals in the same message — that collapses 1a into 1b and turns the oracle into a ratification
 - Do not show the human raw YAML, a cell count, or a prose summary in place of the grouped table — an unreadable presentation of a total enumeration decides the open cells by attrition, which is the same outcome the table exists to prevent
+- Do not prune the enumeration tail (`tests/`, factories, seeders, policies, adjacent models) because those rows will end up `decided-null` — that class is the largest in the table and the reason the non-regression criteria exist; the AC list aggregates it, 0b does not drop it
 - Do not emit one AC per cell, and never put a `path:line` inside an AC — a criterion the functional analyst cannot read is a criterion nobody tests; the trace belongs in the cell's `ac` field, which is checkable, not in the criterion text, which is not
 - Do not empty the AC list by marking behavioural cells `internal` — it is for cells with nothing observable, it costs a `verify_note`, and review sees how many there are
 - Do not write a bulk answer into the YAML without echoing it back first — the human must be able to see a misparse before it becomes a recorded decision

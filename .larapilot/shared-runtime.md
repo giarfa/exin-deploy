@@ -36,7 +36,7 @@ Larapilot skills use `php artisan larapilot:*` as the only backend for PRD, back
 - Treat exit codes as stable: `0` success · `1` generic error · `2` invalid input · `3` connector/backend failure · `4` missing precondition.
 - When `.larapilot/config.yaml` is absent, the CLI applies its built-in defaults for connector, paths, workflow statuses, and **project settings**.
 - `config-show` returns `data.project_root`: the ABSOLUTE project root containing `.larapilot/config.yaml` (or the current directory when defaults are used). Run connector/backlog commands from this root unless a command-specific rule says otherwise.
-- `config-show` also returns `data.settings` (`effort`, `backlog`, `git_mode`, `testing`, `auto_approve`, `lucille`, `github`, `gitlab`, `bitbucket`, `notifications`, `notify_slack`, `notify_discord`, `notify_telegram`). **Every skill MUST read and honor these before planning work.** Change them only via `/larapilot-settings` → `php artisan larapilot:settings-set`.
+- `config-show` also returns `data.settings` (`effort`, `backlog`, `git_mode`, `testing`, `auto_approve`, `lucille`, `github`, `gitlab`, `bitbucket`, `notifications`, `notify_slack`, `notify_discord`, `notify_telegram`, `decision_tables`). **Every skill MUST read and honor these before planning work.** Change them only via `/larapilot-settings` → `php artisan larapilot:settings-set`.
 
 ### Worktree working directory
 
@@ -48,7 +48,7 @@ Larapilot works **with** [Laravel Boost](https://laravel.com/ai/boost), not inst
 
 ## Project Settings
 
-Persisted in `.larapilot/config.yaml` under `settings:`. Configure with **`/larapilot-settings`** (AskQuestion) or `php artisan larapilot:settings-set`. Defaults when unset: `effort: STANDARD` / `backlog: STANDARD` / `git_mode: GITFLOW` / `testing: NORMAL` / `auto_approve: false` / `lucille: true` / `github|gitlab|bitbucket: false` / `notifications: false` / `notify_*: false`.
+Persisted in `.larapilot/config.yaml` under `settings:`. Configure with **`/larapilot-settings`** (AskQuestion) or `php artisan larapilot:settings-set`. Defaults when unset: `effort: STANDARD` / `backlog: STANDARD` / `git_mode: GITFLOW` / `testing: NORMAL` / `auto_approve: false` / `lucille: true` / `github|gitlab|bitbucket: false` / `notifications: false` / `notify_*: false` / `decision_tables: false`.
 
 ### Effort (`settings.effort`)
 
@@ -152,6 +152,21 @@ Master switch plus per-channel toggles. Secrets live only in `.env` (`LARAPILOT_
 **Skill contract:** when notifications are ON, call `php artisan larapilot:notify --event=… --title=… [--body=…] [--url=…]` for `pr_opened`, `pr_updated`, `spec_review`, `spec_blocked`, `review_changes`, `schedule_drift`, `ship_go`, `ship_nogo`, `security_fail`, and (optionally) `doctor_fail` / `custom`. Never ask for webhook/token values in chat — point at `.larapilot/integrations.md`.
 
 Missing channel credentials → skip that channel with a warning; do not fail the workflow.
+
+### Decision tables (`settings.decision_tables`) — **EXPERIMENTAL**, opt-in, default OFF
+
+Stored as a boolean `true`/`false`; envelope exposes `YES`/`NO`. Missing key → **`NO`**. Marked **experimental**: the shape of the table, the states, and the checks may change between minor versions.
+
+When **`YES`**, `/larapilot-feature` enumerates the sites a change breaks into `{paths.research}/decisions/{code}.yaml`, collects the human answer per row, and blocks approval on open cells; `plan`, `implement`, `review`, and `autopilot` read that table and `php artisan larapilot:decisions-check` enforces it. Full contract: **Decision surfaces** and **Single writer** in `larapilot-feature`.
+
+**Cells aggregate onto acceptance criteria, they do not become them.** The enumeration is site-level and routinely holds tens of rows; the AC list is written for a functional analyst, so each closed cell carries `ac: AC-n` (or `ac: internal` + `verify_note` when nothing is observable from outside) and one criterion covers many cells. Never emit one AC per cell and never put a `path:line` in an AC — the trace lives in the `ac` field, where the gate checks it in both directions. **The aggregation happens in the AC list and never reduces the number of cells:** the enumeration keeps one row per occurrence whatever the criteria end up being. Full contract: **Acceptance criteria** in `larapilot-feature`.
+
+| Value | Behavior |
+| --- | --- |
+| **`false` / `NO`** | **Default.** No decision table is enumerated, written, read, or presented. `/larapilot-feature` runs the plain discovery interview; `plan` / `implement` / `review` / `autopilot` skip every decision-table step; `larapilot:decisions-check` reports `data.enabled: false`, exits `0`, and says in `notes` that it checked nothing. Do not create `{paths.research}/decisions/` and do not mention the mechanism in chat. |
+| **`true` / `YES`** | The full mechanism is active and **mandatory at every `effort` level** (ECO narrows the proposals pass, never the enumeration). Only `/larapilot-feature` may write a table. |
+
+**Never enable it on your own initiative** — it adds a mandatory human pass per feature and a CI gate, so it is the user's call via `/larapilot-settings` or `php artisan larapilot:settings-set --decision-tables=YES`. When a spec already carries a `Decision table:` line but the setting is now `NO`, say so once and honor the setting: leave the file untouched rather than half-maintaining it.
 
 ## Language Policy
 
@@ -290,7 +305,7 @@ Zoey posts **exactly one line** at skill **start** (after loading shared-runtime
 | Skill / phase             | Economy level    | Chat behavior                                                                                                                                                                                                                                                       |
 | ------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **`larapilot-inception`** | Clarity first    | Discovery needs rationale for trade-offs (tenancy, budget, compliance). Still: no filler, no recap of what the user already said, at most 3 questions per round. Persona blocks: **2–4 sentences** when contributing. PRD file: formal and complete.                  |
-| **`larapilot-feature`**   | Moderate         | Focused mini-inception — brief scope summary; AskQuestion rounds max 3/round. Spec body: full user story and AC.                                                                                                                                                      |
+| **`larapilot-feature`**   | Moderate         | Focused mini-inception — brief scope summary; AskQuestion rounds max 3/round. Spec body: full user story and AC. **Exception, only when `settings.decision_tables` is `YES`:** the decision table is rendered in full in chat, grouped by surface and numbered per row (see **Presenting the table** in the skill) — never as raw YAML, a count, or a prose recap.                                                                                                                                                      |
 | **`larapilot-bug`**       | Moderate         | Brief triage summary; full reproduce steps and fix AC in spec or rework payload.                                                                                                                                                                                      |
 | **`larapilot-spec`**      | Moderate         | Brief announce of bootstrap vs extend and epic/priority choices. Spec markdown bodies: full user story and acceptance criteria — never shortened.                                                                                                                     |
 | **`larapilot-plan`**      | Split            | Team brief: **1–3 sentences per agent**. Between stages: status and blockers only. `plan_body` and task bodies: detailed execution contracts — do not strip.                                                                                                          |
@@ -308,6 +323,7 @@ Zoey posts **exactly one line** at skill **start** (after loading shared-runtime
 - Security **NO-GO** rationale (Lars)
 - Acceptance criteria and rework feedback
 - Multi-option architecture comparisons when the user must choose (John)
+- Decision-table rows put to the human for decision, and the diff between the table and delivered behavior at review (Tom) — one row per site, numbered, never summarized to the interesting ones *(only when `settings.decision_tables` is `YES`)*. The **AC** derived from those rows are the opposite case: they aggregate, they carry no file paths, and they are written for whoever signs the spec off
 - Anything that would hide a material risk or make AskQuestion ambiguous
 
 ## Sub-agents
