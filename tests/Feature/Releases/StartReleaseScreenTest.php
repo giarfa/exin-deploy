@@ -124,7 +124,16 @@ class StartReleaseScreenTest extends TestCase
         $this->assertSame(1, Release::count());
     }
 
-    public function test_a_project_without_a_responsible_shows_the_reason_and_disables_the_command(): void
+    /**
+     * Un ruolo scoperto **non** blocca piu l'avvio (US-013, FR-029): e proprio il
+     * caso che la scelta dei responsabili in avvio esiste per coprire, e tenerlo
+     * come blocco impedirebbe la funzione nel punto in cui la si userebbe.
+     *
+     * Il ruolo resta nominato, ma come avviso: senza questa nota il prossimo
+     * lettore rimetterebbe il ramo dentro `Project::startBlocker()` credendo di
+     * riparare una dimenticanza.
+     */
+    public function test_a_project_without_a_responsible_names_the_role_without_blocking_the_start(): void
     {
         $project = $this->projectReadyToRelease();
 
@@ -138,9 +147,8 @@ class StartReleaseScreenTest extends TestCase
 
         $component = Livewire::test('releases.start', ['project' => $project->fresh()]);
 
-        $component->assertSee(__('releases.blocked_heading'));
-        $component->assertSee($orphan->name);
-        $component->assertSee(__('releases.blocked_hint_assignments'));
+        $component->assertDontSee(__('releases.blocked_heading'));
+        $this->assertNull($project->fresh()->startBlocker());
     }
 
     public function test_a_project_without_a_template_explains_why_it_cannot_release(): void
@@ -161,7 +169,13 @@ class StartReleaseScreenTest extends TestCase
             ->assertSee(__('releases.blocked_inactive_project'));
     }
 
-    public function test_an_inactive_responsible_blocks_the_start_and_is_named(): void
+    /**
+     * Stessa ragione del ruolo scoperto (US-013, FR-029): un responsabile
+     * predefinito disattivato e letteralmente l'assenza che la spec esiste per
+     * coprire — sostituire una persona su un singolo rilascio. Resta **nominato**
+     * ma non blocca; il suo ruolo chiedera una scelta esplicita.
+     */
+    public function test_an_inactive_responsible_is_named_without_blocking_the_start(): void
     {
         $project = $this->projectReadyToRelease();
 
@@ -169,8 +183,9 @@ class StartReleaseScreenTest extends TestCase
         $responsible->update(['is_active' => false]);
 
         Livewire::test('releases.start', ['project' => $project->fresh()])
-            ->assertSee(__('releases.blocked_heading'))
-            ->assertSee($responsible->name);
+            ->assertDontSee(__('releases.blocked_heading'));
+
+        $this->assertNull($project->fresh()->startBlocker());
     }
 
     public function test_a_start_refused_by_the_action_is_a_message_and_not_an_unhandled_error(): void

@@ -322,12 +322,24 @@ new class extends Component
                         <flux:table.cell class="text-sm">
                             {{ trans_choice('projects.assignments_count', $project->assignments_count, ['count' => $project->assignments_count]) }}
 
+                            {{-- Da US-013 questi due badge informano senza impedire: il
+                                 comando di avvio resta abilitato, perche e proprio li che
+                                 si indica un responsabile per il rilascio in corso. --}}
                             @php($uncovered = $project->uncoveredRoles())
 
                             @if ($uncovered->isNotEmpty())
                                 <flux:text class="mt-1 inline-flex items-center gap-1.5 text-xs">
                                     <flux:icon name="exclamation-triangle" variant="mini" class="size-4 shrink-0" />
                                     {{ trans_choice('projects.uncovered_roles_badge', $uncovered->count(), ['count' => $uncovered->count()]) }}
+                                </flux:text>
+                            @endif
+
+                            @php($inactiveResponsibles = $project->inactiveResponsibles())
+
+                            @if ($inactiveResponsibles->isNotEmpty())
+                                <flux:text class="mt-1 inline-flex items-center gap-1.5 text-xs">
+                                    <flux:icon name="exclamation-triangle" variant="mini" class="size-4 shrink-0" />
+                                    {{ trans_choice('projects.inactive_responsibles_badge', $inactiveResponsibles->count(), ['count' => $inactiveResponsibles->count()]) }}
                                 </flux:text>
                             @endif
 

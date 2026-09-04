@@ -204,10 +204,16 @@ class ProjectAssignmentsTest extends TestCase
         $project = Project::factory()->withTemplate($template)->create();
         ProjectRoleAssignment::factory()->for($project)->for($roles[0])->create();
 
+        /*
+         * L'avviso nominava i ruoli e diceva che una release "si bloccherebbe":
+         * da US-013 (FR-029) non e piu vero — la release parte lo stesso purche
+         * chi la avvia indichi li un responsabile. L'asserzione segue la
+         * conseguenza reale, altrimenti fisserebbe una copia obsoleta.
+         */
         Livewire::test('projects.assignments', ['project' => $project])
             ->assertSee($roles[1]->name)
             ->assertSee($roles[2]->name)
-            ->assertSee('si bloccherebbe');
+            ->assertSee('in fase di avvio');
     }
 
     public function test_a_fully_mapped_project_shows_no_warning(): void
@@ -219,8 +225,10 @@ class ProjectAssignmentsTest extends TestCase
         $project = Project::factory()->withTemplate($template)->create();
         ProjectRoleAssignment::factory()->for($project)->for($role)->create();
 
+        // Stessa ragione del caso precedente: la frase che segnala il buco e
+        // cambiata con FR-029, e l'assenza va verificata su quella nuova.
         Livewire::test('projects.assignments', ['project' => $project])
-            ->assertDontSee('si bloccherebbe');
+            ->assertDontSee('in fase di avvio');
     }
 
     public function test_an_unusable_template_is_flagged_with_its_reason(): void
