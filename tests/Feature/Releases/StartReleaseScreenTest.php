@@ -148,6 +148,8 @@ class StartReleaseScreenTest extends TestCase
         $component = Livewire::test('releases.start', ['project' => $project->fresh()]);
 
         $component->assertDontSee(__('releases.blocked_heading'));
+        $component->assertSee($orphan->name);
+        $component->assertSee(__('releases.responsible_choice_required'));
         $this->assertNull($project->fresh()->startBlocker());
     }
 
@@ -183,7 +185,9 @@ class StartReleaseScreenTest extends TestCase
         $responsible->update(['is_active' => false]);
 
         Livewire::test('releases.start', ['project' => $project->fresh()])
-            ->assertDontSee(__('releases.blocked_heading'));
+            ->assertDontSee(__('releases.blocked_heading'))
+            ->assertSee($responsible->name)
+            ->assertSee(__('releases.responsible_choice_required'));
 
         $this->assertNull($project->fresh()->startBlocker());
     }
