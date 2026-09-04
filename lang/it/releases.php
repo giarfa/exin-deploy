@@ -37,6 +37,22 @@ return [
      * dei responsabili. Il nome del ruolo e nel messaggio e non solo nell'etichetta
      * del campo, perche chi lo ascolta da uno screen reader lo sente da solo.
      */
+    /*
+     * Scelta dei responsabili in avvio (US-013). I due avvisi qui sotto **non**
+     * bloccano: dicono cosa va indicato nel modulo e lasciano il comando attivo.
+     * Nominano i ruoli e le persone perche "manca qualcosa" senza sapere cosa non
+     * si risolve.
+     */
+    'warning_uncovered_roles' => '{1} Questo ruolo non ha un responsabile sul progetto: :roles. Indicane uno qui sotto per avviare.|[2,*] Questi ruoli non hanno un responsabile sul progetto: :roles. Indicane uno per ciascuno qui sotto per avviare.',
+    'warning_inactive_responsibles' => '{1} Questo responsabile e disattivato e non puo ricevere step: :members. Indica un\'altra persona qui sotto per avviare.|[2,*] Questi responsabili sono disattivati e non possono ricevere step: :members. Indica altre persone qui sotto per avviare.',
+
+    'responsibles_heading' => 'Responsabili di questo rilascio',
+    'responsibles_help' => 'Ogni ruolo arriva gia con il responsabile configurato sul progetto: cambialo solo per questo rilascio, per un\'assenza o una sostituzione. La mappatura del progetto resta com\'e.',
+    'responsible_choice_required' => 'Va indicato un responsabile: questo ruolo non ne ha uno utilizzabile sul progetto.',
+    'responsible_choose_option' => '— Indica un responsabile —',
+    'responsible_overridden_note' => 'Responsabile indicato in avvio, non ereditato dalla mappatura del progetto.',
+    'override_required' => 'Indica chi risponde del ruolo :role per questo rilascio.',
+
     'override_refused_missing_member' => 'La persona indicata per il ruolo :role non esiste piu.',
     'override_refused_inactive_member' => 'La persona indicata per il ruolo :role e disattivata e non puo ricevere step.',
     'override_refused_role_not_in_process' => 'L\'avvio indicava un responsabile per un ruolo che il processo del progetto non prevede: la release non e stata creata.',

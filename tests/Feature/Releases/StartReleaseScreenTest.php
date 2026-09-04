@@ -207,7 +207,22 @@ class StartReleaseScreenTest extends TestCase
         $this->assertSame(0, Release::count());
     }
 
-    public function test_a_refusal_arriving_after_the_summary_names_the_role_that_blocked_it(): void
+    /**
+     * Prima di US-013 questo caso era un **rifiuto**: l'assegnazione spariva fra
+     * il riepilogo e la scrittura, e l'avvio si fermava nominando il ruolo
+     * rimasto scoperto.
+     *
+     * Da FR-029 non si ferma piu, ed e il punto della spec: il modulo porta con
+     * se una scelta esplicita per quel ruolo — la persona che era precompilata,
+     * ancora attiva — e l'avvio la usa. Gli override si risolvono in avvio e non
+     * dipendono dalla mappatura del progetto, quindi togliere la mappatura mentre
+     * il modulo e aperto non puo invalidare una scelta gia fatta.
+     *
+     * Cosa resta coperto altrove: un rifiuto che arriva dopo il riepilogo e un
+     * messaggio e non un 500 — lo verifica il caso del progetto disattivato qui
+     * sopra, dove nessuna scelta nel modulo puo sanare la causa.
+     */
+    public function test_a_choice_made_in_the_form_survives_the_mapping_being_removed(): void
     {
         $project = $this->projectReadyToRelease();
 
@@ -215,21 +230,26 @@ class StartReleaseScreenTest extends TestCase
             $project->workflowTemplate->stepDefinitions->first()->role_id
         )->first();
 
+        $chosen = User::query()->whereKey(
+            $project->assignments->firstWhere('role_id', $orphan->id)->user_id
+        )->firstOrFail();
+
         $component = Livewire::test('releases.start', ['project' => $project]);
 
-        // Il responsabile sparisce **dopo** che la schermata ha letto le
-        // precondizioni: e la finestra fra controllo e scrittura. Il messaggio
-        // nasce dall'eccezione, che porta con se il ruolo scoperto, e non da un
-        // ricalcolo dello stato corrente — cosi dice cosa ha bloccato quel
-        // tentativo anche se nel frattempo la causa fosse stata risolta.
         $project->assignments->firstWhere('role_id', $orphan->id)->delete();
 
         $component->set('label', 'v2.4.0')
             ->call('start')
-            ->assertHasNoErrors()
-            ->assertSee($orphan->name);
+            ->assertHasNoErrors();
 
-        $this->assertSame(0, Release::count());
+        $this->assertSame(1, Release::count());
+
+        $step = ReleaseStep::query()->where('role_id', $orphan->id)->firstOrFail();
+
+        $this->assertSame($chosen->id, $step->assigned_user_id);
+        // Il ruolo non aveva piu un predefinito da cui ereditare: la persona e
+        // stata indicata in avvio, e lo snapshot lo dichiara.
+        $this->assertTrue($step->responsible_overridden);
     }
 
     public function test_the_start_command_appears_on_the_project_list_for_administrators(): void
