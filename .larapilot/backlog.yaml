@@ -614,7 +614,7 @@ specs:
       title: 'Esecuzione del rilascio'
     priority: HIGH
     points: 5
-    status: 'IN PROGRESS'
+    status: REVIEW
     body: |
       #### US-013: Responsabili specifici per singola release in fase di avvio
 
@@ -689,4 +689,5 @@ specs:
     status_history:
       - { status: PLANNED, at: '2026-09-03T17:03:27+00:00' }
       - { status: 'IN PROGRESS', at: '2026-09-03T17:45:09+00:00' }
+      - { status: REVIEW, at: '2026-09-04T10:16:06+00:00' }
     rework: false
