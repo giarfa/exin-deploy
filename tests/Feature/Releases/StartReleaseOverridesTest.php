@@ -228,6 +228,33 @@ class StartReleaseOverridesTest extends TestCase
         );
     }
 
+    /**
+     * La firma dichiara `array<string, mixed>` perche l'unico percorso di
+     * produzione riceve questi valori da una richiesta: la rete e **qui**, non solo
+     * nel filtro del componente, che un domani potrebbe cambiare.
+     *
+     * Un valore non scalare cade prima del cast — `(string) []` non produrrebbe un
+     * rifiuto ma un `ErrorException` — e il ruolo torna al predefinito: fallisce
+     * chiuso, senza onorare nulla di cio che il payload chiedeva.
+     */
+    public function test_a_non_scalar_value_is_not_a_choice_and_never_reaches_the_cast(): void
+    {
+        $project = $this->projectReadyToRelease();
+        [$shared] = $this->rolesOf($project);
+        $default = $project->assignments->firstWhere('role_id', $shared->id)->user_id;
+
+        $release = $this->action->handle($project, 'v2.4.0', $this->actor, [
+            $shared->id => ['scelta' => 'arbitraria'],
+        ]);
+
+        foreach ($release->steps()->where('role_id', $shared->id)->get() as $step) {
+            $this->assertSame($default, $step->assigned_user_id);
+            $this->assertFalse($step->responsible_overridden);
+        }
+
+        $this->assertArrayNotHasKey('overrides', $this->startedEvent($release)->payload);
+    }
+
     public function test_a_role_the_process_does_not_use_is_refused(): void
     {
         $project = $this->projectReadyToRelease();

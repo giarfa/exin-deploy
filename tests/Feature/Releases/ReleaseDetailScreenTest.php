@@ -117,9 +117,12 @@ class ReleaseDetailScreenTest extends TestCase
     {
         $release = $this->releaseInProgress();
 
-        $release->steps->firstWhere('position', 2)
-            ->forceFill(['responsible_overridden' => true])
-            ->save();
+        // Lo stato di factory esiste per questo: verificare la segnalazione senza
+        // costruire un avvio completo con override, che e gia coperto altrove.
+        ReleaseStep::factory()->for($release)->blocked()->overriddenResponsible()->create([
+            'position' => 6,
+            'role_name' => 'DevOps',
+        ]);
 
         $this->actingAs(User::factory()->create())
             ->get(route('releases.show', $release))

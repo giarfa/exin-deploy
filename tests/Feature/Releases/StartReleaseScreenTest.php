@@ -278,6 +278,38 @@ class StartReleaseScreenTest extends TestCase
         $response->assertSee(__('releases.blocked_without_template'));
     }
 
+    /**
+     * L'elenco progetti segnala ruoli scoperti e responsabili disattivati **senza**
+     * disabilitare l'avvio (US-013, FR-029): sono i casi che la scelta dei
+     * responsabili in avvio copre.
+     *
+     * Il caso vale anche come rete su una dipendenza non ovvia: il badge dei
+     * responsabili disattivati esiste solo se `projects()` precarica la **colonna**
+     * `is_active` sulla persona. Il test di budget confronta il numero di query fra
+     * cinque e dieci progetti, quindi intercetta una relazione tolta dalla select ma
+     * non una colonna: senza `is_active` ogni responsabile risulterebbe attivo, il
+     * badge sparirebbe e il budget resterebbe verde.
+     */
+    public function test_the_project_list_flags_gaps_without_disabling_the_start_command(): void
+    {
+        $uncovered = $this->projectReadyToRelease();
+        ProjectRoleAssignment::where('project_id', $uncovered->id)->delete();
+
+        $withInactive = $this->projectReadyToRelease();
+        User::query()
+            ->whereKey($withInactive->assignments->pluck('user_id'))
+            ->update(['is_active' => false]);
+
+        $response = $this->get(route('projects.index'))->assertOk();
+
+        $response->assertSee(trans_choice('projects.uncovered_roles_badge', 3, ['count' => 3]));
+        $response->assertSee(trans_choice('projects.inactive_responsibles_badge', 3, ['count' => 3]));
+
+        // Il comando resta raggiungibile su entrambi: informa senza impedire.
+        $response->assertSee(route('releases.start', $uncovered), escape: false);
+        $response->assertSee(route('releases.start', $withInactive), escape: false);
+    }
+
     public function test_the_project_list_does_not_query_per_row_for_the_start_command(): void
     {
         Project::factory()->count(3)->create();
