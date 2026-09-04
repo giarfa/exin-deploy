@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Releases;
 
+use App\Actions\Releases\StartRelease;
+use App\Exceptions\ResponsibleOverrideRefused;
+use App\Exceptions\RolesWithoutResponsible;
 use App\Models\FieldDefinition;
 use App\Models\Project;
 use App\Models\ProjectRoleAssignment;
@@ -256,6 +259,36 @@ class StartReleaseOverrideScreenTest extends TestCase
         }
     }
 
+    /**
+     * Il selettore manda una stringa: un valore non scalare puo arrivare solo da un
+     * client costruito a mano. Deve cadere prima del cast, perche `(string) []`
+     * produrrebbe un 500 invece di un rifiuto — un errore che non dice nulla a chi
+     * lo riceve. Il ruolo ricade sul predefinito, quindi l'avvio riesce senza
+     * onorare nulla di cio che il payload chiedeva.
+     */
+    public function test_a_non_scalar_value_does_not_blow_up_the_request(): void
+    {
+        $project = $this->projectReadyToRelease();
+        [$shared] = $this->rolesOf($project);
+
+        Livewire::test('releases.start', ['project' => $project])
+            ->set('label', 'v2.4.0')
+            ->set("responsibles.{$shared->id}", ['scelta' => 'arbitraria'])
+            ->call('start')
+            ->assertHasNoErrors();
+
+        $release = Release::query()->where('project_id', $project->id)->sole();
+
+        foreach ($release->steps as $step) {
+            $this->assertFalse($step->responsible_overridden);
+        }
+
+        $this->assertSame(
+            $project->assignments->firstWhere('role_id', $shared->id)->user_id,
+            $release->steps->firstWhere('role_id', $shared->id)->assigned_user_id
+        );
+    }
+
     public function test_after_a_refusal_the_preconditions_stay_coherent_and_the_choices_are_kept(): void
     {
         $project = $this->projectReadyToRelease();
@@ -376,6 +409,111 @@ class StartReleaseOverrideScreenTest extends TestCase
             $largeCost,
             "Il modulo e costato {$smallCost} query con due ruoli e {$largeCost} con otto: si interroga per ruolo."
         );
+    }
+
+    /**
+     * Un rifiuto dell'Action su una persona non ammissibile compare **sul campo del
+     * ruolo** che lo ha generato, non in testa alla pagina: si corregge dove si
+     * sbaglia.
+     *
+     * Il rifiuto arriva dall'Action e non dalla validazione, perche e la validazione
+     * a scattare per prima sul percorso normale. Quello dell'Action e il codice
+     * della finestra fra controllo e scrittura — lo stato cambia dopo che il modulo
+     * ha letto — e il piano chiede che non diventi mai un 500. Senza guidarlo a
+     * mano resterebbe il ramo meno percorso e piu delicato della schermata.
+     */
+    public function test_a_refusal_from_the_action_lands_on_the_field_of_its_role(): void
+    {
+        $project = $this->projectReadyToRelease();
+        [$shared] = $this->rolesOf($project);
+
+        $this->refuseStartWith(ResponsibleOverrideRefused::notAssignable(
+            $project,
+            [$shared->id => 'releases.override_refused_inactive_member'],
+            [$shared->id => $shared->name],
+        ));
+
+        $component = Livewire::test('releases.start', ['project' => $project])
+            ->set('label', 'v2.4.0')
+            ->call('start')
+            ->assertHasErrors("responsibles.{$shared->id}");
+
+        $this->assertStringContainsString(
+            (string) __('releases.override_refused_inactive_member', ['role' => $shared->name]),
+            json_encode($component->errors()->all(), JSON_THROW_ON_ERROR)
+        );
+
+        $this->assertSame(0, Release::count());
+    }
+
+    /**
+     * Il ruolo fuori processo non ha un campo a cui agganciarsi — nel modulo non
+     * esiste — quindi il messaggio va in testa. Il percorso passa da `refuse()`, che
+     * rilegge anche le precondizioni.
+     */
+    public function test_a_refusal_with_no_field_to_attach_to_becomes_the_message_at_the_top(): void
+    {
+        $project = $this->projectReadyToRelease();
+
+        $this->refuseStartWith(ResponsibleOverrideRefused::roleNotInProcess($project, ['un-ruolo-estraneo']));
+
+        Livewire::test('releases.start', ['project' => $project])
+            ->set('label', 'v2.4.0')
+            ->call('start')
+            ->assertSee(__('releases.override_refused_role_not_in_process'));
+
+        $this->assertSame(0, Release::count());
+    }
+
+    /**
+     * `RolesWithoutResponsible` porta nomi **e** identificativi in due liste
+     * parallele: il rifiuto va sul campo di ogni ruolo elencato, e il nome che
+     * compare deve essere quello del ruolo giusto. Due ruoli, cosi un
+     * disallineamento fra gli indici si vedrebbe.
+     */
+    public function test_roles_left_without_a_responsible_are_flagged_on_their_own_fields(): void
+    {
+        $project = $this->projectReadyToRelease();
+        [$shared, $other] = $this->rolesOf($project);
+
+        $this->refuseStartWith(RolesWithoutResponsible::on($project, collect([$shared, $other])));
+
+        $component = Livewire::test('releases.start', ['project' => $project])
+            ->set('label', 'v2.4.0')
+            ->call('start')
+            ->assertHasErrors("responsibles.{$shared->id}")
+            ->assertHasErrors("responsibles.{$other->id}");
+
+        $errors = $component->errors();
+
+        $this->assertStringContainsString(
+            $shared->name,
+            json_encode($errors->get("responsibles.{$shared->id}"), JSON_THROW_ON_ERROR)
+        );
+        $this->assertStringContainsString(
+            $other->name,
+            json_encode($errors->get("responsibles.{$other->id}"), JSON_THROW_ON_ERROR)
+        );
+
+        $this->assertSame(0, Release::count());
+    }
+
+    /**
+     * Sostituisce l'Action con una che rifiuta, per guidare i rami di `catch` che il
+     * percorso normale non raggiunge: sulla schermata la validazione scatta prima,
+     * e l'Action rifiuterebbe solo se lo stato cambiasse fra le due.
+     */
+    private function refuseStartWith(\Throwable $refusal): void
+    {
+        $this->app->bind(StartRelease::class, fn (): StartRelease => new class($refusal) extends StartRelease
+        {
+            public function __construct(private readonly \Throwable $refusal) {}
+
+            public function handle(Project $project, string $label, User $actor, array $responsibleOverrides = []): Release
+            {
+                throw $this->refusal;
+            }
+        });
     }
 
     /**

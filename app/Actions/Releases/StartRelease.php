@@ -59,7 +59,12 @@ use Illuminate\Support\Str;
 class StartRelease
 {
     /**
-     * @param  array<string, string>  $responsibleOverrides  identificativo del ruolo => identificativo della persona indicata in avvio; il default `[]` riproduce il comportamento precedente a US-013
+     * I valori sono dichiarati `mixed` e non `string` perche l'unico percorso di
+     * produzione li riceve da una richiesta: e questa Action — non il modulo — il
+     * punto in cui gli override vengono autorizzati e validati, quindi la firma
+     * deve ammettere cio che un client puo davvero mandare.
+     *
+     * @param  array<string, mixed>  $responsibleOverrides  identificativo del ruolo => identificativo della persona indicata in avvio; il default `[]` riproduce il comportamento precedente a US-013
      *
      * @throws InactiveProjectCannotStartRelease se il progetto e disattivato
      * @throws ProjectWithoutUsableTemplate se il processo manca, e disattivato o non ha step
@@ -239,7 +244,7 @@ class StartRelease
      * precaricate dalla rilettura del progetto, piu **una sola** `whereIn` per le
      * persone degli override — che non viene nemmeno emessa quando non ce ne sono.
      *
-     * @param  array<string, string>  $responsibleOverrides  ruolo => persona indicata in avvio
+     * @param  array<string, mixed>  $responsibleOverrides  ruolo => persona indicata in avvio
      * @return array{
      *     byRole: array<string, User>,
      *     overriddenRoles: array<string, bool>,
@@ -258,9 +263,18 @@ class StartRelease
             ->mapWithKeys(fn ($definition): array => [$definition->role_id => $definition->role->name])
             ->all();
 
-        // Una stringa vuota e "nessuna scelta", non una persona: il modulo la manda
-        // per i ruoli lasciati sul predefinito e per quelli ancora da compilare.
+        /*
+         * Una stringa vuota e "nessuna scelta", non una persona: il modulo la manda
+         * per i ruoli lasciati sul predefinito e per quelli ancora da compilare.
+         *
+         * Un valore **non scalare** non e nemmeno una scelta, e cade prima del cast:
+         * `(string) []` non produce un rifiuto ma un `ErrorException`, cioe un 500
+         * al posto di un messaggio. Scartarlo e sicuro perche fallisce chiuso — il
+         * ruolo torna al predefinito, e se non ne ha uno la copertura lo rifiuta
+         * nominandolo. La schermata applica lo stesso filtro prima di validare.
+         */
         $overrides = collect($responsibleOverrides)
+            ->reject(fn (mixed $userId): bool => ! is_scalar($userId))
             ->map(fn (mixed $userId): string => (string) $userId)
             ->reject(fn (string $userId): bool => $userId === '');
 

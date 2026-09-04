@@ -240,6 +240,16 @@ new class extends Component
          */
         $this->responsibles = collect($this->responsibles)
             ->only(collect($this->responsibleChoices)->map(fn (array $choice): string => $choice['role']->id)->all())
+            /*
+             * Un valore non scalare non e una persona, ed e una forma che solo un
+             * client costruito a mano puo produrre: il selettore manda una stringa.
+             * Va scartato **prima** del cast, perche `(string) []` non fallisce con
+             * un rifiuto ma con un `ErrorException` promosso a 500 — un errore che
+             * non dice nulla al posto di un messaggio sul campo. Scartandolo, il
+             * ruolo ricade sul predefinito, oppure resta vuoto e produce il
+             * `required` che lo nomina.
+             */
+            ->reject(fn (mixed $userId): bool => ! is_scalar($userId))
             ->map(fn (mixed $userId): string => (string) $userId)
             ->all();
 

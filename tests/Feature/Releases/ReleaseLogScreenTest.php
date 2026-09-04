@@ -19,6 +19,7 @@ use App\Models\StepDefinition;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -198,6 +199,168 @@ class ReleaseLogScreenTest extends TestCase
         $release = $this->releaseStarted();
 
         $this->get(route('releases.log', $release))->assertRedirect(route('login'));
+    }
+
+    /**
+     * La voce di avvio racconta i ruoli il cui responsabile e stato indicato in
+     * avvio (US-013): quale ruolo, da chi era coperto, a chi e finito.
+     */
+    public function test_the_started_entry_names_the_overridden_roles(): void
+    {
+        $project = $this->projectReadyToRelease();
+        $role = $project->workflowTemplate->stepDefinitions->first()->role;
+        $from = $project->assignments->firstWhere('role_id', $role->id)->user;
+        $to = User::factory()->create(['name' => 'Sostituto Del Rilascio']);
+
+        $release = app(StartRelease::class)->handle(
+            $project,
+            'v2.4.0',
+            User::factory()->admin()->create(),
+            [$role->id => $to->id],
+        );
+
+        $body = (string) $this->actingAs(User::factory()->admin()->create())
+            ->get(route('releases.log', $release))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            __('releases.log_detail_override_replaced', [
+                'role' => $role->name,
+                'from' => $from->name,
+                'to' => $to->name,
+            ]),
+            $body
+        );
+    }
+
+    /**
+     * Un ruolo che non aveva un responsabile ha `from` a `null` nel payload, e
+     * merita una frase propria: un nome vuoto o un trattino lascerebbe a chi legge
+     * il compito di indovinare se il dato manchi o se non ci fosse nessuno.
+     */
+    public function test_a_role_that_had_no_responsible_gets_a_sentence_of_its_own(): void
+    {
+        $project = $this->projectReadyToRelease();
+        $role = $project->workflowTemplate->stepDefinitions->first()->role;
+
+        ProjectRoleAssignment::query()
+            ->where('project_id', $project->id)
+            ->where('role_id', $role->id)
+            ->delete();
+
+        $to = User::factory()->create(['name' => 'Sostituto Del Rilascio']);
+
+        $release = app(StartRelease::class)->handle(
+            $project->fresh(),
+            'v2.4.0',
+            User::factory()->admin()->create(),
+            [$role->id => $to->id],
+        );
+
+        $body = (string) $this->actingAs(User::factory()->admin()->create())
+            ->get(route('releases.log', $release))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            __('releases.log_detail_override_uncovered', ['role' => $role->name, 'to' => $to->name]),
+            $body
+        );
+    }
+
+    /**
+     * Il plurale passa da `trans_choice` sul numero di ruoli sovrascritti: con due
+     * ruoli la frase non deve restare al singolare.
+     */
+    public function test_two_overridden_roles_are_announced_in_the_plural(): void
+    {
+        $project = $this->projectReadyToRelease();
+        $roles = $project->workflowTemplate->stepDefinitions->pluck('role')->take(2);
+        $to = User::factory()->create(['name' => 'Sostituto Del Rilascio']);
+
+        $release = app(StartRelease::class)->handle(
+            $project,
+            'v2.4.0',
+            User::factory()->admin()->create(),
+            $roles->mapWithKeys(fn (Role $role): array => [$role->id => $to->id])->all(),
+        );
+
+        // La frase attesa e composta come la compone il componente: cosi il caso
+        // copre l'involucro al plurale **e** l'elenco che ci finisce dentro.
+        $expected = trans_choice('releases.log_detail_overrides', 2, [
+            'count' => 2,
+            'overrides' => $roles
+                ->map(fn (Role $role): string => (string) __('releases.log_detail_override_replaced', [
+                    'role' => $role->name,
+                    'from' => $project->assignments->firstWhere('role_id', $role->id)->user->name,
+                    'to' => $to->name,
+                ]))
+                ->implode('; '),
+        ]);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('releases.log', $release))
+            ->assertOk()
+            ->assertSee($expected);
+    }
+
+    /**
+     * Una release avviata senza sovrascritture non aggiunge rumore: la voce e quella
+     * di sempre, e la parte sugli override non compare.
+     */
+    public function test_a_start_without_overrides_reads_exactly_as_before(): void
+    {
+        $release = $this->releaseStarted();
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('releases.log', $release))
+            ->assertOk()
+            ->assertSee(__('releases.log_detail_started', [
+                'template' => $release->project->workflowTemplate->name,
+                'steps' => $release->steps()->count(),
+            ]))
+            ->assertDontSee(trans_choice('releases.log_detail_overrides', 1, [
+                'count' => 1,
+                'overrides' => '',
+            ]));
+    }
+
+    /**
+     * Il registro e in sola aggiunta: nessuno potra tornare a completare le righe
+     * scritte prima di US-013, che non hanno la chiave `overrides` — e nemmeno una
+     * riga che la portasse in una forma imprevista puo far cadere la pagina.
+     */
+    public function test_an_entry_written_before_this_spec_still_renders(): void
+    {
+        $release = $this->releaseStarted();
+
+        /*
+         * Scrittura **sotto** il modello, di proposito: `ReleaseEventIsAppendOnly`
+         * rifiuta qualunque modifica passi da lui — ed e giusto che lo faccia. Ma
+         * una riga lasciata da una versione precedente dello strumento e proprio
+         * cio che nessun percorso applicativo odierno puo produrre, e il registro
+         * deve saperla rendere comunque. Riprodurla richiede quindi di aggirare la
+         * guardia, non di indebolirla.
+         */
+        DB::table('release_events')
+            ->where('release_id', $release->id)
+            ->where('action', ReleaseEventAction::ReleaseStarted->value)
+            ->update(['payload' => json_encode([
+                'label' => $release->label,
+                'template' => 'Rilascio standard',
+                'steps' => 3,
+                // Forma imprevista: la lettura deve reggerla senza inventare nulla.
+                'overrides' => 'qualcosa che non e una lista',
+            ], JSON_THROW_ON_ERROR)]);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('releases.log', $release))
+            ->assertOk()
+            ->assertSee(__('releases.log_detail_started', [
+                'template' => 'Rilascio standard',
+                'steps' => 3,
+            ]));
     }
 
     /**
