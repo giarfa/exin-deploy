@@ -31,6 +31,17 @@ return [
     'blocked_hint_assignments' => 'Assegna i responsabili mancanti',
 
     /*
+     * Rifiuti degli override indicati in avvio (US-013). Distinti dai `blocked_*`
+     * perche non parlano della configurazione del progetto ma della scelta appena
+     * fatta: si risolvono cambiando la persona nel modulo, non aprendo la pagina
+     * dei responsabili. Il nome del ruolo e nel messaggio e non solo nell'etichetta
+     * del campo, perche chi lo ascolta da uno screen reader lo sente da solo.
+     */
+    'override_refused_missing_member' => 'La persona indicata per il ruolo :role non esiste piu.',
+    'override_refused_inactive_member' => 'La persona indicata per il ruolo :role e disattivata e non puo ricevere step.',
+    'override_refused_role_not_in_process' => 'L\'avvio indicava un responsabile per un ruolo che il processo del progetto non prevede: la release non e stata creata.',
+
+    /*
      * Conferma dopo l'avvio: la prova visiva che lo snapshot esiste.
      */
     'started_heading' => 'Release :label avviata',
