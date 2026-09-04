@@ -44,6 +44,63 @@ class StartReleaseQueryBudgetTest extends TestCase
         );
     }
 
+    /**
+     * Stessa invariante con i responsabili indicati in avvio (US-013): la
+     * risoluzione degli override e **una sola** `whereIn` sui valori distinti, non
+     * una query per ruolo, quindi neanche qui il costo puo dipendere dalla
+     * lunghezza della catena.
+     */
+    public function test_starting_with_overrides_costs_the_same_on_a_short_and_on_a_long_chain(): void
+    {
+        $short = $this->projectWith(steps: 2, fieldsPerStep: 1);
+        $long = $this->projectWith(steps: 5, fieldsPerStep: 14);
+        $actor = User::factory()->admin()->create();
+        $stand = User::factory()->create();
+
+        $shortCost = $this->queriesWhile(fn () => $this->startWithOverrides($short, $actor, $stand));
+        $longCost = $this->queriesWhile(fn () => $this->startWithOverrides($long, $actor, $stand));
+
+        $this->assertSame(
+            $shortCost,
+            $longCost,
+            "L'avvio con override e costato {$shortCost} query su due step e {$longCost} su cinque: il costo dipende dalla lunghezza della catena."
+        );
+    }
+
+    /**
+     * E non puo dipendere nemmeno dal **numero di ruoli sovrascritti**: e la stessa
+     * query, con piu identificativi dentro.
+     */
+    public function test_overriding_many_roles_costs_the_same_as_overriding_one(): void
+    {
+        $actor = User::factory()->admin()->create();
+        $stand = User::factory()->create();
+
+        [$few, $fewRoles] = $this->projectWithDistinctRoles(2);
+        [$many, $manyRoles] = $this->projectWithDistinctRoles(8);
+
+        $fewCost = $this->queriesWhile(
+            fn () => app(StartRelease::class)->handle(
+                $few->fresh(), 'v-few', $actor, [$fewRoles[0] => $stand->id]
+            )
+        );
+
+        $manyCost = $this->queriesWhile(
+            fn () => app(StartRelease::class)->handle(
+                $many->fresh(),
+                'v-many',
+                $actor,
+                array_fill_keys($manyRoles, $stand->id)
+            )
+        );
+
+        $this->assertSame(
+            $fewCost,
+            $manyCost,
+            "Un override e costato {$fewCost} query e otto {$manyCost}: la risoluzione interroga per ruolo."
+        );
+    }
+
     public function test_reading_a_frozen_chain_costs_the_same_on_a_short_and_on_a_long_chain(): void
     {
         $actor = User::factory()->admin()->create();
@@ -84,6 +141,55 @@ class StartReleaseQueryBudgetTest extends TestCase
     private function start(Project $project, User $actor): Release
     {
         return app(StartRelease::class)->handle($project->fresh(), 'v'.$project->slug, $actor);
+    }
+
+    /**
+     * Avvia sovrascrivendo l'unico ruolo del processo costruito da `projectWith()`.
+     */
+    private function startWithOverrides(Project $project, User $actor, User $stand): Release
+    {
+        $project = $project->fresh();
+
+        $overrides = $project->workflowTemplate->stepDefinitions
+            ->pluck('role_id')
+            ->unique()
+            ->mapWithKeys(fn (string $roleId): array => [$roleId => $stand->id])
+            ->all();
+
+        return app(StartRelease::class)->handle($project, 'v'.$project->slug, $actor, $overrides);
+    }
+
+    /**
+     * Progetto con un ruolo distinto per step, tutti coperti dalla mappatura.
+     *
+     * @return array{Project, list<string>}
+     */
+    private function projectWithDistinctRoles(int $roles): array
+    {
+        $template = WorkflowTemplate::factory()->create();
+        $roleIds = [];
+
+        for ($position = 1; $position <= $roles; $position++) {
+            $role = Role::factory()->create();
+            $roleIds[] = $role->id;
+
+            StepDefinition::factory()->for($template)->create([
+                'position' => $position,
+                'role_id' => $role->id,
+            ]);
+        }
+
+        $project = Project::factory()->withTemplate($template)->create();
+
+        foreach ($roleIds as $roleId) {
+            ProjectRoleAssignment::factory()->create([
+                'project_id' => $project->id,
+                'role_id' => $roleId,
+                'user_id' => User::factory()->create()->id,
+            ]);
+        }
+
+        return [$project->fresh(), $roleIds];
     }
 
     /**
