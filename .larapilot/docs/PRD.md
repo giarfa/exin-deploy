@@ -61,6 +61,8 @@ Gestione dei progetti su cui il team rilascia: nome, identificativo leggibile, d
 
 Per ogni progetto si definisce quale membro del team ricopre ciascun ruolo funzionale utilizzato dal template associato. Questa mappatura è ciò che trasforma un template astratto in un processo con responsabili reali. Il sistema segnala i ruoli previsti dal template ma non ancora assegnati sul progetto, perché una release avviata con ruoli scoperti si bloccherebbe.
 
+- La mappatura del progetto è la sorgente **predefinita**, non l'unica: chi avvia una release può sovrascriverla per quel singolo rilascio (**FR-029**), anche coprendo un ruolo scoperto. La segnalazione dei ruoli scoperti resta quindi un **avviso** sulla schermata di avvio, non un blocco incondizionato: blocca solo quando l'avvio non fornisce un responsabile per quel ruolo.
+
 ### FR-005: Assegnazione ruolo → persona predefinita a livello di team
 
 **MoSCoW:** Must
@@ -158,6 +160,16 @@ La chiusura dell'ultimo step segna la release come conclusa, con istante e autor
 
 Il sistema è corredato di factory e seeder che producono un ambiente dimostrativo coerente: membri del team con ruoli, almeno due progetti, un template di workflow realistico di rilascio, una release in corso a metà catena e una release conclusa. Serve allo sviluppo, ai test e a valutare l'usabilità reale delle schermate senza tabelle vuote.
 
+### FR-029: Responsabili specifici per singola release in fase di avvio
+
+**MoSCoW:** Must
+
+In fase di avvio di una release, chi la crea può indicare responsabili diversi da quelli risolti dalla mappatura del progetto (FR-004, precompilata da FR-005), **sovrascrivendola per quel solo rilascio**. L'override è espresso **per ruolo funzionale** previsto dal processo: la persona scelta vale su tutti gli step di quel ruolo nella release, coerentemente con il modello in cui il ruolo è l'unità di responsabilità. Nessun override modifica la mappatura del progetto né quella predefinita di team.
+
+La schermata di avvio propone i responsabili predefiniti già compilati, così che il caso normale resti un solo campo da riempire (l'etichetta) e la sovrascrittura sia un'azione deliberata. Un ruolo **scoperto** sul progetto può essere coperto qui: fornire un responsabile in avvio rende la release avviabile senza passare dalla configurazione del progetto, che è ciò che serve al rilascio una tantum (sostituzione per assenza, ferie, incarico temporaneo) — il caso che oggi costringe a modificare la configurazione condivisa e a ricordarsi di ripristinarla.
+
+Le regole di ammissibilità del responsabile non cambiano: la persona indicata deve essere un membro attivo. Lo snapshot congelato (FR-009) memorizza il responsabile effettivo come già oggi, e il registro delle transizioni (FR-016) annota all'avvio quali ruoli sono stati sovrascritti e con chi, perché una responsabilità assegnata fuori dalla mappatura configurata deve restare riconoscibile a posteriori.
+
 ### FR-019: Riapertura o correzione di uno step chiuso da parte di un admin
 
 **MoSCoW:** Should
@@ -226,7 +238,7 @@ Supporto a più team o clienti isolati sulla stessa installazione. Esclusa da qu
 
 ### In Scope
 
-Corrispondono ai requisiti **Must** (FR-001 → FR-018):
+Corrispondono ai requisiti **Must** (FR-001 → FR-018, FR-029):
 
 - Autenticazione dei membri del team, con distinzione tra `admin` e `member`, e anagrafica disattivabile
 - Catalogo dei ruoli funzionali di processo, condiviso tra i progetti
@@ -235,6 +247,7 @@ Corrispondono ai requisiti **Must** (FR-001 → FR-018):
 - Configurazione di template di workflow: sequenza ordinata di step, ruolo responsabile per step, istruzioni
 - Configurazione dei campi informativi per step nei quattro tipi previsti (testo breve, testo lungo, link, conferma), con obbligatorietà
 - Avvio di una release con snapshot congelato della definizione e risoluzione ruolo → persona
+- Sovrascrittura dei responsabili per singola release in fase di avvio, per ruolo, con i predefiniti del progetto precompilati e copertura dei ruoli scoperti
 - Avanzamento strettamente sequenziale con un solo step attivo, validazione dei campi obbligatori alla chiusura e attivazione automatica dello step successivo
 - Autorizzazione lato server sulla chiusura degli step (responsabile o `admin`)
 - Vista operativa "i miei step" cross-progetto, usabile da telefono
@@ -405,4 +418,5 @@ Sul fronte costi, con Budget Sensitivity **Relaxed** non è stato aperto un roun
 
 | Date | Trigger | Summary |
 | --- | --- | --- |
+| 2026-09-03 | larapilot-feature US-013 | Aggiunto FR-029 — responsabili specifici per singola release in fase di avvio, per ruolo (MoSCoW: Must), con copertura dei ruoli scoperti; chiarito FR-004 (la mappatura di progetto è la sorgente predefinita, non l'unica) e aggiornato `### In Scope`. |
 | 2026-08-12 | larapilot-inception | PRD iniziale: orchestratore del processo di rilascio per team distribuito. Project Kind Personal, target MVP, catena sequenziale stretta, responsabili per ruolo risolti sul progetto, solo tracciamento. Stack Laravel 13 + Livewire 4 + Flux + Fortify su SQLite, dev locale Herd, deploy su server interno. Notifiche, step paralleli, automazione del deploy e multi-team esclusi da questo rilascio. |

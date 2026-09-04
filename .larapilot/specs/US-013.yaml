@@ -1,0 +1,87 @@
+code: US-013
+title: 'Responsabili specifici per singola release in fase di avvio'
+epic:
+  code: EP-003
+  title: 'Esecuzione del rilascio'
+priority: HIGH
+points: 5
+status: 'IN PROGRESS'
+body: |
+  #### US-013: Responsabili specifici per singola release in fase di avvio
+
+  **Epic:** EP-003 | **Priority:** HIGH | **Points:** 5 | **Status:** TODO
+  **Blocked by:** -
+  **Tipo:** Evolutiva
+  **Traces to:** FR-029 (MoSCoW: Must); chiarisce FR-004; estende FR-009 e FR-016
+  **Correlata a:** US-002 (mappatura ruolo → persona), US-004 (avvio con snapshot congelato), US-008 (dettaglio release), US-010 (registro delle transizioni)
+  **Granularità dell'override:** per **ruolo funzionale** — un responsabile per ruolo, valido su tutti gli step di quel ruolo nella release
+  **Ruoli scoperti:** l'override può coprirli e sblocca l'avvio
+
+  **Storia utente**
+  Come Release Owner,
+  voglio poter indicare, mentre avvio una release, responsabili diversi da quelli configurati sul progetto,
+  così da gestire un'assenza o una sostituzione temporanea su quel singolo rilascio senza modificare la
+  configurazione condivisa e senza dovermi ricordare di ripristinarla dopo.
+
+  **Dimostra**
+  Dopo questa spec apro l'avvio di una release su un progetto: accanto all'etichetta compaiono i ruoli
+  previsti dal processo, ciascuno con il proprio responsabile predefinito già selezionato. Avvio senza
+  toccarli e ottengo esattamente la catena di prima. Riavvio, cambio la persona su un solo ruolo, avvio:
+  tutti gli step di quel ruolo risultano assegnati alla persona scelta, gli altri ai predefiniti, e la
+  mappatura del progetto è rimasta invariata. Su un progetto con un ruolo scoperto — che oggi blocca
+  l'avvio — scelgo qui una persona e la release parte. Il registro delle transizioni mostra, sull'evento
+  di avvio, quale ruolo è stato sovrascritto, da chi era coperto e a chi è finito.
+
+  **Criteri di accettazione**
+
+  _Percorso principale_
+  - [ ] La schermata di avvio elenca i **ruoli previsti dal processo** del progetto (non gli step), ciascuno con un selettore di responsabile
+  - [ ] Ogni selettore è **precompilato** con il responsabile risolto dalla mappatura del progetto (FR-004/FR-005); il caso normale resta "compila l'etichetta e avvia", senza scelte obbligate
+  - [ ] I selettori propongono i soli **membri attivi**; un membro disattivato non è selezionabile
+  - [ ] Avviando senza modificare alcun selettore, la release prodotta è **identica** a quella prodotta oggi: stessi responsabili, stesso snapshot, nessuna differenza osservabile (nessuna regressione su US-004)
+  - [ ] Sovrascrivendo un ruolo, **tutti** gli step di quel ruolo nella release avviata riportano la persona scelta; gli step degli altri ruoli restano sui predefiniti
+  - [ ] Un ruolo **scoperto** sul progetto compare senza precompilazione: fornendo un responsabile l'avvio riesce, e il blocco odierno sui ruoli scoperti non si applica più quando l'avvio li copre tutti
+
+  _Casi di errore_
+  - [ ] Lasciare vuoto un ruolo scoperto rifiuta l'avvio con il **nome del ruolo** mancante, non con un messaggio generico; nessuna release viene creata
+  - [ ] Indicare una persona inesistente o disattivata rifiuta l'avvio con messaggio associato al campo di quel ruolo; nessuna release viene creata
+  - [ ] Il rifiuto è deciso **prima di qualsiasi scrittura** e dentro la stessa transazione dell'avvio: non resta mai una release a metà (invariante già dichiarata su `StartRelease`)
+  - [ ] Le precondizioni mostrate prima del tentativo restano coerenti dopo un rifiuto (stesso trattamento già adottato in `⚡start.blade.php`)
+  - [ ] Il doppio invio continua a essere chiuso dall'unicità `(project_id, label)`: il secondo tentativo mostra il messaggio di etichetta duplicata e non lascia nulla dietro di sé
+
+  _Casi limite e integrità_
+  - [ ] La mappatura del progetto (`ProjectRoleAssignment`) e quella predefinita di team (`DefaultRoleAssignment`) sono **invariate** dopo un avvio con override — verificato in test, non solo osservato a schermo
+  - [ ] Un override sulla release A non influenza la release B avviata subito dopo sullo stesso progetto: ogni avvio riparte dai predefiniti
+  - [ ] Le regole già in vigore restano tali: progetto disattivato, processo mancante/disattivato/senza step continuano a rifiutare l'avvio indipendentemente dagli override
+  - [ ] Nessuna lettura delle entità di **definizione** a release avviata: gli override si risolvono in avvio e finiscono nello snapshot, come già i responsabili predefiniti (invariante 4 del PRD)
+  - [ ] Un ruolo compare **una sola volta** anche quando il processo lo usa su più step; la scelta si applica a tutti
+
+  _Autorizzazione_
+  - [ ] Gli override sono ammessi solo a chi è già autorizzato ad avviare una release sul progetto (`ReleasePolicy::create`); nessun nuovo permesso viene introdotto
+  - [ ] L'autorizzazione e la validazione degli override sono applicate **lato server** nell'azione di avvio, non solo nel form: un payload manipolato dal client (ruolo non previsto dal processo, membro disattivato, membro inesistente) è rifiutato
+  - [ ] Un tentativo non autorizzato resta tracciato come già previsto da FR-016
+
+  _Tracciabilità_
+  - [ ] L'evento di avvio nel registro annota i **soli ruoli sovrascritti**, con nome del ruolo, responsabile predefinito e responsabile scelto; un avvio senza override non aggiunge rumore al payload
+  - [ ] Il dettaglio della release (US-008) segnala che un responsabile è stato indicato in avvio anziché ereditato dalla configurazione, senza affidarsi al solo colore
+  - [ ] Il registro resta in sola aggiunta: nessuna scrittura retroattiva sugli eventi già registrati
+
+  _Interfaccia e accessibilità_
+  - [ ] Il modulo di avvio resta usabile a **375 px**: i selettori sono impilati a piena larghezza, con area di tocco adeguata
+  - [ ] Ogni selettore ha un'etichetta esplicita con il nome del ruolo; gli errori sono associati programmaticamente al campo che li ha generati (WCAG 2.2 AA), in tema chiaro e scuro
+  - [ ] Tutti i testi nuovi passano dai file `lang/` (italiano), nessuna stringa incastonata nelle viste
+  - [ ] La schermata carica ruoli, assegnazioni e membri attivi con eager loading: nessun N+1 al crescere della catena o del numero di membri
+
+  _Verifica_
+  - [ ] Test (`NORMAL`, PHPUnit) su: avvio senza override identico al comportamento attuale; avvio con override su un ruolo; avvio che copre un ruolo scoperto; rifiuto per ruolo lasciato scoperto; rifiuto per membro disattivato; rifiuto per membro inesistente; invarianza di `ProjectRoleAssignment` e `DefaultRoleAssignment`; payload dell'evento di avvio; avvio negato a chi non è autorizzato
+  - [ ] I test esistenti sull'avvio della release (US-004) restano verdi senza essere riscritti per accomodare la nuova firma
+  - [ ] Factory e seeder aggiornati nello stesso commit di eventuali modifiche a migrazioni, modelli o enum; il dataset dimostrativo (FR-018) include almeno una release avviata con un responsabile sovrascritto
+  - [ ] `php artisan larapilot:quality` verde (Pint + Larastan livello 5)
+status_history:
+  -
+    status: PLANNED
+    at: '2026-09-03T17:03:27+00:00'
+  -
+    status: 'IN PROGRESS'
+    at: '2026-09-03T17:45:09+00:00'
+rework: false

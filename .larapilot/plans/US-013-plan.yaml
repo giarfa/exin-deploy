@@ -1,0 +1,684 @@
+code: US-013
+plan_body: |-
+  ## Soluzione tecnica
+
+  L'override e **risolto in avvio e congelato nello snapshot**: nessun percorso di esecuzione torna a leggere `project_role_assignments` a release avviata (invariante 4 del PRD, `.ai/rules/app.md`). Questo fissa tre scelte portanti.
+
+  **1. Una colonna sullo snapshot, non una tabella di override.** `release_steps.responsible_overridden` (booleano, default `false`) dice se il responsabile di quello step e stato *indicato in avvio* invece che ereditato dalla mappatura. Una tabella `release_responsible_overrides` sarebbe un secondo posto da interrogare per rispondere a una domanda che lo step gia porta con se, e il dettaglio della release (US-008) dovrebbe fare una join per disegnare un'icona. Scartata anche l'alternativa di ricavare il flag dal payload dell'evento di avvio: il dettaglio non legge il registro, e farlo introdurrebbe una dipendenza fra due schermate che oggi non si conoscono.
+
+  **2. Firma additiva su `StartRelease`.** `handle(Project $project, string $label, User $actor, array $responsibleOverrides = [])`, con `array<string, string>` ruolo => persona. Il default `[]` e cio che tiene verdi i chiamanti esistenti — `DatabaseSeeder::seedReleases()`, `StartReleaseTest`, `StartReleaseQueryBudgetTest`, `SnapshotIsolationTest`, `ReleaseLogScreenTest` — senza riscriverli per accomodare la nuova firma (criterio di accettazione esplicito). `StartRelease` resta l'**unico percorso di avvio**: la schermata non risolve nulla da se e non decide cosa sia un override.
+
+  **3. La schermata propone, l'Action decide.** Il componente valida i selettori per dare un messaggio agganciato al campo del ruolo (caso normale), l'Action rivalida sul dato fresco ed e l'unica autorita (payload manipolato, e finestra di corsa fra riepilogo e scrittura — lo stesso trattamento gia adottato per gli altri rifiuti in `⚡start.blade.php`). Il componente passa **tutte** le persone selezionate: e l'Action a calcolare quali differiscono dal default, cosi la regola "cos'e un override" vive in un posto solo. Un selettore lasciato sulla persona predefinita non e un override: non alza il flag e non compare nel payload dell'evento.
+
+  ### Precondizioni: da blocco ad avviso
+
+  Decisione registrata (`larapilot:decision-log`, US-013): **ruolo scoperto** e **responsabile predefinito disattivato** smettono di bloccare l'avvio, perche sono esattamente i casi che l'override esiste per coprire. `Project::startBlocker()` conserva quindi solo: progetto disattivato, processo mancante, processo disattivato o senza step — le regole che nessun override puo sanare. `uncoveredRoles()` e `inactiveResponsibles()` restano invariati e diventano **avvisi** sulla schermata di avvio e sull'elenco progetti.
+
+  Conseguenza dichiarata: due test schermata di US-004 (`test_a_project_without_a_responsible_shows_the_reason_and_disables_the_command`, `test_an_inactive_responsible_blocks_the_start_and_is_named`) cambiano asserzione da "comando disabilitato con il motivo" a "avviso non bloccante + scelta richiesta sul ruolo". Non e un adattamento alla nuova firma: e la regola di dominio che cambia, ed e per questo che il criterio "i test di US-004 restano verdi" vale sulla suite dell'Action (`StartReleaseTest`, dove il default `[]` riproduce il comportamento odierno riga per riga), non su queste due asserzioni di interfaccia.
+
+  ### Granularita e ordine dei selettori
+
+  L'unita e il **ruolo funzionale**: un ruolo usato da due step compare una sola volta e la scelta vale su entrambi (coerente con `.ai/rules/models.md` — il cumulo di ruoli e la norma, e uno snapshot che non lo reggesse sarebbe inutile). L'ordine dei selettori segue la **posizione del primo step che usa quel ruolo**, non l'alfabeto: la schermata racconta la catena, e un ordine alfabetico costringerebbe a ricostruirla a mente.
+
+  ### Ammissibilita e superficie di rifiuto
+
+  | Caso | Chi rifiuta | Come si presenta |
+  | --- | --- | --- |
+  | Ruolo lasciato senza responsabile | Componente (validazione) + Action (`RolesWithoutResponsible`) | Errore sul campo di **quel** ruolo, col nome del ruolo |
+  | Persona inesistente | Componente (`AssignableUser`) + Action | Errore sul campo del ruolo |
+  | Persona disattivata | Componente (`AssignableUser`) + Action | Errore sul campo del ruolo, con il nome della persona |
+  | Ruolo non previsto dal processo | Componente (`only()` sulle chiavi ammesse) + Action | Rifiuto: payload manipolato, nessun campo a cui agganciarlo |
+  | Progetto disattivato / processo inutilizzabile | Action, come oggi | Messaggio in testa, comando disabilitato |
+
+  `AssignableUser` (`app/Rules/AssignableUser.php`) e riusata cosi com'e: distingue gia inesistente da disattivato, che si risolvono in modi diversi. Sul versante Action serve una nuova eccezione che porti i **ruoli** e non solo i nomi delle persone, perche il messaggio va agganciato al campo giusto.
+
+  ### Autorizzazione
+
+  Nessun nuovo permesso: gli override sono ammessi a chi puo gia avviare (`ReleasePolicy::create`, concessa dal solo filtro `before()` agli amministratori). `Gate::authorize` resta al montaggio e su ogni azione Livewire — le azioni Livewire non ripassano dal middleware di rotta.
+
+  ### Prestazioni
+
+  - La schermata carica ruoli, assegnazioni e membri attivi con eager loading: nessuna query per ruolo mentre la vista disegna i selettori, e nessuna al crescere del numero di membri (una sola lista di persone selezionabili, riusata da tutti i selettori).
+  - L'Action carica le persone degli override con **una** query `whereIn`: il costo dell'avvio resta indipendente dalla lunghezza della catena e dal numero di override (budget gia sotto test in `StartReleaseQueryBudgetTest`).
+  - Il flag sul dettaglio della release non costa nulla: la colonna arriva con lo step gia caricato.
+
+  ### Trappole del progetto da rispettare
+
+  - `.ai/rules/views.md` — nessuna direttiva Blade dentro l'attributo di un componente. `wire:model="responsibles.{{ $role->id }}"` e interpolazione diretta di un UUID senza apici: forma corretta. `tests/Unit/Views/BladeComponentAttributesTest.php` scandisce le viste da se.
+  - `.ai/rules/seeders.md` — i rilasci si seminano chiamando le Action, mai scrivendo righe: la release dimostrativa con override passa da `StartRelease`.
+  - `.ai/rules/tests.md` — `session('errors')` e un array in questo progetto: quando un'asserzione sulla risposta fallisce, il messaggio riportato mente. Leggere `json_encode(session('errors'))` a mano.
+  - `.ai/rules/general.md` — SQLite, solo Eloquent e migrazioni portabili; `larastan` non e in `vendor/`, serve `composer install` prima di `larapilot:quality`.
+
+  ## Git e branching
+
+  - Modalita: **GITFLOW** (`data.settings.git_mode`) — nessun push automatico, nessuna PR remota
+  - Branch: `feature/US-013-responsabili-per-release` da `develop`
+  - TASK-00: bootstrap del branch + descrizione PR preparata **in locale**
+  - Un commit atomico per task, Conventional Commits `type(US-013): TASK-NN ...` — mai un commit che copre due task
+  - Push e apertura/aggiornamento della PR remota **solo** su richiesta esplicita in sessione
+  - Merge verso `develop` solo dopo l'approvazione umana in `/larapilot-review`
+  - Rebase su `develop` in caso di deriva (Sarah guida la risoluzione dei conflitti)
+  - `CHANGELOG.md` Unreleased aggiornato: il comportamento visibile all'utente cambia
+
+  ## Strategia dei dati di test
+
+  - La colonna nuova su `release_steps` e accompagnata da factory e seeder **nello stesso task** della migrazione (TASK-01), mai differiti
+  - `ReleaseStepFactory`: la colonna entra con default `false` e uno stato dedicato per il caso sovrascritto
+  - Dataset dimostrativo (FR-018): `DatabaseSeeder::seedReleases()` semina almeno **una release avviata con un responsabile sovrascritto**, chiamando `StartRelease` con override — le Action restano l'unico percorso, cosi snapshot, flag e payload dell'evento sono quelli veri e non righe inventate
+  - Verifica `php artisan migrate:fresh --seed` verde prima di ogni `task-done` sui task che toccano schema o seeder
+  - Volumi invariati rispetto a oggi: il seeder aggiunge un override su una release esistente, non una release in piu
+
+  ## Strategia di test
+
+  - Bar: **NORMAL** (`data.settings.testing`) — PHPUnit, nessun Playwright, nessun Dusk, nessun Pest browser, nessuna matrice di viewport automatizzata
+  - Test interlacciati con l'implementazione, non tutti in coda: TASK-07 chiude l'Action, TASK-08 la schermata
+  - **Suite nuove:** `tests/Feature/Releases/StartReleaseOverridesTest.php` (Action) e `tests/Feature/Releases/StartReleaseOverrideScreenTest.php` (schermata + autorizzazione)
+  - **Budget di query:** casi aggiunti a `StartReleaseQueryBudgetTest` — l'avvio con override costa come l'avvio senza, e la schermata non interroga per ruolo ne per membro
+  - **Invarianza verificata in test, non osservata a schermo:** `ProjectRoleAssignment` e `DefaultRoleAssignment` confrontati riga per riga prima e dopo un avvio con override
+  - **Isolamento fra release:** un override sulla release A non tocca la release B avviata subito dopo sullo stesso progetto
+  - **Regressione su US-004:** il caso "avvio senza override" confronta lo snapshot prodotto con quello odierno (step, responsabili, campi, payload dell'evento), cosi la nuova firma resta osservabilmente neutra
+  - **Suite esistenti attese verdi senza riscrittura:** `StartReleaseTest`, `SnapshotIsolationTest`, `StartReleaseQueryBudgetTest`, `ReleaseDetailScreenTest`, `ReleaseLogScreenTest`, `ReleaseIndexScreenTest`, `DatabaseSeederTest`, `BladeComponentAttributesTest`
+  - **Aggiornate di proposito:** due asserzioni in `StartReleaseScreenTest` (blocco -> avviso), per la decisione registrata sulle precondizioni
+  - **Consegna manuale (ammessa a NORMAL):** verifica a mano di 375 / 768 / 1280 px sul modulo di avvio, in tema chiaro e scuro, con tastiera; annotata in `## Criteri di completamento` dei task di interfaccia
+  - Gate finale: `php artisan larapilot:quality` verde (Pint + Larastan livello 5)
+tasks:
+  -
+    id: TASK-00
+    title: 'Bootstrap del branch di feature e descrizione PR locale'
+    body: |-
+      ## Descrizione
+      Prepara Gitflow per US-013: branch di feature da `develop` e descrizione della PR interna verso `develop` tenuta **in locale**. `git_mode` e `GITFLOW`: non spingere nulla e non aprire la PR remota se l'utente non lo chiede in sessione.
+
+      ## File coinvolti
+      - (solo git — nessun file applicativo)
+
+      ## Passi
+      1. `git checkout develop` (pull solo se il branch traccia un remoto)
+      2. `git checkout -b feature/US-013-responsabili-per-release`
+      3. Redigi titolo e corpo della PR verso `develop`: titolo `US-013: Responsabili specifici per singola release in fase di avvio`, corpo con il collegamento al piano e l'elenco dei task previsti — resta locale
+      4. Commit di ancoraggio del branch (vuoto ammesso)
+
+      ## Criteri di completamento
+      - [x] Branch `feature/US-013-responsabili-per-release` esiste in locale
+      - [x] Titolo e corpo della PR verso `develop` redatti (apertura remota non effettuata)
+      - [x] Nessun push eseguito
+
+      ## Dati di test
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Consegne Git
+      - Commit: `chore(US-013): TASK-00 bootstrap feature branch` (commit vuoto ammesso)
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: preparata in locale — apertura o aggiornamento remoto solo su richiesta esplicita
+    type: Impl
+    status: DONE
+    assignee: Sarah
+    estimate_hours: 0.5
+    dependencies: {}
+    commit:
+      sha: 6eb67b17a89cbd4daf2c06d1bec8f96a0bd17217
+      short_sha: 6eb67b1
+      subject: 'chore(US-013): TASK-00 bootstrap feature branch'
+      committed_at: '2026-09-03T19:44:52+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/6eb67b17a89cbd4daf2c06d1bec8f96a0bd17217'
+  -
+    id: TASK-01
+    title: 'Snapshot: colonna responsible_overridden su release_steps, con factory e seeder'
+    body: |-
+      ## Descrizione
+      Aggiungi allo snapshot il fatto che il responsabile di uno step e stato **indicato in avvio** invece che ereditato dalla mappatura del progetto. Una colonna booleana su `release_steps`, non una tabella di override: il dettaglio della release deve poter disegnare la segnalazione senza join e senza tornare a leggere le entita di definizione (invariante 4 del PRD, `.ai/rules/app.md`).
+
+      In questo task la colonna nasce e resta sempre `false`: la scrive TASK-02. Serve prima perche Action, schermata, dettaglio e registro dipendono tutti da lei.
+
+      ## File coinvolti
+      - `database/migrations/xxxx_add_responsible_overridden_to_release_steps_table.php` (nuova)
+      - `app/Models/ReleaseStep.php` (`#[Fillable]` + cast booleano + PHPDoc `@property`)
+      - `database/factories/ReleaseStepFactory.php`
+      - `database/seeders/DatabaseSeeder.php` (solo se la factory richiede un allineamento; la release con override e di TASK-09)
+
+      ## Passi
+      1. `php artisan make:migration add_responsible_overridden_to_release_steps_table --no-interaction`
+      2. Colonna `boolean('responsible_overridden')->default(false)` — **nessun indice**: non e una colonna di filtro ne di ordinamento, e su SQLite un indice booleano a bassa selettivita non paga (`.ai/rules/general.md`: solo migrazioni portabili, nessuna funzione SQLite-specifica). Migrazione reversibile con `dropColumn`
+      3. Il default `false` e cio che rende la migrazione applicabile alle release gia esistenti senza backfill: uno step storico non e stato sovrascritto, e dichiararlo e corretto — non un ripiego
+      4. `ReleaseStep`: aggiungi la colonna a `#[Fillable]` (la scrive `StartRelease` via `insert()`, quindi il cast conta piu del fillable, ma l'incoerenza fra i due sarebbe una trappola) e il cast `'responsible_overridden' => 'boolean'`; annota `@property bool $responsible_overridden`
+      5. `ReleaseStepFactory`: campo con default `false`, piu uno stato `overriddenResponsible()` che lo porta a `true` — serve ai test del dettaglio senza passare da un avvio completo
+      6. `php artisan migrate:fresh --seed` e verifica che il seed produca un ambiente coerente
+      7. `php artisan test --filter=ReleaseSchemaConstraintsTest` e `--filter=DatabaseSeederTest`
+
+      ## Criteri di completamento
+      - [x] Migrazione applicata e reversibile; nessuna funzione SQLite-specifica
+      - [x] `ReleaseStep` espone la colonna con cast booleano e PHPDoc allineato
+      - [x] `ReleaseStepFactory` produce `false` per default e `true` con lo stato dedicato
+      - [x] `migrate:fresh --seed` verde
+      - [x] `ReleaseSchemaConstraintsTest` e `DatabaseSeederTest` verdi
+
+      ## Dati di test
+      - [x] `database/factories/ReleaseStepFactory.php` aggiornata **in questo stesso task** della migrazione
+      - [x] Stato di factory `overriddenResponsible()` disponibile per i test di interfaccia
+      - [x] Seeder verificato con `migrate:fresh --seed` (il caso dimostrativo con override e di TASK-09)
+
+      ## Consegne Git
+      - Commit: `feat(US-013): TASK-01 add responsible_overridden to release steps snapshot`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: DONE
+    assignee: Mike
+    estimate_hours: 2
+    dependencies:
+      - TASK-00
+    commit:
+      sha: 997ddf0d7ee7509fad5fdbb359657da190769a73
+      short_sha: 997ddf0
+      subject: 'feat(US-013): TASK-01 add responsible_overridden to release steps snapshot'
+      committed_at: '2026-09-04T11:33:13+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/997ddf0d7ee7509fad5fdbb359657da190769a73'
+  -
+    id: TASK-02
+    title: 'StartRelease accetta gli override per ruolo, li valida prima di ogni scrittura e li annota nel registro'
+    body: |-
+      ## Descrizione
+      Porta l'override nell'unico percorso di avvio. `StartRelease` riceve una mappatura ruolo => persona, la valida **prima di qualsiasi scrittura** e dentro la stessa transazione, risolve i responsabili dando precedenza all'override, alza `responsible_overridden` sugli step interessati e annota nel payload dell'evento di avvio i **soli** ruoli effettivamente sovrascritti.
+
+      La firma resta additiva perche i chiamanti esistenti non devono essere riscritti: e un criterio di accettazione, non una comodita.
+
+      ## File coinvolti
+      - `app/Actions/Releases/StartRelease.php`
+      - `app/Exceptions/ResponsibleOverrideRefused.php` (nuova)
+      - `app/Exceptions/RolesWithoutResponsible.php` (aggiunta additiva)
+      - `lang/it/releases.php` (motivi di rifiuto degli override)
+
+      ## Passi
+      1. Firma: `handle(Project $project, string $label, User $actor, array $responsibleOverrides = []): Release` con PHPDoc `@param array<string, string> $responsibleOverrides ruolo => persona`. Il default `[]` deve riprodurre il comportamento odierno **riga per riga**
+      2. Nuova eccezione `ResponsibleOverrideRefused` sul modello di `RolesWithoutResponsible` (costruttore privato, costruttori statici, proprieta `readonly`): porta `array<string, string> $reasonsByRole` — ruolo => chiave di traduzione — piu i nomi dei ruoli per il messaggio. Due costruttori statici, perche i due casi si risolvono in modi diversi:
+         - `notAssignable()` — persona inesistente o disattivata su uno o piu ruoli
+         - `roleNotInProcess()` — il payload nomina un ruolo che il processo non prevede: non e un errore di campo, e un payload manipolato
+      3. `RolesWithoutResponsible`: aggiungi `public readonly array $roleIds` accanto a `$roleNames` (aggiunta additiva — il messaggio e la forma esistente non cambiano, cosi `StartReleaseTest` resta verde). Serve alla schermata per agganciare l'errore al campo del ruolo giusto
+      4. In `responsibles()`, prima di ogni scrittura e nell'ordine in cui si risolvono:
+         a. **Chiavi ammesse** — i soli `role_id` previsti dagli step del processo; una chiave estranea solleva `ResponsibleOverrideRefused::roleNotInProcess()`
+         b. **Persone degli override** — caricate con **una sola** query `whereIn('id', ...)` sui valori distinti; una persona mancante o con `is_active` falso alimenta `reasonsByRole` e solleva `ResponsibleOverrideRefused::notAssignable()`
+         c. **Copertura** — un ruolo e coperto quando ha un override valido **oppure** un'assegnazione di progetto con persona attiva; i ruoli residui sollevano `RolesWithoutResponsible` con nomi **e** identificativi
+         d. **Risoluzione** — override se presente, altrimenti la persona della mappatura
+      5. Ordine dei controlli: i ruoli non previsti e le persone non ammissibili **prima** della copertura. Un override invalido che lasciasse anche un ruolo scoperto deve riportare la causa vera, non quella derivata
+      6. `responsible_overridden` per step: `true` **solo** quando la persona risolta differisce da quella che la mappatura avrebbe dato. Un selettore lasciato sulla persona predefinita non e una sovrascrittura, e un ruolo scoperto coperto qui **lo e** (nessun default da cui ereditare). Il confronto e per identificativo di persona, non per presenza della chiave nell'array
+      7. Payload dell'evento `ReleaseStarted`: aggiungi la chiave `overrides` **solo quando non vuota** — lista di `{role, from, to}` con **nomi** (`from` vale `null` per un ruolo scoperto). Un avvio senza override deve produrre lo stesso payload di oggi, chiave assente compresa: e il criterio "nessun rumore"
+      8. Nessuna query in piu per ruolo o per step: la risoluzione lavora sulle relazioni gia precaricate dalla rilettura del progetto, piu l'unica `whereIn` degli override
+      9. Aggiorna il PHPDoc di classe: cosa viene congelato ora comprende il fatto che il responsabile e stato indicato in avvio; e resta scritto che l'override **non** modifica `ProjectRoleAssignment` ne `DefaultRoleAssignment`
+      10. Chiavi di traduzione dei motivi in `lang/it/releases.php` (prefisso coerente con le esistenti `blocked_*`)
+      11. `php artisan test --filter=StartReleaseTest` e `--filter=SnapshotIsolationTest` — verdi **senza modifiche**: e la prova che la firma e neutra
+
+      ## Criteri di completamento
+      - [x] Con `$responsibleOverrides` vuoto la release prodotta e indistinguibile da quella odierna: step, responsabili, campi, stato e payload dell'evento
+      - [x] Un override su un ruolo assegna la persona scelta a **tutti** gli step di quel ruolo; gli altri ruoli restano sui predefiniti
+      - [x] Un ruolo scoperto coperto da un override rende l'avvio possibile
+      - [x] Ruolo lasciato scoperto, persona inesistente, persona disattivata e ruolo non previsto dal processo rifiutano l'avvio **prima** di ogni scrittura, nella stessa transazione; nessuna release a meta
+      - [x] `RolesWithoutResponsible` porta nomi e identificativi dei ruoli; `ResponsibleOverrideRefused` porta il motivo per ruolo
+      - [x] `responsible_overridden` e `true` solo dove la persona differisce dal predefinito
+      - [x] La chiave `overrides` e assente nel payload quando non ci sono sovrascritture
+      - [x] `ProjectRoleAssignment` e `DefaultRoleAssignment` non vengono scritte da questo percorso
+      - [x] Progetto disattivato e processo mancante/disattivato/senza step continuano a rifiutare, override o no
+      - [x] `StartReleaseTest` e `SnapshotIsolationTest` verdi senza essere modificati
+
+      ## Dati di test
+      - [x] Nessuna modifica di schema in questo task (la colonna e di TASK-01)
+      - [x] Le factory esistenti bastano; il caso dimostrativo con override e di TASK-09
+
+      ## Consegne Git
+      - Commit: `feat(US-013): TASK-02 resolve responsible overrides when starting a release`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 5
+    dependencies:
+      - TASK-01
+    commit:
+      sha: b771520a23cb48ca3270ba8b4a5178da82d38f37
+      short_sha: b771520
+      subject: 'feat(US-013): TASK-02 resolve responsible overrides when starting a release'
+      committed_at: '2026-09-04T11:38:23+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/b771520a23cb48ca3270ba8b4a5178da82d38f37'
+  -
+    id: TASK-03
+    title: 'Precondizioni: ruoli scoperti e responsabili disattivati diventano avvisi, non blocchi'
+    body: |-
+      ## Descrizione
+      Applica al modello la decisione registrata per US-013: `Project::startBlocker()` conserva solo le regole che nessun override puo sanare — progetto disattivato, processo mancante, processo disattivato o senza step. Ruolo scoperto e responsabile predefinito disattivato restano **segnalati** ma non bloccano piu l'avvio, perche sono esattamente i casi che l'override esiste per coprire.
+
+      La regola vive sul modello e non sul componente perche serve in due posti — la schermata di avvio e l'elenco progetti, che disabilita il comando con il motivo accanto — e due copie divergerebbero. Questo task tocca il modello e l'elenco; la schermata di avvio e di TASK-04.
+
+      Qui nasce anche il dato che la schermata iterera: i ruoli previsti dal processo con il proprio responsabile predefinito, ciascuno una sola volta.
+
+      ## File coinvolti
+      - `app/Models/Project.php`
+      - `resources/views/components/projects/⚡index.blade.php`
+      - `lang/it/projects.php` e/o `lang/it/releases.php` (testi degli avvisi)
+
+      ## Passi
+      1. `startBlocker()`: rimuovi i rami `uncoveredRoles()` e `inactiveResponsibles()`. Conserva `is_active`, template assente, `isUsable()`. Aggiorna il PHPDoc del metodo: dichiara **perche** i due casi sono usciti e rimanda a FR-029, altrimenti sembrera una dimenticanza da ripristinare
+      2. `uncoveredRoles()` e `inactiveResponsibles()` restano **invariati**: cambia chi li interpreta, non cosa calcolano. Non toccarne la logica ne le avvertenze N+1
+      3. Nuovo metodo `responsibleChoices(): Collection` sul modello — per ogni ruolo previsto dagli step del processo, una volta sola:
+         - il `Role`
+         - la persona predefinita risolta dalla mappatura, **`null` quando il ruolo e scoperto oppure quando la persona risolta e disattivata** (un disattivato non e selezionabile, quindi non e un valore precompilabile)
+         - se richiede una scelta esplicita (predefinito `null`)
+         Ordine: **posizione del primo step che usa quel ruolo**, non alfabetico — la schermata segue la catena. Stessa avvertenza N+1 degli altri due metodi: con le relazioni precaricate non interroga il database, e `loadMissing` e la rete di sicurezza per l'uso su un singolo progetto, non una licenza a chiamarlo in un ciclo
+      4. Elenco progetti: il comando "Avvia una release" resta **abilitato** quando l'unico problema e un ruolo scoperto o un responsabile disattivato. Il badge dei ruoli scoperti resta dov'e — informa senza impedire
+      5. Verifica che il budget di query dell'elenco non cambi: `StartReleaseScreenTest::test_the_project_list_does_not_query_per_row_for_the_start_command` deve restare verde con le stesse relazioni precaricate
+      6. Testi: l'avviso nomina i ruoli **e la conseguenza** ("va indicato un responsabile in fase di avvio"), non un generico "attenzione" da ignorare
+      7. `php artisan test --filter=ProjectManagementTest` e `--filter=ProjectAssignmentsTest`
+
+      ## Criteri di completamento
+      - [x] `startBlocker()` restituisce `null` su un progetto attivo con processo utilizzabile e un ruolo scoperto
+      - [x] Continua a rifiutare progetto disattivato, processo mancante, disattivato o senza step
+      - [x] `responsibleChoices()` elenca ogni ruolo una sola volta, nell'ordine del primo step che lo usa, con predefinito `null` per ruolo scoperto o persona disattivata
+      - [x] Elenco progetti: comando di avvio abilitato con ruoli scoperti, badge di segnalazione ancora presente
+      - [x] Nessuna query per riga nell'elenco progetti (test di budget esistente verde)
+      - [x] `uncoveredRoles()` e `inactiveResponsibles()` invariati nel comportamento
+      - [x] Interfaccia usabile a 375 / 768 / 1280 px, tema chiaro e scuro (verifica manuale)
+
+      ## Dati di test
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Consegne Git
+      - Commit: `feat(US-013): TASK-03 uncovered roles become a warning instead of a start blocker`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 3
+    dependencies:
+      - TASK-00
+    commit:
+      sha: a37aa1a259d049ff062fe404a567f8fd52addb3e
+      short_sha: a37aa1a
+      subject: 'feat(US-013): TASK-03 uncovered roles become a warning instead of a start blocker'
+      committed_at: '2026-09-04T11:45:39+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/a37aa1a259d049ff062fe404a567f8fd52addb3e'
+  -
+    id: TASK-04
+    title: 'Schermata di avvio: un selettore di responsabile per ruolo, precompilato e con errori agganciati al campo'
+    body: |-
+      ## Descrizione
+      Aggiungi al modulo di avvio l'elenco dei **ruoli previsti dal processo**, ciascuno con un selettore di responsabile precompilato col predefinito. Il caso normale resta "compila l'etichetta e avvia": nessuna scelta obbligata dove un predefinito esiste. La sovrascrittura e un'azione deliberata; un ruolo senza predefinito (scoperto o con persona disattivata) chiede una scelta e la nomina.
+
+      ## File coinvolti
+      - `resources/views/components/releases/⚡start.blade.php`
+      - `lang/it/releases.php`
+
+      ## Passi
+      1. Stato: `public array $responsibles = []` — ruolo => persona, stringa vuota per "nessuno". Precompilato in `mount()` da `Project::responsibleChoices()`, dove il predefinito `null` diventa stringa vuota
+      2. `mount()` continua a precaricare il processo e le assegnazioni in un colpo solo: la vista non deve interrogare per ruolo
+      3. Computed `responsibleChoices` (delega al modello) e `assignableUsers`: **solo membri attivi**, `select(['id','name'])`, ordinati per nome. Divergenza deliberata da `⚡assignments.blade.php`, che tiene in elenco i disattivati gia assegnati perche la loro riga mostrerebbe altrimenti qualcun altro: qui una release nuova non deve poter nascere in carico a chi non accede piu. Annotalo nel PHPDoc del computed, altrimenti la differenza fra le due pagine si legge come incoerenza
+      4. Una sola lista di persone per tutti i selettori: il costo non deve crescere col numero di ruoli
+      5. `rules()`: `responsibles` array, e `responsibles.*` con `['required','string', new AssignableUser]` — la regola esistente distingue gia inesistente da disattivato. `validationAttributes()` mappa `responsibles.{roleId}` sul **nome del ruolo**, cosi il messaggio nomina il ruolo mancante invece di dire "il campo responsibles.uuid"
+      6. In `start()`, prima di validare: `only()` sulle sole chiavi ammesse (i ruoli previsti dal processo) e normalizzazione a stringa — stesso pattern di `save()` in `⚡assignments.blade.php`. Un ruolo estraneo non deve nemmeno arrivare all'Action, che lo rifiuterebbe comunque
+      7. `Gate::authorize('create', [Release::class, $this->project])` resta al montaggio e su **ogni** azione Livewire: le azioni Livewire non ripassano dal middleware di rotta
+      8. Passa all'Action **tutte** le persone selezionate: e l'Action a calcolare quali sono override. La schermata non deve conoscere quella regola
+      9. Nuovi `catch`, accanto a quelli esistenti:
+         - `ResponsibleOverrideRefused` -> `addError("responsibles.{roleId}", ...)` per ogni voce di `reasonsByRole`; il caso "ruolo non previsto dal processo" non ha un campo a cui agganciarsi e diventa il messaggio in testa via `refuse()`
+         - `RolesWithoutResponsible` -> non piu solo il messaggio in testa: `addError` sul campo di ogni ruolo elencato in `roleIds`, cosi si corregge dove si sbaglia
+         Il messaggio resta **ricavato dall'eccezione**, non ricalcolato dallo stato corrente: ricalcolarlo direbbe cosa manca adesso, e potrebbe indicare il problema sbagliato
+      10. `refuse()`: dopo un rifiuto rilegge le precondizioni come oggi e invalida anche `responsibleChoices`, **senza** azzerare le scelte gia fatte dall'utente — perdere le selezioni dopo un errore su un solo campo obbligherebbe a ricompilare tutto
+      11. `startAnother()`: reimposta i selettori sui predefiniti freschi (un avvio non deve lasciare in giro le scelte del precedente) e invalida i computed
+      12. Avviso non bloccante in testa quando `uncoveredRoles` o `inactiveResponsibles` non sono vuoti: nomina i ruoli/le persone e la conseguenza ("indica un responsabile qui sotto per avviare"), con il collegamento alla pagina responsabili come alternativa permanente
+      13. Vista, mobile-first (`.larapilot/runtime-ux.md`): schede impilate a piena larghezza sotto la soglia, area di tocco >= 44 px (`min-h-11`), nessuno scorrimento orizzontale a 375 px. Ogni `flux:select` ha `:label` col **nome del ruolo**; l'errore e reso accanto al campo che lo ha generato (associazione programmatica, WCAG 2.2 AA) in tema chiaro **e** scuro. Il ruolo che richiede una scelta e distinto da icona e parola, mai dal solo colore
+      14. `wire:model="responsibles.{{ $role->id }}"`: interpolazione diretta di un UUID senza apici — la forma corretta secondo `.ai/rules/views.md`. **Nessuna** direttiva Blade (`@js`, `@json`, `@class`) dentro l'attributo di un componente `<flux:…>`: resterebbe testo e morirebbe in console
+      15. Tutte le stringhe nuove in `lang/it/releases.php`; nessuna incastonata nella vista. Verifica se `lang/en` porta un gemello di `releases.php` e, in tal caso, allinealo
+      16. `php artisan test --filter=StartReleaseScreenTest` e `--filter=BladeComponentAttributesTest`
+
+      ## Criteri di completamento
+      - [x] I selettori elencano i **ruoli** del processo (non gli step), uno per ruolo anche quando il processo lo usa su piu step
+      - [x] Ogni selettore e precompilato col responsabile risolto dalla mappatura; un ruolo senza predefinito resta vuoto e lo dichiara
+      - [x] Solo membri attivi selezionabili; un disattivato non compare in elenco
+      - [x] Avviando senza toccare nulla la release prodotta e identica a quella odierna
+      - [x] Un ruolo lasciato vuoto rifiuta l'avvio con il **nome del ruolo** sul campo di quel ruolo; nessuna release creata
+      - [x] Un rifiuto dell'Action su una persona non ammissibile compare sul campo del ruolo interessato
+      - [x] Le precondizioni restano coerenti dopo un rifiuto e le selezioni dell'utente non vanno perse
+      - [x] Doppio invio: messaggio di etichetta duplicata sul campo etichetta, nulla lasciato dietro
+      - [x] Nessuna query per ruolo ne per membro nel disegno della pagina
+      - [x] Usabile a 375 / 768 / 1280 px, tema chiaro e scuro, navigabile da tastiera; errori associati ai campi (verifica manuale)
+      - [x] Nessuna stringa incastonata nella vista
+
+      ## Dati di test
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Consegne Git
+      - Commit: `feat(US-013): TASK-04 add per-role responsible selectors to the start screen`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 6
+    dependencies:
+      - TASK-02
+      - TASK-03
+    commit:
+      sha: 6a3512f1527b1f8271125b802336140b6efade0e
+      short_sha: 6a3512f
+      subject: 'feat(US-013): TASK-04 add per-role responsible selectors to the start screen'
+      committed_at: '2026-09-04T11:51:09+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/6a3512f1527b1f8271125b802336140b6efade0e'
+  -
+    id: TASK-05
+    title: 'Dettaglio release: segnala il responsabile indicato in avvio'
+    body: |-
+      ## Descrizione
+      Sul dettaglio della release (US-008), quando il responsabile di uno step e stato indicato in avvio invece che ereditato dalla configurazione, dichiaralo. Con **icona e parola**, mai col solo colore: chi non distingue le tinte non deve dedurre nulla.
+
+      Il dato arriva dalla colonna dello snapshot caricata con lo step: nessuna query in piu, nessuna lettura di `project_role_assignments` a release avviata.
+
+      ## File coinvolti
+      - `resources/views/components/releases/⚡show.blade.php`
+      - `lang/it/releases.php`
+
+      ## Passi
+      1. Accanto a `releases.detail_step_owner`, quando `$step->responsible_overridden` e vero, aggiungi la segnalazione: icona `flux:icon` + testo breve da `lang/`
+      2. Il testo dice **cosa** e successo, non un'etichetta muta: che quel responsabile e stato indicato all'avvio del rilascio e non ereditato dalla mappatura del progetto
+      3. Nessuna modifica alla query del componente: la colonna e gia sullo step. In particolare non aggiungere nulla dopo `withActivationInstant()`, che **ridefinisce la select** e va applicato prima di ogni altra aggiunta (`.ai/rules/components-releases.md`)
+      4. Nessuna lettura di `project_role_assignments`, `step_definitions` o `field_definitions`: `SnapshotIsolationTest` lo verifica sulla pagina resa
+      5. Verifica che la riga resti leggibile a 375 px senza mandare a capo in modo confuso, in tema chiaro e scuro
+      6. `php artisan test --filter=ReleaseDetailScreenTest`, `--filter=SnapshotIsolationTest` e `--filter=ReleaseDetailQueryBudgetTest`
+
+      ## Criteri di completamento
+      - [x] Uno step con responsabile sovrascritto lo dichiara con icona e parola
+      - [x] Uno step con responsabile ereditato non mostra nulla in piu rispetto a oggi
+      - [x] Nessuna query aggiuntiva: budget del dettaglio invariato
+      - [x] Nessuna tabella di definizione interrogata dalla pagina
+      - [x] Leggibile a 375 / 768 / 1280 px, tema chiaro e scuro (verifica manuale)
+      - [x] Testo dalle chiavi `lang/`
+
+      ## Dati di test
+      - N/A — nessuna modifica a schema o modelli in questo task (la colonna e di TASK-01)
+
+      ## Consegne Git
+      - Commit: `feat(US-013): TASK-05 flag responsibles indicated at start on the release detail`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 2
+    dependencies:
+      - TASK-01
+      - TASK-02
+    commit:
+      sha: 490846fb6b0777f5da5a81803a086d811055115e
+      short_sha: 490846f
+      subject: 'feat(US-013): TASK-05 flag responsibles indicated at start on the release detail'
+      committed_at: '2026-09-04T11:51:35+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/490846fb6b0777f5da5a81803a086d811055115e'
+  -
+    id: TASK-06
+    title: 'Registro delle transizioni: la voce di avvio racconta i ruoli sovrascritti'
+    body: |-
+      ## Descrizione
+      Sulla voce di avvio del registro (US-010), quando il payload porta la chiave `overrides`, mostra quali ruoli sono stati sovrascritti, da chi erano coperti e a chi sono finiti. Un avvio senza override non aggiunge nulla: la frase resta quella di oggi.
+
+      Il registro resta in **sola aggiunta**: nessuna scrittura retroattiva sugli eventi gia registrati, e le righe scritte prima di questa spec non hanno la chiave — il rendering deve reggerlo senza inventare nulla.
+
+      ## File coinvolti
+      - `resources/views/components/releases/⚡log.blade.php`
+      - `lang/it/releases.php`
+
+      ## Passi
+      1. In `detailFor()`, ramo `ReleaseEventAction::ReleaseStarted`: la frase esistente resta, e quando `overrides` e presente e non vuota si aggiunge la parte sulle sovrascritture. Il payload e **nullable** e le sue chiavi variano per azione: continua a leggerlo con `??`, come fa il resto del metodo
+      2. Un ruolo sovrascritto senza predefinito (era scoperto) ha `from` a `null`: serve una forma di frase distinta — "era senza responsabile" — non un nome vuoto o un trattino da interpretare
+      3. Plurale con `trans_choice` sul numero di ruoli sovrascritti
+      4. I nomi arrivano dal payload, che e **dato**: vanno passati come **parametri** della traduzione, mai concatenati dentro una chiave di traduzione. La stessa avvertenza che `recordedAbility()` porta scritta per `ability` vale qui per ruoli e persone
+      5. Una riga scritta prima di questa spec (nessuna chiave `overrides`) deve rendere esattamente come oggi
+      6. Nessuna query in piu: il payload e sull'evento gia caricato. Verifica il budget con `ReleaseLogQueryBudgetTest`
+      7. Nessun metodo pubblico nuovo sul componente del registro: in Livewire ogni metodo pubblico e un'azione invocabile dal browser, e l'elenco atteso e sotto test in `ReleaseEventAppendOnlyTest` (`.ai/rules/policies.md`)
+      8. `php artisan test --filter=ReleaseLogScreenTest`, `--filter=ReleaseEventAppendOnlyTest` e `--filter=ReleaseLogQueryBudgetTest`
+
+      ## Criteri di completamento
+      - [x] La voce di avvio di una release con override nomina ruolo, responsabile predefinito e responsabile scelto
+      - [x] Un ruolo prima scoperto e reso con una frase propria, non con un nome mancante
+      - [x] La voce di avvio di una release senza override e identica a oggi
+      - [x] Una voce scritta prima di questa spec rende senza errori
+      - [x] Nessun metodo pubblico aggiunto al componente; `ReleaseEventAppendOnlyTest` verde
+      - [x] Budget di query del registro invariato
+      - [x] Testo dalle chiavi `lang/`; leggibile a 375 px in tema chiaro e scuro (verifica manuale)
+
+      ## Dati di test
+      - N/A — nessuna modifica a schema o modelli in questo task
+
+      ## Consegne Git
+      - Commit: `feat(US-013): TASK-06 render overridden roles on the release started log entry`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 2.5
+    dependencies:
+      - TASK-02
+    commit:
+      sha: a0de587c78835fc671cfdc72dd3fd0552d5a6c7e
+      short_sha: a0de587
+      subject: 'feat(US-013): TASK-06 render overridden roles on the release started log entry'
+      committed_at: '2026-09-04T11:52:36+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/a0de587c78835fc671cfdc72dd3fd0552d5a6c7e'
+  -
+    id: TASK-07
+    title: "Test dell'Action: override, rifiuti, invarianza della configurazione e budget di query"
+    body: |-
+      ## Descrizione
+      Copertura PHPUnit dell'avvio con override al livello dove la decisione vive davvero: l'Action. Bar `NORMAL` — nessun browser, nessuna matrice di viewport.
+
+      Il caso portante non e l'override: e l'**avvio senza override**, che deve restare osservabilmente identico a quello odierno. Se quel caso passa, la nuova firma e neutra e i test di US-004 non hanno bisogno di essere riscritti.
+
+      ## File coinvolti
+      - `tests/Feature/Releases/StartReleaseOverridesTest.php` (nuovo)
+      - `tests/Feature/Releases/StartReleaseQueryBudgetTest.php` (casi aggiunti)
+
+      ## Passi
+      1. `php artisan make:test --phpunit StartReleaseOverridesTest --no-interaction`, poi spostalo in `tests/Feature/Releases/`
+      2. Riusa le factory esistenti (`WorkflowTemplate`, `StepDefinition`, `FieldDefinition`, `Project`, `ProjectRoleAssignment`, `User`) — non duplicare definizioni di factory nel test. Riprendi la forma di `projectReadyToRelease()` da `StartReleaseTest`, dove **un ruolo e usato da due step**: e il caso che dimostra la granularita per ruolo
+      3. Casi da coprire:
+         - avvio senza override: snapshot, responsabili, campi, stato e payload dell'evento identici al comportamento odierno; `responsible_overridden` falso su ogni step; chiave `overrides` **assente** dal payload
+         - override su un ruolo usato da due step: **entrambi** riportano la persona scelta e hanno il flag a vero; gli step degli altri ruoli restano sui predefiniti col flag falso
+         - override che indica la **stessa** persona del predefinito: nessun flag alzato, nessuna voce nel payload
+         - ruolo scoperto coperto da un override: l'avvio riesce, il flag e vero, e nel payload `from` e `null`
+         - ruolo lasciato scoperto: `RolesWithoutResponsible` con nome **e** identificativo del ruolo, nessuna riga scritta
+         - persona disattivata e persona inesistente: rifiuto con il motivo indicizzato per ruolo, nessuna riga scritta
+         - ruolo non previsto dal processo nel payload: rifiuto, nessuna riga scritta
+         - invarianza: `ProjectRoleAssignment` e `DefaultRoleAssignment` confrontate **riga per riga** prima e dopo un avvio con override
+         - isolamento: override sulla release A, poi release B avviata subito dopo sullo stesso progetto ripartendo dai predefiniti
+         - regole immutate: progetto disattivato, processo mancante, disattivato e senza step rifiutano anche con override validi
+         - payload dell'evento con override: un solo evento di avvio, con i **soli** ruoli sovrascritti
+      4. Riusa il pattern `assertRefusedWithoutWriting()` di `StartReleaseTest` (il `fail()` fuori dal `try`, altrimenti il `catch` lo inghiotte e riporta l'errore sbagliato)
+      5. Budget: in `StartReleaseQueryBudgetTest` aggiungi che l'avvio con override costa **come** l'avvio senza, su catena corta e lunga — la risoluzione degli override e una sola `whereIn`, non una query per ruolo
+      6. `php artisan test tests/Feature/Releases --compact` e verifica che le suite esistenti dell'Action siano verdi **senza modifiche**
+
+      ## Criteri di completamento
+      - [x] Tutti i casi elencati coperti e verdi
+      - [x] Nessuna definizione di factory duplicata nel test
+      - [x] `StartReleaseTest`, `SnapshotIsolationTest` e `DatabaseSeederTest` verdi senza essere toccati
+      - [x] Budget di query invariato con override, su catena corta e lunga
+      - [x] Nessun Playwright, Dusk, Pest browser o suite di viewport (bar `NORMAL`)
+
+      ## Consegne Git
+      - Commit: `test(US-013): TASK-07 cover responsible overrides in StartRelease`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Test
+    status: DONE
+    assignee: Anne
+    estimate_hours: 4
+    dependencies:
+      - TASK-02
+    commit:
+      sha: 532e98f35eaeddd9f56e5cc395a2d7c737bcc3d4
+      short_sha: 532e98f
+      subject: 'test(US-013): TASK-07 cover responsible overrides in StartRelease'
+      committed_at: '2026-09-04T11:54:53+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/532e98f35eaeddd9f56e5cc395a2d7c737bcc3d4'
+  -
+    id: TASK-08
+    title: 'Test della schermata: selettori, rifiuti per campo, autorizzazione e le due asserzioni di US-004 che cambiano'
+    body: |-
+      ## Descrizione
+      Copertura PHPUnit del modulo di avvio e dell'autorizzazione, piu l'aggiornamento delle due asserzioni di US-004 che la decisione sulle precondizioni rende obsolete. Bar `NORMAL`: verifica dell'HTML reso e delle interazioni Livewire, nessun browser.
+
+      ## File coinvolti
+      - `tests/Feature/Releases/StartReleaseOverrideScreenTest.php` (nuovo)
+      - `tests/Feature/Releases/StartReleaseScreenTest.php` (due asserzioni aggiornate)
+
+      ## Passi
+      1. `php artisan make:test --phpunit StartReleaseOverrideScreenTest --no-interaction`, poi spostalo in `tests/Feature/Releases/`
+      2. Casi da coprire:
+         - i selettori elencano i **ruoli** del processo, ciascuno una sola volta anche quando un ruolo e usato da due step
+         - ogni selettore e precompilato con il responsabile risolto dalla mappatura
+         - un membro disattivato **non** compare fra le opzioni
+         - un ruolo senza predefinito compare vuoto e la pagina dice che va indicato un responsabile
+         - avvio senza toccare i selettori: release identica al comportamento odierno
+         - avvio con override su un ruolo: tutti gli step di quel ruolo alla persona scelta
+         - ruolo scoperto: avviso presente e comando di avvio **abilitato**; fornendo un responsabile la release parte
+         - ruolo lasciato vuoto: errore agganciato a `responsibles.{roleId}` con il **nome del ruolo** nel messaggio, nessuna release creata
+         - payload manipolato — ruolo non previsto dal processo, membro disattivato, membro inesistente — rifiutato con nessuna release creata
+         - precondizioni coerenti dopo un rifiuto, e selezioni dell'utente conservate
+         - doppio invio: messaggio di etichetta duplicata, nulla lasciato dietro
+         - un utente non amministratore non puo avviare ne inviare override (`ReleasePolicy::create`): rifiuto anche invocando l'azione Livewire direttamente, non solo con il comando nascosto
+         - `startAnother()` riporta i selettori sui predefiniti freschi
+         - budget: nessuna query per ruolo ne per membro nel disegno della pagina, con un processo a molti ruoli e molti membri attivi (riusa `queriesWhile()` come nelle suite esistenti)
+      3. Sul tracciamento del tentativo non autorizzato: **verifica cosa fa oggi US-004** prima di scrivere l'asserzione. Il registro delle transizioni si aggancia a una release, e in avvio la release non esiste ancora — il criterio dice "tracciato **come gia previsto** da FR-016", quindi non introdurre un percorso di tracciamento nuovo: asserisci il comportamento esistente, non uno desiderato
+      4. Aggiorna in `StartReleaseScreenTest` le due asserzioni rese obsolete dalla decisione registrata:
+         - `test_a_project_without_a_responsible_shows_the_reason_and_disables_the_command` -> avviso presente, comando **abilitato**, scelta richiesta sul ruolo
+         - `test_an_inactive_responsible_blocks_the_start_and_is_named` -> la persona disattivata e nominata, il selettore del suo ruolo e vuoto, il comando e abilitato
+         Aggiorna anche il commento sopra ciascuna: la ragione del cambio e FR-029, e senza scriverlo qui il prossimo lettore le ripristinera
+      5. Le altre asserzioni di `StartReleaseScreenTest` non si toccano
+      6. Trappola `.ai/rules/tests.md`: in questo progetto `session('errors')` e un array, e quando un'asserzione sulla risposta fallisce il messaggio riportato ("Call to a member function all() on array") **non** e il bug. Per capire il motivo vero leggi `json_encode(session('errors'))` a mano
+      7. `php artisan test tests/Feature --compact` — l'intera suite verde
+
+      ## Criteri di completamento
+      - [x] Tutti i casi elencati coperti e verdi
+      - [x] Le due asserzioni di US-004 aggiornate con il commento che ne dichiara la ragione
+      - [x] Nessun'altra asserzione esistente modificata
+      - [x] `BladeComponentAttributesTest` verde (nessuna direttiva Blade negli attributi dei componenti)
+      - [x] Nessuna query per ruolo ne per membro nel disegno della pagina
+      - [x] Nessun Playwright, Dusk, Pest browser o suite di viewport (bar `NORMAL`)
+      - [x] Consegna manuale annotata: 375 / 768 / 1280 px, tema chiaro e scuro, navigazione da tastiera, errori letti dallo screen reader accanto al campo
+
+      ## Consegne Git
+      - Commit: `test(US-013): TASK-08 cover the start screen responsible selectors`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Test
+    status: DONE
+    assignee: Anne
+    estimate_hours: 4.5
+    dependencies:
+      - TASK-04
+      - TASK-05
+      - TASK-06
+    commit:
+      sha: 2c2447e18d525a092a7e19e948bda59d5a481c92
+      short_sha: 2c2447e
+      subject: 'test(US-013): TASK-08 cover the start screen responsible selectors'
+      committed_at: '2026-09-04T11:57:05+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/2c2447e18d525a092a7e19e948bda59d5a481c92'
+  -
+    id: TASK-09
+    title: 'Dataset dimostrativo: una release avviata con un responsabile sovrascritto'
+    body: |-
+      ## Descrizione
+      FR-018 chiede un ambiente dimostrativo coerente. Dopo questa spec deve contenere almeno **una release avviata con un responsabile sovrascritto**, altrimenti la segnalazione sul dettaglio e la voce del registro non si vedono mai senza costruirle a mano.
+
+      Il rilascio e un **processo**: si semina chiamando `StartRelease`, non scrivendo righe (`.ai/rules/seeders.md`). Uno snapshot scritto a mano falsificherebbe proprio cio che il registro serve a provare: righe di forma giusta e contenuto inventato.
+
+      ## File coinvolti
+      - `database/seeders/DatabaseSeeder.php`
+      - `tests/Feature/DatabaseSeederTest.php`
+
+      ## Passi
+      1. In `seedReleases()`, su una delle release gia seminate, passa a `StartRelease` un override su **un** ruolo: una persona attiva del team diversa da quella della mappatura. Nessuna release in piu — il caso si aggiunge a uno esistente
+      2. Scegli il ruolo in modo che l'override sia leggibile nella pagina: preferibilmente uno usato da **due** step, cosi il dataset dimostra anche la granularita per ruolo
+      3. La mappatura del progetto **non** va modificata: e proprio il punto della funzione, e un seeder che la cambiasse mostrerebbe il contrario di quello che dichiara
+      4. Le Action scrivono `now()`: se gli istanti vanno riportati indietro, farlo **dopo** con `forceFill` (`completed_at`/`completed_by` non sono assegnabili in massa)
+      5. Nessuna release su un template disattivato: `StartRelease` la rifiuterebbe, e un ambiente dimostrativo con uno stato irriproducibile dall'applicazione mente a chi lo usa per capire come funziona
+      6. `DatabaseSeederTest`: **un** caso aggiunto — esiste una release con almeno uno step sovrascritto e la mappatura del progetto e rimasta quella dichiarata. La suite tiene pochi casi di proposito: con `RefreshDatabase` ognuno ripaga l'intero seed
+      7. `php artisan migrate:fresh --seed` e verifica a schermo il dettaglio della release e il registro
+      8. `composer install` (larastan non e in `vendor/`, `.ai/rules/general.md`), poi `php artisan larapilot:quality`
+      9. `php artisan test --compact` — suite completa verde
+
+      ## Criteri di completamento
+      - [x] Il seed produce almeno una release avviata con un responsabile sovrascritto
+      - [x] La mappatura del progetto e quella predefinita di team restano invariate dal seed
+      - [x] Nessuna release seminata su un template disattivato
+      - [x] `migrate:fresh --seed` verde e ambiente verificato a schermo (dettaglio + registro)
+      - [x] `DatabaseSeederTest` verde con il caso aggiunto
+      - [x] `php artisan larapilot:quality` verde (Pint + Larastan livello 5)
+      - [x] Suite completa verde
+
+      ## Dati di test
+      - [x] `DatabaseSeeder::seedReleases()` aggiornato passando dalle Action, non scrivendo righe
+      - [x] `ReleaseStepFactory` gia aggiornata in TASK-01; nessuna modifica di schema qui
+
+      ## Consegne Git
+      - Commit: `chore(US-013): TASK-09 seed a release started with an overridden responsible`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: DONE
+    assignee: Alex
+    estimate_hours: 2.5
+    dependencies:
+      - TASK-01
+      - TASK-02
+      - TASK-03
+    commit:
+      sha: c5da07abb8a788ecb8e93379fb06eb6a11e7e979
+      short_sha: c5da07a
+      subject: 'chore(US-013): TASK-09 seed a release started with an overridden responsible'
+      committed_at: '2026-09-04T11:59:41+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/c5da07abb8a788ecb8e93379fb06eb6a11e7e979'
+  -
+    id: TASK-10
+    title: 'Documentazione baseline: vincolo permanente nel README e CHANGELOG'
+    body: |-
+      ## Descrizione
+      Aggiornamento documentale baseline (`effort: STANDARD`). Nessuna OpenAPI: il perimetro non tocca API pubbliche o partner.
+
+      Due cose vanno messe per iscritto, perche entrambe sembrano difetti a chi le incontra senza contesto: che le precondizioni sui responsabili sono **avvisi** e non blocchi, e che la sovrascrittura del responsabile e un dato dello **snapshot** e non una lettura della configurazione.
+
+      ## File coinvolti
+      - `README.md` (elenco dei vincoli permanenti)
+      - `CHANGELOG.md` (sezione Unreleased)
+
+      ## Passi
+      1. README, nuovo vincolo permanente numerato in coda all'elenco esistente: gli override dei responsabili si risolvono **in avvio** e finiscono nello snapshot (`release_steps.responsible_overridden`); nessun percorso di esecuzione torna a leggere `project_role_assignments`, e l'override non modifica ne la mappatura del progetto ne quella predefinita di team
+      2. Secondo punto, sullo stesso elenco o accanto: ruolo scoperto e responsabile predefinito disattivato **non** bloccano piu l'avvio (FR-029) — `startBlocker()` conserva solo progetto disattivato e processo mancante/disattivato/senza step. Scrivi la ragione, non solo la regola: senza, qualcuno rimettera i due rami dentro credendo di riparare una dimenticanza
+      3. `CHANGELOG.md`, sezione Unreleased: voce `Added` per la scelta dei responsabili in avvio, voce `Changed` per le precondizioni che diventano avvisi. Formato Keep a Changelog
+      4. Verifica che i due testi rimandino a FR-029 e a US-013, cosi il percorso verso il PRD resta percorribile
+
+      ## Criteri di completamento
+      - [x] README: vincolo permanente aggiunto, con la ragione e non solo la regola
+      - [x] README: il cambio di comportamento delle precondizioni e dichiarato e attribuito a FR-029
+      - [x] `CHANGELOG.md` Unreleased aggiornato con `Added` e `Changed`
+      - [x] Nessuna OpenAPI toccata (fuori perimetro)
+
+      ## Dati di test
+      - N/A — solo documentazione
+
+      ## Consegne Git
+      - Commit: `docs(US-013): TASK-10 record the override snapshot constraint and changelog entry`
+      - Push: **omesso** (`git_mode: GITFLOW`)
+      - PR: aggiorna le note locali della PR
+    type: Impl
+    status: DONE
+    assignee: Albert
+    estimate_hours: 1
+    dependencies:
+      - TASK-04
+      - TASK-05
+      - TASK-06
+    commit:
+      sha: bbf009e67d0b0e06fd26a98cfcdc74bff5d7f4ac
+      short_sha: bbf009e
+      subject: 'docs(US-013): TASK-10 record the override snapshot constraint and changelog entry'
+      committed_at: '2026-09-04T12:00:30+02:00'
+      url: 'https://github.com/giarfa/exin-deploy/commit/bbf009e67d0b0e06fd26a98cfcdc74bff5d7f4ac'
+updated_at: '2026-09-04T10:00:31+00:00'
