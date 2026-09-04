@@ -249,6 +249,16 @@ return [
     'log_on_release' => 'Riguarda il rilascio nel suo insieme, non un singolo step',
 
     'log_detail_started' => 'Processo congelato da :template, :steps step copiati nella release.',
+    /*
+     * Sovrascritture indicate in avvio (US-013). Compaiono **solo** quando il
+     * payload le porta: una release avviata senza override, e ogni riga scritta
+     * prima di questa spec, resta identica a prima.
+     */
+    'log_detail_overrides' => '{1} Un ruolo e stato indicato in avvio: :overrides.|[2,*] :count ruoli sono stati indicati in avvio: :overrides.',
+    'log_detail_override_replaced' => ':role, da :from a :to',
+    // Frase propria per il ruolo che non aveva un responsabile: un nome vuoto o un
+    // trattino lascerebbe a chi legge il compito di indovinare.
+    'log_detail_override_uncovered' => ':role, era senza responsabile, affidato a :to',
     'log_detail_step_completed' => '{0} Nessuna informazione fornita|{1} Un\'informazione fornita|[2,*] :count informazioni fornite',
     'log_detail_step_activated' => 'Il flusso e passato a :name.',
     'log_detail_release_completed' => 'La release :label risulta consegnata.',

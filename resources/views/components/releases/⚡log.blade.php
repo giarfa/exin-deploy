@@ -123,10 +123,7 @@ new class extends Component
 
         return match ($event->action) {
             ReleaseEventAction::ReleaseStarted => isset($payload['template'])
-                ? __('releases.log_detail_started', [
-                    'template' => $payload['template'],
-                    'steps' => $payload['steps'] ?? '?',
-                ])
+                ? $this->startedDetail($payload)
                 : null,
 
             ReleaseEventAction::StepCompleted => isset($payload['fields_filled'])
@@ -147,6 +144,73 @@ new class extends Component
                 'ability' => __('releases.log_ability_'.$this->recordedAbility($payload)),
             ]),
         };
+    }
+
+    /**
+     * Frase della voce di avvio: il processo congelato, e — quando ce ne sono — i
+     * ruoli il cui responsabile e stato indicato in avvio.
+     *
+     * Metodo **privato**, come `recordedAbility()`: in Livewire ogni metodo
+     * pubblico e un'azione invocabile dal browser, e la superficie di scrittura di
+     * questa pagina deve restare vuota (`ReleaseEventAppendOnlyTest`).
+     *
+     * La chiave `overrides` e assente su ogni riga scritta prima di US-013, e il
+     * registro e in sola aggiunta: nessuno tornera a completarle. La lettura non
+     * puo quindi darla per garantita, ne inventare un valore quando manca — la
+     * voce deve rendere esattamente come prima.
+     *
+     * I nomi arrivano dal payload, che e **dato**: vanno come parametri della
+     * traduzione e mai concatenati dentro una chiave, per la stessa ragione per
+     * cui `recordedAbility()` filtra l'ability prima di comporne una.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function startedDetail(array $payload): string
+    {
+        $detail = (string) __('releases.log_detail_started', [
+            'template' => $payload['template'],
+            'steps' => $payload['steps'] ?? '?',
+        ]);
+
+        $overrides = $payload['overrides'] ?? null;
+
+        if (! is_array($overrides)) {
+            return $detail;
+        }
+
+        $described = [];
+
+        foreach ($overrides as $override) {
+            if (! is_array($override)) {
+                continue;
+            }
+
+            $role = (string) ($override['role'] ?? '?');
+            $to = (string) ($override['to'] ?? '?');
+            $from = $override['from'] ?? null;
+
+            /*
+             * Un ruolo prima scoperto ha `from` a `null` e merita una frase propria:
+             * un nome vuoto o un trattino lascerebbe a chi legge il compito di
+             * indovinare se il dato manchi o se non ci fosse nessuno.
+             */
+            $described[] = $from === null
+                ? (string) __('releases.log_detail_override_uncovered', ['role' => $role, 'to' => $to])
+                : (string) __('releases.log_detail_override_replaced', [
+                    'role' => $role,
+                    'from' => (string) $from,
+                    'to' => $to,
+                ]);
+        }
+
+        if ($described === []) {
+            return $detail;
+        }
+
+        return $detail.' '.trans_choice('releases.log_detail_overrides', count($described), [
+            'count' => count($described),
+            'overrides' => implode('; ', $described),
+        ]);
     }
 
     /**
