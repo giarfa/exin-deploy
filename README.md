@@ -739,6 +739,31 @@ riga, con icona e parola.
     che pretende la voce di log su un accesso negato: il 403 arriverebbe comunque, ma senza
     traccia.
 
+13. **I responsabili indicati in avvio si risolvono una volta sola e finiscono nello
+    snapshot.** Chi avvia una release puo indicare, per ciascun ruolo del processo, una
+    persona diversa da quella configurata sul progetto (US-013, FR-029): serve a coprire
+    un'assenza o una sostituzione su quel singolo rilascio. La scelta e risolta da
+    `StartRelease` **in avvio**, insieme ai responsabili predefiniti, e cio che resta e la
+    riga di `release_steps` — persona assegnata piu `responsible_overridden`, che dice se
+    quella persona e stata indicata li o ereditata. Nessun percorso di esecuzione torna a
+    leggere `project_role_assignments`: e il vincolo 7 applicato anche a questo dato, e
+    `SnapshotIsolationTest` lo verifica sulla pagina resa. L'override **non scrive** ne la
+    mappatura del progetto ne quella predefinita di team — indicare una persona per un
+    rilascio non cambia la configurazione condivisa, ed e proprio la ragione per cui la
+    funzione esiste: senza, servirebbe modificare la mappatura e ricordarsi di ripristinarla.
+
+14. **Ruolo scoperto e responsabile disattivato sono avvisi, non blocchi.**
+    `Project::startBlocker()` conserva soltanto le precondizioni che nessuna scelta in avvio
+    puo sanare: progetto disattivato, processo mancante, disattivato o senza step. I due
+    rami sui responsabili ne sono usciti con US-013 (FR-029), e non per dimenticanza: sono
+    esattamente i casi che la scelta dei responsabili in avvio esiste per coprire, e tenerli
+    come blocco impedirebbe la funzione nel punto in cui la si userebbe. Restano
+    **segnalati** — `uncoveredRoles()` e `inactiveResponsibles()` non sono cambiati, e i
+    loro avvisi nominano ruoli, persone e conseguenza — ma il comando di avvio resta
+    attivo. Rimetterli dentro `startBlocker()` spegne US-013;
+    `StartReleaseScreenTest::test_a_project_without_a_responsible_names_the_role_without_blocking_the_start`
+    e il suo gemello sul responsabile disattivato falliscono se qualcuno ci prova.
+
 ## Stack
 
 | Componente | Versione |

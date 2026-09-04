@@ -176,6 +176,15 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
   primo. Ogni schermata operativa ha quindi qualcosa da mostrare senza dover ricostruire uno
   scenario a mano. I rilasci sono prodotti chiamando le Action reali e non scrivendo righe:
   il registro delle transizioni che ne risulta e quello che il processo produce davvero.
+- **Responsabili indicati in avvio** (US-013, FR-029): la schermata di avvio elenca i ruoli
+  previsti dal processo, ciascuno con il responsabile del progetto gia selezionato. Il caso
+  normale resta "compila l'etichetta e avvia"; cambiando la persona su un ruolo, tutti gli
+  step di quel ruolo nella release avviata risultano assegnati a lei — utile per un'assenza
+  o una sostituzione su un singolo rilascio. La mappatura del progetto e quella predefinita
+  di team restano invariate, quindi non c'e nulla da ripristinare dopo. Sono selezionabili
+  i soli membri attivi. Il dettaglio della release dichiara con icona e parola quali
+  responsabili sono stati indicati in avvio, e la voce di avvio del registro nomina ruolo,
+  responsabile precedente e responsabile scelto — solo quando ce ne sono stati.
 - Documentazione baseline: README con avvio via Herd, nota architetturale sulla separazione
   fra definizione e istanza, questo changelog.
 
@@ -218,6 +227,12 @@ versionamento segue [Semantic Versioning](https://semver.org/lang/it/).
 
 - SQLite configurato in modalita **WAL** con `busy_timeout`, per contenere il rischio di
   concorrenza in scrittura accettato nel PRD.
+- **Le precondizioni sui responsabili diventano avvisi** (US-013, FR-029): un ruolo senza
+  responsabile sul progetto, o un responsabile predefinito disattivato, non impediscono piu
+  di avviare una release — sono i casi che la scelta dei responsabili in avvio esiste per
+  coprire. Restano segnalati, con il nome del ruolo o della persona e cosa fare, ma il
+  comando di avvio resta attivo. Continuano a bloccare, come prima, il progetto disattivato
+  e il processo mancante, disattivato o senza step.
 
 ### Fixed
 
