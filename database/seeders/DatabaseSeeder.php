@@ -433,7 +433,7 @@ class DatabaseSeeder extends Seeder
      * | Release | Progetto | Cosa dimostra |
      * | --- | --- | --- |
      * | `v2.3.0` | Portale Clienti | rilascio concluso: catena tutta chiusa, registro completo |
-     * | `v2.4.0` | Portale Clienti | rilascio a meta catena: primo step chiuso, secondo attivo |
+     * | `v2.4.0` | Portale Clienti | rilascio a meta catena: primo step chiuso, secondo attivo, **un ruolo sovrascritto in avvio** |
      * | `2026.08.1` | Gestionale Magazzino | rilascio appena avviato, fermo sul **primo** step |
      *
      * La terza non e un di piu: e l'unica forma in cui lo step attivo e il primo
@@ -441,6 +441,16 @@ class DatabaseSeeder extends Seeder
      * cui leggere l'istante e ripiega su `release.started_at`. E il ramo che ogni
      * rilascio nuovo percorre, e un ambiente dimostrativo che non lo contenesse lo
      * lascerebbe non verificabile a mano.
+     *
+     * **Un responsabile indicato in avvio.** Su `v2.4.0` il ruolo `DevOps` — usato
+     * da **due** step del processo — e affidato a Luca Serra invece che a Davide
+     * Rossi: senza un caso cosi, la segnalazione sul dettaglio della release e la
+     * voce del registro introdotte da US-013 non si vedrebbero mai senza
+     * costruirle a mano. Il cumulo di ruoli su una persona e la norma su un team
+     * piccolo, ed e gia dichiarato in `.ai/rules/models.md`.
+     *
+     * La sovrascrittura **non** tocca la mappatura del progetto, ed e il punto:
+     * un seeder che la cambiasse mostrerebbe il contrario di cio che dichiara.
      *
      * **Nessuna release sul template disattivato.** "Rilascio urgente" resta senza:
      * `StartRelease` rifiuta un processo disattivato, e un ambiente dimostrativo che
@@ -467,7 +477,16 @@ class DatabaseSeeder extends Seeder
         $delivered = $this->releaseThroughTheChain($customerPortal, 'v2.3.0', $owner, closeSteps: 5, startedAt: now()->subDays(9));
         $this->rewindRelease($delivered, now()->subDays(9), now()->subDays(8));
 
-        $inProgress = $this->releaseThroughTheChain($customerPortal, 'v2.4.0', $owner, closeSteps: 1, startedAt: now()->subDays(2));
+        $inProgress = $this->releaseThroughTheChain(
+            $customerPortal,
+            'v2.4.0',
+            $owner,
+            closeSteps: 1,
+            startedAt: now()->subDays(2),
+            responsibleOverrides: [
+                Role::where('name', 'DevOps')->firstOrFail()->id => User::where('email', 'l.serra@gruppoexcellence.com')->firstOrFail()->id,
+            ],
+        );
         $this->rewindRelease($inProgress, now()->subDays(2));
 
         $justStarted = $this->releaseThroughTheChain($warehouse, '2026.08.1', $owner, closeSteps: 0, startedAt: now()->subHours(5));
@@ -482,6 +501,8 @@ class DatabaseSeeder extends Seeder
      * entrambi, ma il registro dimostrativo racconterebbe un rilascio in cui una
      * sola persona ha fatto tutto — cioe l'opposto del processo che lo strumento
      * esiste per orchestrare.
+     *
+     * @param  array<string, string>  $responsibleOverrides  ruolo => persona indicata in avvio
      */
     private function releaseThroughTheChain(
         Project $project,
@@ -489,8 +510,9 @@ class DatabaseSeeder extends Seeder
         User $starter,
         int $closeSteps,
         CarbonInterface $startedAt,
+        array $responsibleOverrides = [],
     ): Release {
-        $release = app(StartRelease::class)->handle($project, $label, $starter);
+        $release = app(StartRelease::class)->handle($project, $label, $starter, $responsibleOverrides);
 
         $release->forceFill(['started_at' => $startedAt])->save();
 

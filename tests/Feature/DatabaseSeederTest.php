@@ -8,6 +8,7 @@ use App\Enums\ReleaseStepStatus;
 use App\Enums\UserLevel;
 use App\Models\DefaultRoleAssignment;
 use App\Models\Project;
+use App\Models\ProjectRoleAssignment;
 use App\Models\Release;
 use App\Models\ReleaseEvent;
 use App\Models\ReleaseStep;
@@ -30,11 +31,12 @@ use Tests\TestCase;
  * perche uno scenario che le violasse renderebbe verdi test scritti su dati che
  * l'applicazione non puo produrre.
  *
- * **Quattro casi e non dieci**, ed e una scelta e non pigrizia: seminare l'intero
+ * **Cinque casi e non dieci**, ed e una scelta e non pigrizia: seminare l'intero
  * ambiente e l'operazione piu lenta della suite (circa un secondo), e con
  * `RefreshDatabase` ogni caso paga il proprio. Dieci casi granulari costavano dieci
  * secondi su una suite che ne dura diciassette. Ogni metodo qui racconta comunque
- * una storia sola.
+ * una storia sola — il quinto e arrivato con US-013, perche il responsabile
+ * indicato in avvio e una forma che nessuno degli altri quattro copre.
  */
 class DatabaseSeederTest extends TestCase
 {
@@ -134,6 +136,52 @@ class DatabaseSeederTest extends TestCase
         $this->assertNotNull($active);
         $this->assertSame(1, $active->position);
         $this->assertSame(0, $justStarted->steps->where('status', ReleaseStepStatus::Completed)->count());
+    }
+
+    /**
+     * FR-018 chiede un ambiente dimostrativo coerente: dopo US-013 deve contenere
+     * almeno una release avviata con un responsabile **indicato in avvio**, o la
+     * segnalazione sul dettaglio e la voce del registro non si vedrebbero mai
+     * senza costruirle a mano.
+     *
+     * L'altra meta del caso conta quanto la prima: la mappatura del progetto deve
+     * essere rimasta quella dichiarata. E il punto della funzione, e un seeder che
+     * la cambiasse mostrerebbe il contrario di cio che dichiara.
+     */
+    public function test_a_release_is_started_with_an_overridden_responsible_without_touching_the_mapping(): void
+    {
+        $release = Release::where('label', 'v2.4.0')->with('steps.assignedUser')->firstOrFail();
+
+        $overridden = $release->steps->where('responsible_overridden', true);
+
+        $this->assertNotEmpty(
+            $overridden,
+            'Nessuno step con responsabile indicato in avvio: la segnalazione di US-013 resta invisibile.'
+        );
+
+        // Il ruolo scelto e usato da due step: il dataset dimostra anche la
+        // granularita per ruolo, non solo il fatto che l'override esista.
+        $this->assertGreaterThan(1, $overridden->count());
+        $this->assertSame(1, $overridden->pluck('role_id')->unique()->count());
+
+        $standIn = $overridden->first()->assignedUser;
+        $project = $release->project;
+
+        $mapped = ProjectRoleAssignment::query()
+            ->where('project_id', $project->id)
+            ->where('role_id', $overridden->first()->role_id)
+            ->sole();
+
+        $this->assertNotSame(
+            $standIn->id,
+            $mapped->user_id,
+            'La sovrascrittura ha cambiato la mappatura del progetto: e proprio cio che non deve fare.'
+        );
+
+        $this->assertSame(
+            User::where('email', 'd.rossi@gruppoexcellence.com')->firstOrFail()->id,
+            $mapped->user_id
+        );
     }
 
     public function test_the_seeded_data_respects_the_domain_and_has_no_orphans(): void
