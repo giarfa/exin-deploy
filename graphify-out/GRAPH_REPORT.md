@@ -1,16 +1,16 @@
-# Graph Report - exin-deploy  (2026-08-28)
+# Graph Report - exin-deploy  (2026-09-04)
 
 ## Corpus Check
-- 574 files · ~502,531 words
+- 608 files · ~538,409 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5390 nodes · 7600 edges · 472 communities (418 shown, 54 thin omitted)
+- 5653 nodes · 8085 edges · 506 communities (445 shown, 61 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 31 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `00a0a448`
+- Built from commit: `bbf009e6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,8 +21,8 @@
 - Illuminate\Support\Facades\Schema
 - FortifyServiceProvider.php
 - User
-- ReleaseStep
-- WellFormedLinkTest
+- Release
+- WellFormedLink
 - ReleaseEventAppendOnlyTest
 - LoginTest
 - CLAUDE.md
@@ -31,18 +31,18 @@
 - Project
 - CloseStepTest
 - AGENTS.md
-- Larapilot Shared Runtime (Core)
+- Project Settings
 - FieldType
 - ReleaseIndexScreenTest
 - ReleaseStepPolicyTest
 - TwoFactorTest
 - MyStepsScreenTest
 - StartReleaseScreenTest
-- DefaultAssignmentsTest
+- StartReleaseOverridesTest
 - devDependencies
 - CloseStepScreenTest
 - ReleaseDetailScreenTest
-- UserPolicy
+- StartReleaseOverrideScreenTest
 - DefaultAssignmentPrecompilationTest
 - StepDefinition
 - scripts
@@ -61,7 +61,7 @@
 - Larapilot — Ship & Deploy
 - SaveStepValuesTest
 - Larapilot — Ship & Deploy
-- ReleasePolicy
+- Larapilot — Adopt (brownfield onboarding)
 - Larapilot — Ship & Deploy
 - FieldDefinitionFactory
 - Larapilot — Ship & Deploy
@@ -85,7 +85,7 @@
 - ⚡fields.blade.php
 - ⚡steps.blade.php
 - Bin
-- .projectWith
+- StartReleaseQueryBudgetTest
 - ReleaseEvent
 - Rules
 - Rules
@@ -119,9 +119,10 @@
 - Larapilot Runtime — Discovery
 - UX & Frontend Design _(Elise owns)_
 - Larapilot — Bug Report
+- Larapilot — Adopt (brownfield onboarding)
 - Laravel Fortify Development
 - Laravel Fortify Development
-- Notifications (`settings.notifications`)
+- Larapilot — Optional Integrations
 - Mockup — Superficie operativa (Exin Deploy)
 - Laravel Fortify Development
 - Larapilot — Spec Implementation
@@ -150,6 +151,7 @@
 - Larapilot — Backstage Integration
 - Larapilot — Backstage Integration
 - Larapilot — Backstage Integration
+- Larapilot — Adopt (brownfield onboarding)
 - Larapilot — Spec Planning
 - Tailwind CSS Development
 - Larapilot — Spec Planning
@@ -175,6 +177,7 @@
 - Architecture Best Practices
 - .agents/skills/laravel-best-practices/SKILL.md
 - Security Best Practices
+- StartReleaseTest
 - Detection Checklist
 - Process
 - Larapilot — External frontend repo
@@ -231,12 +234,14 @@
 - Architecture Best Practices
 - .pi/skills/laravel-best-practices/SKILL.md
 - Security Best Practices
+- DecisionGateTest
 - Flux UI Development
-- Queue & Job Best Practices
-- User.php
-- WorkflowTemplatePolicy
+- Queue and Job Best Practices
+- UserFactory
+- PasswordPolicyTest.php
+- WellFormedLinkTest
 - Flux UI Development
-- Queue & Job Best Practices
+- Queue and Job Best Practices
 - Queue & Job Best Practices
 - Queue & Job Best Practices
 - Queue & Job Best Practices
@@ -244,7 +249,17 @@
 - AdminLTE — component & layout patterns
 - Filament — component & layout patterns
 - Flux UI Development
-- Queue & Job Best Practices
+- Queue and Job Best Practices
+- Larapilot — Autopilot
+- Larapilot — Spec Review (Human Gate)
+- Advanced Query Best Practices
+- Database Performance Best Practices
+- Events and Notifications Best Practices
+- Larapilot — Autopilot
+- Larapilot — Spec Review (Human Gate)
+- Advanced Query Best Practices
+- Database Performance Best Practices
+- Events and Notifications Best Practices
 - Larapilot — Autopilot
 - Larapilot — Spec Review (Human Gate)
 - Advanced Query Patterns
@@ -267,19 +282,10 @@
 - Events & Notifications Best Practices
 - Larapilot — Autopilot
 - Larapilot — Spec Review (Human Gate)
-- Advanced Query Patterns
+- Advanced Query Best Practices
 - Database Performance Best Practices
-- Events & Notifications Best Practices
-- Larapilot — Autopilot
-- Larapilot — Spec Review (Human Gate)
-- Advanced Query Patterns
-- Database Performance Best Practices
-- Events & Notifications Best Practices
-- Larapilot — Autopilot
-- Larapilot — Spec Review (Human Gate)
-- Advanced Query Patterns
-- Database Performance Best Practices
-- Events & Notifications Best Practices
+- Events and Notifications Best Practices
+- Illuminate\Support\Facades\Validator
 - Larapilot — Product Inception
 - Caching Best Practices
 - Eloquent Best Practices
@@ -314,11 +320,15 @@
 - Eloquent Best Practices
 - Migration Best Practices
 - Architettura
-- Blade & Views Best Practices
+- Blade and View Best Practices
 - Error Handling Best Practices
 - Task Scheduling Best Practices
-- Testing Best Practices
+- AppServiceProvider
 - [Unreleased]
+- Blade and View Best Practices
+- Error Handling Best Practices
+- Task Scheduling Best Practices
+- ReleasePolicyTest
 - Blade & Views Best Practices
 - Error Handling Best Practices
 - Task Scheduling Best Practices
@@ -327,11 +337,7 @@
 - Error Handling Best Practices
 - Task Scheduling Best Practices
 - Testing Best Practices
-- Blade & Views Best Practices
-- Error Handling Best Practices
-- Task Scheduling Best Practices
-- Testing Best Practices
-- PasswordResetTest.php
+- PasswordResetTest
 - Blade & Views Best Practices
 - Error Handling Best Practices
 - Task Scheduling Best Practices
@@ -342,22 +348,23 @@
 - Testing Best Practices
 - Tailwind CSS — component & layout patterns
 - US-001 — Accesso allo strumento e gestione dei membri del team
-- Blade & Views Best Practices
+- ProjectPolicy
+- Blade and View Best Practices
 - Error Handling Best Practices
 - Task Scheduling Best Practices
-- Testing Best Practices
+- Endpoint Tests
+- Collection Best Practices
+- HTTP Client Best Practices
+- Endpoint Tests
+- Routing and Controller Best Practices
+- Convention and Style Best Practices
+- Validation and Forms Best Practices
 - Collection Best Practices
 - HTTP Client Best Practices
 - Mail Best Practices
-- Routing & Controllers Best Practices
-- Conventions & Style
-- Validation & Forms Best Practices
-- Collection Best Practices
-- HTTP Client Best Practices
-- Mail Best Practices
-- Routing & Controllers Best Practices
-- Conventions & Style
-- Validation & Forms Best Practices
+- Routing and Controller Best Practices
+- Convention and Style Best Practices
+- Validation and Forms Best Practices
 - Collection Best Practices
 - HTTP Client Best Practices
 - Mail Best Practices
@@ -392,12 +399,12 @@
 - Collection Best Practices
 - HTTP Client Best Practices
 - Mail Best Practices
-- Routing & Controllers Best Practices
-- Conventions & Style
-- Validation & Forms Best Practices
+- Routing and Controller Best Practices
+- Convention and Style Best Practices
+- Validation and Forms Best Practices
 - bootstrap/app.php
 - graphify reference: query, path, explain
-- ReleaseStepFactory
+- Endpoint Tests
 - Filament — Figma sources (merged)
 - US-003 — Template di workflow con step ordinati e campi richiesti
 - US-005 — Revisione dell'incremento
@@ -433,6 +440,7 @@
 - Views
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
+- BladeComponentAttributesTest
 - Bootstrap 5 — source index
 - Tailwind CSS — source index
 - Registro delle segnalazioni
@@ -447,67 +455,93 @@
 - tailwind/html/README.md
 - internal-feedback/README.md
 - usage/README.md
+- Assertions
+- .agents/skills/testing-best-practices/SKILL.md
+- Fakes, Mocks, and Determinism
+- Test Suite Performance
+- Reviewing Tests
+- Assertions
+- .claude/skills/testing-best-practices/SKILL.md
+- Fakes, Mocks, and Determinism
+- Test Suite Performance
+- Reviewing Tests
+- Assertions
+- .pi/skills/testing-best-practices/SKILL.md
+- Fakes, Mocks, and Determinism
+- Test Suite Performance
+- Reviewing Tests
+- Configuration Best Practices
+- Naming and Structure
+- ReleaseEventPolicy
+- Naming and Structure
+- Naming and Structure
+- Factories and Test Data
+- Testing Best Practices
+- Factories and Test Data
+- Testing Best Practices
+- Factories and Test Data
+- Testing Best Practices
 
 ## God Nodes (most connected - your core abstractions)
-1. `User` - 380 edges
-2. `Project` - 151 edges
-3. `ReleaseStep` - 149 edges
-4. `Release` - 142 edges
-5. `WorkflowTemplate` - 132 edges
-6. `TestCase` - 122 edges
-7. `Role` - 118 edges
-8. `StepDefinition` - 90 edges
-9. `ReleaseEvent` - 76 edges
-10. `ProjectRoleAssignment` - 63 edges
+1. `User` - 415 edges
+2. `Project` - 168 edges
+3. `Release` - 158 edges
+4. `ReleaseStep` - 155 edges
+5. `WorkflowTemplate` - 139 edges
+6. `Role` - 128 edges
+7. `TestCase` - 126 edges
+8. `StepDefinition` - 96 edges
+9. `ReleaseEvent` - 81 edges
+10. `ProjectRoleAssignment` - 78 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `FieldDefinitionManagementTest` --references--> `StepDefinition`  [EXTRACTED]
-  tests/Feature/Configuration/FieldDefinitionManagementTest.php → app/Models/StepDefinition.php
-- `StartReleaseTest` --references--> `User`  [EXTRACTED]
-  tests/Feature/Releases/StartReleaseTest.php → app/Models/User.php
-- `FieldDefinitionManagementTest` --references--> `WorkflowTemplate`  [EXTRACTED]
-  tests/Feature/Configuration/FieldDefinitionManagementTest.php → app/Models/WorkflowTemplate.php
-- `StepDefinitionManagementTest` --references--> `WorkflowTemplate`  [EXTRACTED]
-  tests/Feature/Configuration/StepDefinitionManagementTest.php → app/Models/WorkflowTemplate.php
+- `StartReleaseOverridesTest` --references--> `StartRelease`  [EXTRACTED]
+  tests/Feature/Releases/StartReleaseOverridesTest.php → app/Actions/Releases/StartRelease.php
 - `StartReleaseTest` --references--> `StartRelease`  [EXTRACTED]
   tests/Feature/Releases/StartReleaseTest.php → app/Actions/Releases/StartRelease.php
+- `FieldDefinitionManagementTest` --references--> `StepDefinition`  [EXTRACTED]
+  tests/Feature/Configuration/FieldDefinitionManagementTest.php → app/Models/StepDefinition.php
+- `StartReleaseOverridesTest` --references--> `User`  [EXTRACTED]
+  tests/Feature/Releases/StartReleaseOverridesTest.php → app/Models/User.php
+- `StartReleaseTest` --references--> `User`  [EXTRACTED]
+  tests/Feature/Releases/StartReleaseTest.php → app/Models/User.php
 
 ## Import Cycles
 - None detected.
 
-## Communities (472 total, 54 thin omitted)
+## Communities (506 total, 61 thin omitted)
 
 ### Community 0 - "TestCase"
-Cohesion: 0.08
-Nodes (17): Illuminate\Database\Eloquent\Collection, Illuminate\Database\Eloquent\ModelNotFoundException, Illuminate\Database\Events\QueryExecuted, Illuminate\Database\QueryException, Illuminate\Foundation\Testing\RefreshDatabase, Illuminate\Foundation\Testing\TestCase, Illuminate\Support\Facades\DB, Illuminate\Support\Facades\Gate (+9 more)
+Cohesion: 0.07
+Nodes (21): Illuminate\Auth\Notifications\ResetPassword, Illuminate\Database\Eloquent\Collection, Illuminate\Database\Eloquent\ModelNotFoundException, Illuminate\Database\Events\QueryExecuted, Illuminate\Database\QueryException, Illuminate\Foundation\Testing\RefreshDatabase, Illuminate\Foundation\Testing\TestCase, Illuminate\Support\Facades\DB (+13 more)
 
 ### Community 1 - "WorkflowTemplate"
 Cohesion: 0.06
 Nodes (9): SetDefaultWorkflowTemplate, InactiveTemplateCannotBeDefault, self, WorkflowTemplate, DefaultWorkflowTemplateTest, ProjectTemplateAssociationTest, TemplateUsabilityTest, WorkflowTemplateManagementTest (+1 more)
 
 ### Community 2 - "Illuminate\Database\Eloquent\Factories\Factory"
-Cohesion: 0.10
-Nodes (8): DefaultRoleAssignmentFactory, static, ReleaseFactory, static, RoleFactory, static, StepDefinitionFactory, Illuminate\Database\Eloquent\Factories\Factory
+Cohesion: 0.09
+Nodes (9): DefaultRoleAssignmentFactory, ProjectRoleAssignmentFactory, static, ReleaseFactory, static, RoleFactory, static, StepDefinitionFactory (+1 more)
 
 ### Community 3 - "Illuminate\Support\Facades\Schema"
 Cohesion: 0.06
 Nodes (3): Illuminate\Database\Migrations\Migration, Illuminate\Database\Schema\Blueprint, Illuminate\Support\Facades\Schema
 
 ### Community 4 - "FortifyServiceProvider.php"
-Cohesion: 0.11
-Nodes (14): ResetUserPassword, UpdateUserPassword, UpdateUserProfileInformation, Illuminate\Cache\RateLimiting\Limit, Illuminate\Contracts\Auth\MustVerifyEmail, Illuminate\Support\Facades\Hash, Illuminate\Support\Facades\RateLimiter, Illuminate\Validation\Rule (+6 more)
+Cohesion: 0.21
+Nodes (8): UpdateUserProfileInformation, Illuminate\Cache\RateLimiting\Limit, Illuminate\Contracts\Auth\MustVerifyEmail, Illuminate\Support\Facades\RateLimiter, Illuminate\Validation\Rule, Illuminate\Validation\ValidationException, Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable, Laravel\Fortify\Contracts\UpdatesUserProfileInformation
 
 ### Community 5 - "User"
-Cohesion: 0.04
-Nodes (10): User, DefaultRoleAssignmentPolicy, ProjectPolicy, ReleaseEventPolicy, RolePolicy, Illuminate\Foundation\Auth\User, ConfigurationPolicyTest, MemberManagementTest (+2 more)
+Cohesion: 0.03
+Nodes (12): User, DefaultRoleAssignmentPolicy, ReleasePolicy, RolePolicy, UserPolicy, WorkflowTemplatePolicy, Illuminate\Foundation\Auth\User, ConfigurationPolicyTest (+4 more)
 
-### Community 6 - "ReleaseStep"
+### Community 6 - "Release"
 Cohesion: 0.04
 Nodes (14): CloseStep, SaveStepValues, self, StepAlreadyClosed, self, StepIsNotOpen, Release, ReleaseStep (+6 more)
 
-### Community 7 - "WellFormedLinkTest"
-Cohesion: 0.05
-Nodes (17): AppServiceProvider, FortifyServiceProvider, AssignableUser, WellFormedLink, Closure, Illuminate\Contracts\Validation\Rule, Illuminate\Contracts\Validation\ValidationRule, Illuminate\Support\Arr (+9 more)
+### Community 7 - "WellFormedLink"
+Cohesion: 0.27
+Nodes (6): AssignableUser, WellFormedLink, Closure, Illuminate\Contracts\Validation\ValidationRule, Illuminate\Support\Arr, Illuminate\Translation\PotentiallyTranslatedString
 
 ### Community 8 - "ReleaseEventAppendOnlyTest"
 Cohesion: 0.14
@@ -519,35 +553,31 @@ Nodes (40): APIs & Eloquent Resources, Application Structure & Architecture, Art
 
 ### Community 11 - "StartReleaseTest.php"
 Cohesion: 0.07
-Nodes (15): StartRelease, InactiveProjectCannotStartRelease, self, InactiveResponsibleOnProject, self, self, ProjectWithoutUsableTemplate, self (+7 more)
+Nodes (19): StartRelease, InactiveProjectCannotStartRelease, self, InactiveResponsibleOnProject, self, self, ProjectWithoutUsableTemplate, self (+11 more)
 
 ### Community 12 - "Illuminate\Database\Eloquent\Relations\BelongsTo"
-Cohesion: 0.06
-Nodes (9): Illuminate\Database\Eloquent\Attributes\Fillable, Illuminate\Database\Eloquent\Attributes\Scope, Illuminate\Database\Eloquent\Builder, Illuminate\Database\Eloquent\Concerns\HasUuids, Illuminate\Database\Eloquent\Factories\HasFactory, Illuminate\Database\Eloquent\Model, Illuminate\Database\Eloquent\Relations\BelongsTo, Illuminate\Database\Eloquent\Relations\HasMany (+1 more)
+Cohesion: 0.05
+Nodes (12): Illuminate\Database\Eloquent\Attributes\Fillable, Illuminate\Database\Eloquent\Attributes\Hidden, Illuminate\Database\Eloquent\Attributes\Scope, Illuminate\Database\Eloquent\Builder, Illuminate\Database\Eloquent\Concerns\HasUuids, Illuminate\Database\Eloquent\Factories\HasFactory, Illuminate\Database\Eloquent\Model, Illuminate\Database\Eloquent\Relations\BelongsTo (+4 more)
 
 ### Community 13 - "Project"
 Cohesion: 0.04
-Nodes (12): CreateProject, DefaultRoleAssignment, Project, ProjectRoleAssignment, Role, ProjectRoleAssignmentFactory, ProjectAssignmentsTest, ProjectManagementTest (+4 more)
+Nodes (12): CreateProject, DefaultRoleAssignment, Project, ProjectRoleAssignment, Role, Illuminate\Support\Facades\Route, ProjectAssignmentsTest, ProjectManagementTest (+4 more)
 
 ### Community 14 - "CloseStepTest"
-Cohesion: 0.18
-Nodes (3): ReleaseStepStatus, CloseStepTest, ReleaseStatusTest
+Cohesion: 0.13
+Nodes (5): static, ReleaseStepFactory, ReleaseStepStatus, CloseStepTest, ReleaseStatusTest
 
 ### Community 15 - "AGENTS.md"
 Cohesion: 0.05
 Nodes (39): APIs & Eloquent Resources, Application Structure & Architecture, Artifacts live in the repo, Artisan, CLI contract, Conventions, Deployment, Do Things the Laravel Way (+31 more)
 
-### Community 16 - "Larapilot Shared Runtime (Core)"
+### Community 16 - "Project Settings"
 Cohesion: 0.06
-Nodes (30): Agent Persona, Assumptions and Questions, Auto-approve (`settings.auto_approve`), Backlog granularity (`settings.backlog`), CLI Runtime Contract, Context estimate (Zoey — every skill), Conversation Rules, Do not compress (+22 more)
+Nodes (35): Agent Persona, API auth (`settings.api_auth`) — opt-in, default OFF, Assumptions and Questions, Auto-approve (`settings.auto_approve`), Backlog granularity (`settings.backlog`), CLI Runtime Contract, Code change history (`settings.code_history`) — opt-in, default OFF, Context estimate (Zoey — every skill) (+27 more)
 
 ### Community 17 - "FieldType"
 Cohesion: 0.09
 Nodes (6): static, ReleaseStepFieldFactory, FieldType, FieldDefinitionManagementTest, FieldTypeTest, ReleaseStepFieldTest
-
-### Community 19 - "ReleaseStepPolicyTest"
-Cohesion: 0.08
-Nodes (5): Illuminate\Support\Facades\Process, DecisionGateTest, ReleaseEventPolicyTest, ReleasePolicyTest, ReleaseStepPolicyTest
 
 ### Community 20 - "TwoFactorTest"
 Cohesion: 0.14
@@ -558,8 +588,8 @@ Cohesion: 0.11
 Nodes (17): concurrently, laravel-vite-plugin, devDependencies, concurrently, laravel-vite-plugin, tailwindcss, @tailwindcss/vite, vite (+9 more)
 
 ### Community 29 - "StepDefinition"
-Cohesion: 0.06
-Nodes (7): FieldDefinition, StepDefinition, Illuminate\Support\Collection, StepDefinitionManagementTest, WorkflowSchemaConstraintsTest, OrderedByPositionTest, StepDefinitionTest
+Cohesion: 0.07
+Nodes (6): FieldDefinition, StepDefinition, StepDefinitionManagementTest, WorkflowSchemaConstraintsTest, OrderedByPositionTest, StepDefinitionTest
 
 ### Community 30 - "scripts"
 Cohesion: 0.12
@@ -567,15 +597,15 @@ Nodes (17): scripts, analyse, dev, lint, lint:check, post-autoload-dump, post-up
 
 ### Community 31 - "Functional Requirements"
 Cohesion: 0.07
-Nodes (29): FR-001: Autenticazione e anagrafica dei membri del team, FR-002: Catalogo dei ruoli funzionali, FR-003: Progetti, FR-004: Assegnazione ruolo → persona per progetto, FR-005: Assegnazione ruolo → persona predefinita a livello di team, FR-006: Template di workflow configurabili, FR-007: Definizione degli step di un template, FR-008: Definizione dei campi informativi richiesti per step (+21 more)
+Nodes (30): FR-001: Autenticazione e anagrafica dei membri del team, FR-002: Catalogo dei ruoli funzionali, FR-003: Progetti, FR-004: Assegnazione ruolo → persona per progetto, FR-005: Assegnazione ruolo → persona predefinita a livello di team, FR-006: Template di workflow configurabili, FR-007: Definizione degli step di un template, FR-008: Definizione dei campi informativi richiesti per step (+22 more)
 
 ### Community 32 - "Larapilot Runtime — Delivery"
 Cohesion: 0.07
 Nodes (28): Architecture Standards _(John owns)_, CI/CD Pipeline _(Jack imposes minimum gates; Sarah authors pipeline scripts)_, CLI, Git Pipelines & Linux _(Sarah owns — steps in wherever these surfaces appear)_, Code quality gate _(Andrew + Jack — mandatory; Sarah when CI scripts change)_, Code Review Gate _(Robert owns — Sabrine on refactoring/porting)_, Data Architecture _(Mike owns)_, Decision lens, Effort gate — `ECO` docs deferral (+20 more)
 
 ### Community 33 - "composer.json"
-Cohesion: 0.13
-Nodes (14): autoload-dev, psr-4, description, keywords, license, minimum-stability, name, prefer-stable (+6 more)
+Cohesion: 0.14
+Nodes (13): autoload-dev, psr-4, description, keywords, license, minimum-stability, name, prefer-stable (+5 more)
 
 ### Community 34 - "Larapilot Runtime — Ops & Lifecycle"
 Cohesion: 0.07
@@ -613,6 +643,10 @@ Nodes (23): Cipi runbook, Config & CLI, Custom / VPS, Deploy targets, Kubernetes
 Cohesion: 0.08
 Nodes (23): Cipi runbook, Config & CLI, Custom / VPS, Deploy targets, Kubernetes, Larapilot — Ship & Deploy, Laravel Cloud, Laravel Forge (+15 more)
 
+### Community 46 - "Larapilot — Adopt (brownfield onboarding)"
+Cohesion: 0.11
+Nodes (18): 0. Context load, 1. Codebase discovery (read-only), 2. Derive the product model, 3. Confirmation interview (AskQuestion — max 3 per round, skippable), 4. Codebase analysis report, 5. Write the PRD, 6. Dashboard snapshot & ledger, 7. Next steps (+10 more)
+
 ### Community 47 - "Larapilot — Ship & Deploy"
 Cohesion: 0.08
 Nodes (23): Cipi runbook, Config & CLI, Custom / VPS, Deploy targets, Kubernetes, Larapilot — Ship & Deploy, Laravel Cloud, Laravel Forge (+15 more)
@@ -642,8 +676,8 @@ Cohesion: 0.22
 Nodes (9): require-dev, fakerphp/faker, larastan/larastan, laravel/pail, laravel/pao, laravel/pint, mockery/mockery, nunomaduro/collision (+1 more)
 
 ### Community 58 - "Larapilot — Feature / Evolutiva"
-Cohesion: 0.10
-Nodes (20): 0. Context load, 0b. Decision surfaces (Tom + Mike — deterministic enumeration) — **experimental, opt-in**, 1. Interviews — two passes, in this order (`decision_tables: YES` only), 1c. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+12 more)
+Cohesion: 0.12
+Nodes (15): 0. Context load, 1. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps, Config & CLI, Example (+7 more)
 
 ### Community 59 - "OrderedByPosition.php"
 Cohesion: 0.54
@@ -662,8 +696,8 @@ Cohesion: 0.10
 Nodes (19): Aesthetic Guidelines, Config & CLI, Elise — accessibility (WCAG 2.2 AA), Elise — AdminLTE mockups, Elise — Bootstrap 5 mockups, Elise — brand identity & assets *(when client does not provide)*, Elise — Filament admin mockups, Elise — Laravel stack & aesthetic (+11 more)
 
 ### Community 64 - "Larapilot — Feature / Evolutiva"
-Cohesion: 0.10
-Nodes (20): 0. Context load, 0b. Decision surfaces (Tom + Mike — deterministic enumeration) — **experimental, opt-in**, 1. Interviews — two passes, in this order (`decision_tables: YES` only), 1c. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+12 more)
+Cohesion: 0.12
+Nodes (15): 0. Context load, 1. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps, Config & CLI, Example (+7 more)
 
 ### Community 65 - "Rules"
 Cohesion: 0.10
@@ -682,8 +716,8 @@ Cohesion: 0.29
 Nodes (6): closeForm, delete(, moveDown(, moveUp(, openCreateForm, openEditForm(
 
 ### Community 71 - "ReleaseEvent"
-Cohesion: 0.09
-Nodes (11): RecordUnauthorizedStepAttempt, self, ReleaseEventIsAppendOnly, ReleaseEvent, ReleaseStepField, Illuminate\Support\Carbon, Illuminate\Support\Facades\File, Illuminate\Support\Facades\Route (+3 more)
+Cohesion: 0.13
+Nodes (7): RecordUnauthorizedStepAttempt, ReleaseEvent, ReleaseStepField, Illuminate\Support\Carbon, LogicException, CloseStepConcurrencyTest, ReleaseLogInstantTest
 
 ### Community 72 - "Rules"
 Cohesion: 0.10
@@ -738,8 +772,8 @@ Cohesion: 0.10
 Nodes (19): Aesthetic Guidelines, Config & CLI, Elise — accessibility (WCAG 2.2 AA), Elise — AdminLTE mockups, Elise — Bootstrap 5 mockups, Elise — brand identity & assets *(when client does not provide)*, Elise — Filament admin mockups, Elise — Laravel stack & aesthetic (+11 more)
 
 ### Community 134 - "Larapilot — Feature / Evolutiva"
-Cohesion: 0.10
-Nodes (20): 0. Context load, 0b. Decision surfaces (Tom + Mike — deterministic enumeration) — **experimental, opt-in**, 1. Interviews — two passes, in this order (`decision_tables: YES` only), 1c. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps (+12 more)
+Cohesion: 0.12
+Nodes (15): 0. Context load, 1. Discovery interview (AskQuestion — max 3 per round, skippable), 2. Acceptance criteria (Tom), 3. PRD sync (when scope changes), 4. Persist spec, 5. Next steps, Config & CLI, Example (+7 more)
 
 ### Community 135 - "Larapilot — Bug Report"
 Cohesion: 0.11
@@ -767,7 +801,7 @@ Nodes (17): 0. Context load, 1. Triage interview (AskQuestion — max 3 per roun
 
 ### Community 141 - "Larapilot Runtime — Discovery"
 Cohesion: 0.11
-Nodes (17): Backlog mapping (`larapilot-spec`), Branching rules _(inception)_, Budget Sensitivity, Client Materials _(all skills — mandatory input)_, Delivery Target, Downstream behavior, Downstream honor rules, Frontend Topology _(John + Joe co-own)_ (+9 more)
+Nodes (18): Backlog mapping (`larapilot-spec`), Branching rules _(inception)_, Budget Sensitivity, Client Materials _(all skills — mandatory input)_, Decision Journal _(inception — `settings.decision_log`, default ON)_, Delivery Target, Downstream behavior, Downstream honor rules (+10 more)
 
 ### Community 142 - "UX & Frontend Design _(Elise owns)_"
 Cohesion: 0.11
@@ -777,6 +811,10 @@ Nodes (17): Accessibility _(Elise leads — Emma & Violet collaborate)_, Brand i
 Cohesion: 0.11
 Nodes (17): 0. Context load, 1. Triage interview (AskQuestion — max 3 per round, skippable), 2. Normalize intake (Sophia), 3. Route to workflow, 3b. PRD sync (requirement gap only), 4. Fix spec body (new bug), 5. Rework payload (existing spec), 6. Next steps (+9 more)
 
+### Community 144 - "Larapilot — Adopt (brownfield onboarding)"
+Cohesion: 0.11
+Nodes (18): 0. Context load, 1. Codebase discovery (read-only), 2. Derive the product model, 3. Confirmation interview (AskQuestion — max 3 per round, skippable), 4. Codebase analysis report, 5. Write the PRD, 6. Dashboard snapshot & ledger, 7. Next steps (+10 more)
+
 ### Community 145 - "Laravel Fortify Development"
 Cohesion: 0.12
 Nodes (16): Available Features, Best Practices, Custom Authentication Logic, Documentation, Email Verification Setup, Key Endpoints, Laravel Fortify Development, Passkeys Setup (+8 more)
@@ -785,9 +823,9 @@ Nodes (16): Available Features, Best Practices, Custom Authentication Logic, Doc
 Cohesion: 0.12
 Nodes (16): Available Features, Best Practices, Custom Authentication Logic, Documentation, Email Verification Setup, Key Endpoints, Laravel Fortify Development, Passkeys Setup (+8 more)
 
-### Community 147 - "Notifications (`settings.notifications`)"
-Cohesion: 0.12
-Nodes (16): Bitbucket Cloud (`settings.bitbucket`), Discord, Events, GitHub (`settings.github`), GitLab (`settings.gitlab`), Larapilot — Optional Integrations, Missing credentials, Notifications (`settings.notifications`) (+8 more)
+### Community 147 - "Larapilot — Optional Integrations"
+Cohesion: 0.06
+Nodes (31): API access (`settings.api_auth`), Azure DevOps (`settings.azure`), Behaviour, Bitbucket Cloud (`settings.bitbucket`), Calling the API (client side), Dashboard access (`settings.dashboard_auth`), Discord, Events (+23 more)
 
 ### Community 148 - "Mockup — Superficie operativa (Exin Deploy)"
 Cohesion: 0.12
@@ -901,21 +939,25 @@ Nodes (14): 0. Read current state, 1. Catalog identity (Matt), 2. Persist identi
 Cohesion: 0.13
 Nodes (14): 0. Read current state, 1. Catalog identity (Matt), 2. Persist identity, 3. Generate, 4. Register in Backstage, 5. Keep it fresh (Jack — optional), Config & CLI, Larapilot — Backstage Integration (+6 more)
 
+### Community 176 - "Larapilot — Adopt (brownfield onboarding)"
+Cohesion: 0.11
+Nodes (18): 0. Context load, 1. Codebase discovery (read-only), 2. Derive the product model, 3. Confirmation interview (AskQuestion — max 3 per round, skippable), 4. Codebase analysis report, 5. Write the PRD, 6. Dashboard snapshot & ledger, 7. Next steps (+10 more)
+
 ### Community 177 - "Larapilot — Spec Planning"
-Cohesion: 0.13
-Nodes (14): Config & CLI, Decision table (read-only here) — `decision_tables: YES` only, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec (+6 more)
+Cohesion: 0.14
+Nodes (13): Config & CLI, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec, Stage 1 — Load context (parallel) (+5 more)
 
 ### Community 178 - "Tailwind CSS Development"
-Cohesion: 0.14
-Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
+Cohesion: 0.18
+Nodes (10): Basic Usage, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Import Syntax, Replaced Utilities, Spacing (+2 more)
 
 ### Community 179 - "Larapilot — Spec Planning"
-Cohesion: 0.13
-Nodes (14): Config & CLI, Decision table (read-only here) — `decision_tables: YES` only, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec (+6 more)
+Cohesion: 0.14
+Nodes (13): Config & CLI, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec, Stage 1 — Load context (parallel) (+5 more)
 
 ### Community 180 - "Tailwind CSS Development"
-Cohesion: 0.14
-Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
+Cohesion: 0.18
+Nodes (10): Basic Usage, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Import Syntax, Replaced Utilities, Spacing (+2 more)
 
 ### Community 181 - "Larapilot — Spec Planning"
 Cohesion: 0.14
@@ -950,12 +992,12 @@ Cohesion: 0.14
 Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
 
 ### Community 189 - "Larapilot — Spec Planning"
-Cohesion: 0.13
-Nodes (14): Config & CLI, Decision table (read-only here) — `decision_tables: YES` only, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec (+6 more)
+Cohesion: 0.14
+Nodes (13): Config & CLI, Larapilot — Spec Planning, Laravel Planning Rules, Output Economy, Rework Mode, Shared Runtime, Stage 0 — Select spec, Stage 1 — Load context (parallel) (+5 more)
 
 ### Community 190 - "Tailwind CSS Development"
-Cohesion: 0.14
-Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
+Cohesion: 0.18
+Nodes (10): Basic Usage, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Import Syntax, Replaced Utilities, Spacing (+2 more)
 
 ### Community 191 - "Product Requirements Document"
 Cohesion: 0.15
@@ -990,16 +1032,16 @@ Cohesion: 0.17
 Nodes (11): 0. Load, 1. Understand the question, 2. Answer (Lucille), 3. Optional follow-ups, Config & CLI, Larapilot — Usage & Time Tracking (Lucille), Output Economy, Rules (+3 more)
 
 ### Community 199 - "Architecture Best Practices"
-Cohesion: 0.17
-Nodes (11): Architecture Best Practices, Code to Interfaces, Convention Over Configuration, Default Sort by Descending, Single-Purpose Action Classes, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution, Use `Context` for Request-Scoped Data (+3 more)
+Cohesion: 0.18
+Nodes (11): Architecture Best Practices, Depend on Contracts at Boundaries, Extract Focused Business Operations, Follow Framework Conventions, Inject Required Dependencies, Specify a Deterministic Sort Order, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution (+3 more)
 
 ### Community 200 - ".agents/skills/laravel-best-practices/SKILL.md"
-Cohesion: 0.17
-Nodes (10): Configuration Best Practices, `env()` Only in Config Files, Use `App::environment()` for Environment Checks, Use Constants and Language Files, Use Encrypted Env or External Secrets, Consistency First, Decision Rules, How to Apply (+2 more)
+Cohesion: 0.14
+Nodes (11): Assert the Delivery Mode, Dispatch Queued Mail After Commit, Mail Best Practices, Queue Slow Mail Delivery, Separate Content and Delivery Tests, Use Markdown Mailables When They Fit, Consistency First, Decision Rules (+3 more)
 
 ### Community 201 - "Security Best Practices"
 Cohesion: 0.17
-Nodes (11): Audit Dependencies, Authorize Every Action, CSRF Protection, Encrypt Sensitive Database Fields, Escape Output to Prevent XSS, Keep Secrets Out of Code, Mass Assignment Protection, Prevent SQL Injection (+3 more)
+Nodes (11): Apply Cross-Site Request Forgery Protection, Audit Dependencies, Authorize Protected Actions, Bind Query Parameters, Control Mass Assignment, Encrypt Sensitive Attributes When Appropriate, Escape Output in Its Context, Keep Secrets Out of Application Code (+3 more)
 
 ### Community 203 - "Detection Checklist"
 Cohesion: 0.17
@@ -1027,15 +1069,15 @@ Nodes (11): 0. Load, 1. Understand the question, 2. Answer (Lucille), 3. Optiona
 
 ### Community 209 - "Architecture Best Practices"
 Cohesion: 0.17
-Nodes (11): Architecture Best Practices, Code to Interfaces, Convention Over Configuration, Default Sort by Descending, Single-Purpose Action Classes, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution, Use `Context` for Request-Scoped Data (+3 more)
+Nodes (11): Architecture Best Practices, Depend on Contracts at Boundaries, Extract Focused Business Operations, Follow Framework Conventions, Inject Required Dependencies, Specify a Deterministic Sort Order, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution (+3 more)
 
 ### Community 210 - ".claude/skills/laravel-best-practices/SKILL.md"
 Cohesion: 0.17
-Nodes (10): Configuration Best Practices, `env()` Only in Config Files, Use `App::environment()` for Environment Checks, Use Constants and Language Files, Use Encrypted Env or External Secrets, Consistency First, Decision Rules, How to Apply (+2 more)
+Nodes (10): Configuration Best Practices, Name Repeated Domain Values, Protect Production Secrets, Read Environment Variables in Configuration Files, Use `App::environment()` for Environment Checks, Consistency First, Decision Rules, How to Apply (+2 more)
 
 ### Community 211 - "Security Best Practices"
 Cohesion: 0.17
-Nodes (11): Audit Dependencies, Authorize Every Action, CSRF Protection, Encrypt Sensitive Database Fields, Escape Output to Prevent XSS, Keep Secrets Out of Code, Mass Assignment Protection, Prevent SQL Injection (+3 more)
+Nodes (11): Apply Cross-Site Request Forgery Protection, Audit Dependencies, Authorize Protected Actions, Bind Query Parameters, Control Mass Assignment, Encrypt Sensitive Attributes When Appropriate, Escape Output in Its Context, Keep Secrets Out of Application Code (+3 more)
 
 ### Community 212 - "Detection Checklist"
 Cohesion: 0.17
@@ -1215,35 +1257,35 @@ Nodes (11): 0. Load, 1. Understand the question, 2. Answer (Lucille), 3. Optiona
 
 ### Community 256 - "Architecture Best Practices"
 Cohesion: 0.17
-Nodes (11): Architecture Best Practices, Code to Interfaces, Convention Over Configuration, Default Sort by Descending, Single-Purpose Action Classes, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution, Use `Context` for Request-Scoped Data (+3 more)
+Nodes (11): Architecture Best Practices, Depend on Contracts at Boundaries, Extract Focused Business Operations, Follow Framework Conventions, Inject Required Dependencies, Specify a Deterministic Sort Order, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution (+3 more)
 
 ### Community 257 - ".pi/skills/laravel-best-practices/SKILL.md"
 Cohesion: 0.17
-Nodes (10): Configuration Best Practices, `env()` Only in Config Files, Use `App::environment()` for Environment Checks, Use Constants and Language Files, Use Encrypted Env or External Secrets, Consistency First, Decision Rules, How to Apply (+2 more)
+Nodes (10): Configuration Best Practices, Name Repeated Domain Values, Protect Production Secrets, Read Environment Variables in Configuration Files, Use `App::environment()` for Environment Checks, Consistency First, Decision Rules, How to Apply (+2 more)
 
 ### Community 258 - "Security Best Practices"
 Cohesion: 0.17
-Nodes (11): Audit Dependencies, Authorize Every Action, CSRF Protection, Encrypt Sensitive Database Fields, Escape Output to Prevent XSS, Keep Secrets Out of Code, Mass Assignment Protection, Prevent SQL Injection (+3 more)
+Nodes (11): Apply Cross-Site Request Forgery Protection, Audit Dependencies, Authorize Protected Actions, Bind Query Parameters, Control Mass Assignment, Encrypt Sensitive Attributes When Appropriate, Escape Output in Its Context, Keep Secrets Out of Application Code (+3 more)
 
 ### Community 260 - "Flux UI Development"
 Cohesion: 0.18
 Nodes (10): Available Components (Free Edition), Basic Usage, Common Patterns, Common Pitfalls, Documentation, Flux UI Development, Form Fields, Icons (+2 more)
 
-### Community 261 - "Queue & Job Best Practices"
-Cohesion: 0.18
-Nodes (10): Always Implement `failed()`, Batch Related Jobs, Implement `ShouldBeUnique`, Queue & Job Best Practices, Rate Limit External API Calls in Jobs, `retryUntil()` Needs `$tries = 0`, Set `retry_after` Greater Than `timeout`, Use Exponential Backoff (+2 more)
+### Community 261 - "Queue and Job Best Practices"
+Cohesion: 0.20
+Nodes (9): Back Off Transient Failures, Batch Jobs for Group Coordination, Configure Time-Based Retry Limits Deliberately, Handle Terminal Failure When Needed, Keep Reservation Time Longer Than Execution Time, Queue and Job Best Practices, Rate Limit External Calls, Use Horizon for Redis Queue Operations (+1 more)
 
-### Community 262 - "User.php"
-Cohesion: 0.25
-Nodes (5): static, UserFactory, Illuminate\Database\Eloquent\Attributes\Hidden, Illuminate\Notifications\Notifiable, Laravel\Fortify\TwoFactorAuthenticatable
+### Community 263 - "PasswordPolicyTest.php"
+Cohesion: 0.17
+Nodes (5): Illuminate\Contracts\Validation\Rule, Illuminate\Validation\Rules\Password, PHPUnit\Framework\Attributes\DataProvider, Symfony\Component\Finder\Finder, PasswordPolicyTest
 
 ### Community 265 - "Flux UI Development"
 Cohesion: 0.18
 Nodes (10): Available Components (Free Edition), Basic Usage, Common Patterns, Common Pitfalls, Documentation, Flux UI Development, Form Fields, Icons (+2 more)
 
-### Community 266 - "Queue & Job Best Practices"
-Cohesion: 0.18
-Nodes (10): Always Implement `failed()`, Batch Related Jobs, Implement `ShouldBeUnique`, Queue & Job Best Practices, Rate Limit External API Calls in Jobs, `retryUntil()` Needs `$tries = 0`, Set `retry_after` Greater Than `timeout`, Use Exponential Backoff (+2 more)
+### Community 266 - "Queue and Job Best Practices"
+Cohesion: 0.20
+Nodes (9): Back Off Transient Failures, Batch Jobs for Group Coordination, Configure Time-Based Retry Limits Deliberately, Handle Terminal Failure When Needed, Keep Reservation Time Longer Than Execution Time, Queue and Job Best Practices, Rate Limit External Calls, Use Horizon for Redis Queue Operations (+1 more)
 
 ### Community 267 - "Queue & Job Best Practices"
 Cohesion: 0.18
@@ -1273,49 +1315,49 @@ Nodes (10): Actions & buttons, App shell, Auth (panel login), Filament — compo
 Cohesion: 0.18
 Nodes (10): Available Components (Free Edition), Basic Usage, Common Patterns, Common Pitfalls, Documentation, Flux UI Development, Form Fields, Icons (+2 more)
 
-### Community 274 - "Queue & Job Best Practices"
-Cohesion: 0.18
-Nodes (10): Always Implement `failed()`, Batch Related Jobs, Implement `ShouldBeUnique`, Queue & Job Best Practices, Rate Limit External API Calls in Jobs, `retryUntil()` Needs `$tries = 0`, Set `retry_after` Greater Than `timeout`, Use Exponential Backoff (+2 more)
+### Community 274 - "Queue and Job Best Practices"
+Cohesion: 0.20
+Nodes (9): Back Off Transient Failures, Batch Jobs for Group Coordination, Configure Time-Based Retry Limits Deliberately, Handle Terminal Failure When Needed, Keep Reservation Time Longer Than Execution Time, Queue and Job Best Practices, Rate Limit External Calls, Use Horizon for Redis Queue Operations (+1 more)
 
 ### Community 275 - "Larapilot — Autopilot"
 Cohesion: 0.20
 Nodes (9): Config & CLI, Execution, Larapilot — Autopilot, Laravel, Output Economy, Safety, Selection Rules, Shared Runtime (+1 more)
 
 ### Community 276 - "Larapilot — Spec Review (Human Gate)"
-Cohesion: 0.18
-Nodes (10): Approval, Config & CLI, Decision table diff — format (`decision_tables: YES` only), Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules (+2 more)
-
-### Community 277 - "Advanced Query Patterns"
 Cohesion: 0.20
-Nodes (9): Advanced Query Patterns, Create Dynamic Relationships via Subquery FK, Prefer `whereIn` + Subquery Over `whereHas`, Sometimes Two Simple Queries Beat One Complex Query, Use `addSelect()` Subqueries for Single Values from Has-Many, Use Compound Indexes Matching `orderBy` Column Order, Use Conditional Aggregates Instead of Multiple Count Queries, Use Correlated Subqueries for Has-Many Ordering (+1 more)
+Nodes (9): Approval, Config & CLI, Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules, Shared Runtime (+1 more)
+
+### Community 277 - "Advanced Query Best Practices"
+Cohesion: 0.20
+Nodes (9): Advanced Query Best Practices, Combine Related Counts with Conditional Aggregates, Compare `whereHas()` with an `IN` Subquery, Consider a Correlated Subquery for Has-Many Ordering, Create Dynamic Relationships with a Subquery Foreign Key, Design Composite Indexes for the Query, Measure Two Simple Queries Against One Complex Query, Reuse Loaded Parent Models with `setRelation()` (+1 more)
 
 ### Community 278 - "Database Performance Best Practices"
-Cohesion: 0.20
-Nodes (9): Add Database Indexes, Always Eager Load Relationships, Chunk Large Datasets, Database Performance Best Practices, No Queries in Blade Templates, Prevent Lazy Loading in Development, Select Only Needed Columns, Use `cursor()` for Memory-Efficient Iteration (+1 more)
+Cohesion: 0.22
+Nodes (8): Add Indexes for Measured Query Patterns, Count Relationships Without Loading Them, Database Performance Best Practices, Eager Load Relationships Before Iterating, Keep Queries Out of Blade Templates, Prevent Lazy Loading in Development, Process Large Data Sets Incrementally, Select Only Needed Columns
 
-### Community 279 - "Events & Notifications Best Practices"
+### Community 279 - "Events and Notifications Best Practices"
 Cohesion: 0.20
-Nodes (9): Always Queue Notifications, Events & Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Run `event:cache` in Production Deploy, Use `afterCommit()` on Notifications in Transactions, Use On-Demand Notifications for Non-User Recipients (+1 more)
+Nodes (9): Cache Event Discovery During Production Deployment, Dispatch Queued Notifications After Commit, Events and Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Queue Slow Notifications, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Use On-Demand Notifications for Non-User Recipients (+1 more)
 
 ### Community 280 - "Larapilot — Autopilot"
 Cohesion: 0.20
 Nodes (9): Config & CLI, Execution, Larapilot — Autopilot, Laravel, Output Economy, Safety, Selection Rules, Shared Runtime (+1 more)
 
 ### Community 281 - "Larapilot — Spec Review (Human Gate)"
-Cohesion: 0.18
-Nodes (10): Approval, Config & CLI, Decision table diff — format (`decision_tables: YES` only), Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules (+2 more)
-
-### Community 282 - "Advanced Query Patterns"
 Cohesion: 0.20
-Nodes (9): Advanced Query Patterns, Create Dynamic Relationships via Subquery FK, Prefer `whereIn` + Subquery Over `whereHas`, Sometimes Two Simple Queries Beat One Complex Query, Use `addSelect()` Subqueries for Single Values from Has-Many, Use Compound Indexes Matching `orderBy` Column Order, Use Conditional Aggregates Instead of Multiple Count Queries, Use Correlated Subqueries for Has-Many Ordering (+1 more)
+Nodes (9): Approval, Config & CLI, Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules, Shared Runtime (+1 more)
+
+### Community 282 - "Advanced Query Best Practices"
+Cohesion: 0.20
+Nodes (9): Advanced Query Best Practices, Combine Related Counts with Conditional Aggregates, Compare `whereHas()` with an `IN` Subquery, Consider a Correlated Subquery for Has-Many Ordering, Create Dynamic Relationships with a Subquery Foreign Key, Design Composite Indexes for the Query, Measure Two Simple Queries Against One Complex Query, Reuse Loaded Parent Models with `setRelation()` (+1 more)
 
 ### Community 283 - "Database Performance Best Practices"
-Cohesion: 0.20
-Nodes (9): Add Database Indexes, Always Eager Load Relationships, Chunk Large Datasets, Database Performance Best Practices, No Queries in Blade Templates, Prevent Lazy Loading in Development, Select Only Needed Columns, Use `cursor()` for Memory-Efficient Iteration (+1 more)
+Cohesion: 0.22
+Nodes (8): Add Indexes for Measured Query Patterns, Count Relationships Without Loading Them, Database Performance Best Practices, Eager Load Relationships Before Iterating, Keep Queries Out of Blade Templates, Prevent Lazy Loading in Development, Process Large Data Sets Incrementally, Select Only Needed Columns
 
-### Community 284 - "Events & Notifications Best Practices"
+### Community 284 - "Events and Notifications Best Practices"
 Cohesion: 0.20
-Nodes (9): Always Queue Notifications, Events & Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Run `event:cache` in Production Deploy, Use `afterCommit()` on Notifications in Transactions, Use On-Demand Notifications for Non-User Recipients (+1 more)
+Nodes (9): Cache Event Discovery During Production Deployment, Dispatch Queued Notifications After Commit, Events and Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Queue Slow Notifications, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Use On-Demand Notifications for Non-User Recipients (+1 more)
 
 ### Community 285 - "Larapilot — Autopilot"
 Cohesion: 0.20
@@ -1402,20 +1444,24 @@ Cohesion: 0.20
 Nodes (9): Config & CLI, Execution, Larapilot — Autopilot, Laravel, Output Economy, Safety, Selection Rules, Shared Runtime (+1 more)
 
 ### Community 306 - "Larapilot — Spec Review (Human Gate)"
-Cohesion: 0.18
-Nodes (10): Approval, Config & CLI, Decision table diff — format (`decision_tables: YES` only), Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules (+2 more)
-
-### Community 307 - "Advanced Query Patterns"
 Cohesion: 0.20
-Nodes (9): Advanced Query Patterns, Create Dynamic Relationships via Subquery FK, Prefer `whereIn` + Subquery Over `whereHas`, Sometimes Two Simple Queries Beat One Complex Query, Use `addSelect()` Subqueries for Single Values from Has-Many, Use Compound Indexes Matching `orderBy` Column Order, Use Conditional Aggregates Instead of Multiple Count Queries, Use Correlated Subqueries for Has-Many Ordering (+1 more)
+Nodes (9): Approval, Config & CLI, Larapilot — Spec Review (Human Gate), Output Economy, Presentation, Request Changes, Rules, Shared Runtime (+1 more)
+
+### Community 307 - "Advanced Query Best Practices"
+Cohesion: 0.20
+Nodes (9): Advanced Query Best Practices, Combine Related Counts with Conditional Aggregates, Compare `whereHas()` with an `IN` Subquery, Consider a Correlated Subquery for Has-Many Ordering, Create Dynamic Relationships with a Subquery Foreign Key, Design Composite Indexes for the Query, Measure Two Simple Queries Against One Complex Query, Reuse Loaded Parent Models with `setRelation()` (+1 more)
 
 ### Community 308 - "Database Performance Best Practices"
-Cohesion: 0.20
-Nodes (9): Add Database Indexes, Always Eager Load Relationships, Chunk Large Datasets, Database Performance Best Practices, No Queries in Blade Templates, Prevent Lazy Loading in Development, Select Only Needed Columns, Use `cursor()` for Memory-Efficient Iteration (+1 more)
+Cohesion: 0.22
+Nodes (8): Add Indexes for Measured Query Patterns, Count Relationships Without Loading Them, Database Performance Best Practices, Eager Load Relationships Before Iterating, Keep Queries Out of Blade Templates, Prevent Lazy Loading in Development, Process Large Data Sets Incrementally, Select Only Needed Columns
 
-### Community 309 - "Events & Notifications Best Practices"
+### Community 309 - "Events and Notifications Best Practices"
 Cohesion: 0.20
-Nodes (9): Always Queue Notifications, Events & Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Run `event:cache` in Production Deploy, Use `afterCommit()` on Notifications in Transactions, Use On-Demand Notifications for Non-User Recipients (+1 more)
+Nodes (9): Cache Event Discovery During Production Deployment, Dispatch Queued Notifications After Commit, Events and Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Queue Slow Notifications, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Use On-Demand Notifications for Non-User Recipients (+1 more)
+
+### Community 310 - "Illuminate\Support\Facades\Validator"
+Cohesion: 0.24
+Nodes (6): ResetUserPassword, UpdateUserPassword, Illuminate\Support\Facades\Validator, Laravel\Fortify\Contracts\ResetsUserPasswords, Laravel\Fortify\Contracts\UpdatesUserPasswords, PasswordValidationRules
 
 ### Community 311 - "Larapilot — Product Inception"
 Cohesion: 0.22
@@ -1423,15 +1469,15 @@ Nodes (8): Config & CLI, Larapilot — Product Inception, Output Boundaries, Out
 
 ### Community 312 - "Caching Best Practices"
 Cohesion: 0.22
-Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::memo()` to Avoid Redundant Hits Within a Request, Use `Cache::remember()` Instead of Manual Get/Put, Use Cache Tags to Invalidate Related Groups, Use `once()` for Per-Request Memoization
+Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Consider `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::memo()` to Avoid Redundant Hits Within an Execution, Use `Cache::remember()` for Cache-Aside Reads, Use Cache Tags to Invalidate Related Groups, Use `once()` for In-Process Memoization
 
 ### Community 313 - "Eloquent Best Practices"
 Cohesion: 0.22
-Nodes (8): Apply Global Scopes Sparingly, Avoid Hardcoded Table Names in Queries, Cast Date Columns Properly, Define Attribute Casts, Eloquent Best Practices, Use Correct Relationship Types, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
+Nodes (8): Apply Global Scopes Sparingly, Cast Date and Time Attributes, Define Attribute Casts, Define Precise Relationship Types, Eloquent Best Practices, Keep Application Queries Model-Aware, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
 
 ### Community 314 - "Migration Best Practices"
-Cohesion: 0.22
-Nodes (8): Add Indexes in the Migration, Generate Migrations with Artisan, Keep Migrations Focused, Migration Best Practices, Mirror Defaults in Model `$attributes`, Never Modify Deployed Migrations, Use `constrained()` for Foreign Keys, Write Reversible `down()` Methods by Default
+Cohesion: 0.20
+Nodes (9): Define Foreign-Key Constraints Deliberately, Design Indexes for Real Queries, Generate Migrations with Artisan, Keep Migrations Focused, Make Rollbacks Honest, Migration Best Practices, Mirror Defaults Only When Unsaved Models Need Them, Stage Changes That Affect Existing Rows (+1 more)
 
 ### Community 315 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.22
@@ -1443,15 +1489,15 @@ Nodes (8): Config & CLI, Larapilot — Product Inception, Output Boundaries, Out
 
 ### Community 317 - "Caching Best Practices"
 Cohesion: 0.22
-Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::memo()` to Avoid Redundant Hits Within a Request, Use `Cache::remember()` Instead of Manual Get/Put, Use Cache Tags to Invalidate Related Groups, Use `once()` for Per-Request Memoization
+Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Consider `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::memo()` to Avoid Redundant Hits Within an Execution, Use `Cache::remember()` for Cache-Aside Reads, Use Cache Tags to Invalidate Related Groups, Use `once()` for In-Process Memoization
 
 ### Community 318 - "Eloquent Best Practices"
 Cohesion: 0.22
-Nodes (8): Apply Global Scopes Sparingly, Avoid Hardcoded Table Names in Queries, Cast Date Columns Properly, Define Attribute Casts, Eloquent Best Practices, Use Correct Relationship Types, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
+Nodes (8): Apply Global Scopes Sparingly, Cast Date and Time Attributes, Define Attribute Casts, Define Precise Relationship Types, Eloquent Best Practices, Keep Application Queries Model-Aware, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
 
 ### Community 319 - "Migration Best Practices"
-Cohesion: 0.22
-Nodes (8): Add Indexes in the Migration, Generate Migrations with Artisan, Keep Migrations Focused, Migration Best Practices, Mirror Defaults in Model `$attributes`, Never Modify Deployed Migrations, Use `constrained()` for Foreign Keys, Write Reversible `down()` Methods by Default
+Cohesion: 0.20
+Nodes (9): Define Foreign-Key Constraints Deliberately, Design Indexes for Real Queries, Generate Migrations with Artisan, Keep Migrations Focused, Make Rollbacks Honest, Migration Best Practices, Mirror Defaults Only When Unsaved Models Need Them, Stage Changes That Affect Existing Rows (+1 more)
 
 ### Community 320 - "Larapilot — Product Inception"
 Cohesion: 0.22
@@ -1539,55 +1585,51 @@ Nodes (8): Config & CLI, Larapilot — Product Inception, Output Boundaries, Out
 
 ### Community 341 - "Caching Best Practices"
 Cohesion: 0.22
-Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::memo()` to Avoid Redundant Hits Within a Request, Use `Cache::remember()` Instead of Manual Get/Put, Use Cache Tags to Invalidate Related Groups, Use `once()` for Per-Request Memoization
+Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Consider `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::memo()` to Avoid Redundant Hits Within an Execution, Use `Cache::remember()` for Cache-Aside Reads, Use Cache Tags to Invalidate Related Groups, Use `once()` for In-Process Memoization
 
 ### Community 342 - "Eloquent Best Practices"
 Cohesion: 0.22
-Nodes (8): Apply Global Scopes Sparingly, Avoid Hardcoded Table Names in Queries, Cast Date Columns Properly, Define Attribute Casts, Eloquent Best Practices, Use Correct Relationship Types, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
+Nodes (8): Apply Global Scopes Sparingly, Cast Date and Time Attributes, Define Attribute Casts, Define Precise Relationship Types, Eloquent Best Practices, Keep Application Queries Model-Aware, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
 
 ### Community 343 - "Migration Best Practices"
-Cohesion: 0.22
-Nodes (8): Add Indexes in the Migration, Generate Migrations with Artisan, Keep Migrations Focused, Migration Best Practices, Mirror Defaults in Model `$attributes`, Never Modify Deployed Migrations, Use `constrained()` for Foreign Keys, Write Reversible `down()` Methods by Default
+Cohesion: 0.20
+Nodes (9): Define Foreign-Key Constraints Deliberately, Design Indexes for Real Queries, Generate Migrations with Artisan, Keep Migrations Focused, Make Rollbacks Honest, Migration Best Practices, Mirror Defaults Only When Unsaved Models Need Them, Stage Changes That Affect Existing Rows (+1 more)
 
 ### Community 344 - "Architettura"
 Cohesion: 0.22
 Nodes (9): Architettura, Autenticazione e autorizzazione, Avvio di una release, Chiusura di uno step e avanzamento, Configurazione del processo, Definizione e istanza sono separate, La macchina a stati, Le due meta dello schema (+1 more)
 
-### Community 345 - "Blade & Views Best Practices"
+### Community 345 - "Blade and View Best Practices"
 Cohesion: 0.25
-Nodes (7): Blade & Views Best Practices, Prefer Blade Components Over `@include`, Use `$attributes->merge()` in Component Templates, Use `@aware` for Deeply Nested Component Props, Use Blade Fragments for Partial Re-Renders (htmx/Turbo), Use `@pushOnce` for Per-Component Scripts, Use View Composers for Shared View Data
+Nodes (7): Blade and View Best Practices, Prefer Components for Explicit Interfaces, Return Blade Fragments for Partial Rendering, Share Compatible View Data with a View Composer, Share Parent Component Props with `@aware`, Use `$attributes->merge()` in Component Templates, Use `@pushOnce` for Per-Component Scripts
 
 ### Community 346 - "Error Handling Best Practices"
 Cohesion: 0.25
-Nodes (7): Add Context to Exception Classes, Enable `dontReportDuplicates()`, Error Handling Best Practices, Exception Reporting and Rendering, Force JSON Error Rendering for API Routes, Throttle High-Volume Exceptions, Use `ShouldntReport` for Exceptions That Should Never Log
+Nodes (7): Add Context to Exception Classes, Choose Where to Report and Render Exceptions, Define JSON Rendering for API Routes, Error Handling Best Practices, Mark Exceptions the Handler Should Not Report, Prevent Duplicate Reports of One Exception Instance, Throttle High-Volume Exception Reports
 
 ### Community 347 - "Task Scheduling Best Practices"
 Cohesion: 0.25
-Nodes (7): Task Scheduling Best Practices, Use `environments()` to Restrict Tasks, Use `onOneServer()` on Multi-Server Deployments, Use `runInBackground()` for Concurrent Long Tasks, Use Schedule Groups for Shared Configuration, Use `takeUntilTimeout()` for Time-Bounded Processing, Use `withoutOverlapping()` on Variable-Duration Tasks
+Nodes (7): Bound Work Inside the Task, Group Shared Configuration, Prevent Unwanted Overlap, Restrict Tasks by Environment, Run a Task on One Server, Run Eligible Commands in the Background, Task Scheduling Best Practices
 
-### Community 348 - "Testing Best Practices"
+### Community 348 - "AppServiceProvider"
 Cohesion: 0.25
-Nodes (7): Call `Event::fake()` After Factory Setup, Testing Best Practices, Use `Exceptions::fake()` to Assert Exception Reporting, Use Factory States and Sequences, Use `LazilyRefreshDatabase` Over `RefreshDatabase`, Use Model Assertions Over Raw Database Assertions, Use `recycle()` to Share Relationship Instances Across Factories
+Nodes (3): AppServiceProvider, FortifyServiceProvider, Illuminate\Support\ServiceProvider
 
 ### Community 349 - "[Unreleased]"
 Cohesion: 0.25
 Nodes (7): Added, Changed, Changelog, Fixed, Removed, Security, [Unreleased]
 
-### Community 350 - "Blade & Views Best Practices"
+### Community 350 - "Blade and View Best Practices"
 Cohesion: 0.25
-Nodes (7): Blade & Views Best Practices, Prefer Blade Components Over `@include`, Use `$attributes->merge()` in Component Templates, Use `@aware` for Deeply Nested Component Props, Use Blade Fragments for Partial Re-Renders (htmx/Turbo), Use `@pushOnce` for Per-Component Scripts, Use View Composers for Shared View Data
+Nodes (7): Blade and View Best Practices, Prefer Components for Explicit Interfaces, Return Blade Fragments for Partial Rendering, Share Compatible View Data with a View Composer, Share Parent Component Props with `@aware`, Use `$attributes->merge()` in Component Templates, Use `@pushOnce` for Per-Component Scripts
 
 ### Community 351 - "Error Handling Best Practices"
 Cohesion: 0.25
-Nodes (7): Add Context to Exception Classes, Enable `dontReportDuplicates()`, Error Handling Best Practices, Exception Reporting and Rendering, Force JSON Error Rendering for API Routes, Throttle High-Volume Exceptions, Use `ShouldntReport` for Exceptions That Should Never Log
+Nodes (7): Add Context to Exception Classes, Choose Where to Report and Render Exceptions, Define JSON Rendering for API Routes, Error Handling Best Practices, Mark Exceptions the Handler Should Not Report, Prevent Duplicate Reports of One Exception Instance, Throttle High-Volume Exception Reports
 
 ### Community 352 - "Task Scheduling Best Practices"
 Cohesion: 0.25
-Nodes (7): Task Scheduling Best Practices, Use `environments()` to Restrict Tasks, Use `onOneServer()` on Multi-Server Deployments, Use `runInBackground()` for Concurrent Long Tasks, Use Schedule Groups for Shared Configuration, Use `takeUntilTimeout()` for Time-Bounded Processing, Use `withoutOverlapping()` on Variable-Duration Tasks
-
-### Community 353 - "Testing Best Practices"
-Cohesion: 0.25
-Nodes (7): Call `Event::fake()` After Factory Setup, Testing Best Practices, Use `Exceptions::fake()` to Assert Exception Reporting, Use Factory States and Sequences, Use `LazilyRefreshDatabase` Over `RefreshDatabase`, Use Model Assertions Over Raw Database Assertions, Use `recycle()` to Share Relationship Instances Across Factories
+Nodes (7): Bound Work Inside the Task, Group Shared Configuration, Prevent Unwanted Overlap, Restrict Tasks by Environment, Run a Task on One Server, Run Eligible Commands in the Background, Task Scheduling Best Practices
 
 ### Community 354 - "Blade & Views Best Practices"
 Cohesion: 0.25
@@ -1620,10 +1662,6 @@ Nodes (7): Task Scheduling Best Practices, Use `environments()` to Restrict Task
 ### Community 361 - "Testing Best Practices"
 Cohesion: 0.25
 Nodes (7): Call `Event::fake()` After Factory Setup, Testing Best Practices, Use `Exceptions::fake()` to Assert Exception Reporting, Use Factory States and Sequences, Use `LazilyRefreshDatabase` Over `RefreshDatabase`, Use Model Assertions Over Raw Database Assertions, Use `recycle()` to Share Relationship Instances Across Factories
-
-### Community 362 - "PasswordResetTest.php"
-Cohesion: 0.25
-Nodes (3): Illuminate\Auth\Notifications\ResetPassword, Illuminate\Support\Facades\Notification, PasswordResetTest
 
 ### Community 363 - "Blade & Views Best Practices"
 Cohesion: 0.25
@@ -1665,69 +1703,69 @@ Nodes (7): App shell (sidebar layout), Common utilities, Dark mode, Marketing si
 Cohesion: 0.25
 Nodes (7): Fuori perimetro, da tracciare, Lars (security), Note per la verifica umana, Parent actions, Robert (code review), Scoperte da conservare, US-001 — Accesso allo strumento e gestione dei membri del team
 
-### Community 374 - "Blade & Views Best Practices"
+### Community 374 - "Blade and View Best Practices"
 Cohesion: 0.25
-Nodes (7): Blade & Views Best Practices, Prefer Blade Components Over `@include`, Use `$attributes->merge()` in Component Templates, Use `@aware` for Deeply Nested Component Props, Use Blade Fragments for Partial Re-Renders (htmx/Turbo), Use `@pushOnce` for Per-Component Scripts, Use View Composers for Shared View Data
+Nodes (7): Blade and View Best Practices, Prefer Components for Explicit Interfaces, Return Blade Fragments for Partial Rendering, Share Compatible View Data with a View Composer, Share Parent Component Props with `@aware`, Use `$attributes->merge()` in Component Templates, Use `@pushOnce` for Per-Component Scripts
 
 ### Community 375 - "Error Handling Best Practices"
 Cohesion: 0.25
-Nodes (7): Add Context to Exception Classes, Enable `dontReportDuplicates()`, Error Handling Best Practices, Exception Reporting and Rendering, Force JSON Error Rendering for API Routes, Throttle High-Volume Exceptions, Use `ShouldntReport` for Exceptions That Should Never Log
+Nodes (7): Add Context to Exception Classes, Choose Where to Report and Render Exceptions, Define JSON Rendering for API Routes, Error Handling Best Practices, Mark Exceptions the Handler Should Not Report, Prevent Duplicate Reports of One Exception Instance, Throttle High-Volume Exception Reports
 
 ### Community 376 - "Task Scheduling Best Practices"
 Cohesion: 0.25
-Nodes (7): Task Scheduling Best Practices, Use `environments()` to Restrict Tasks, Use `onOneServer()` on Multi-Server Deployments, Use `runInBackground()` for Concurrent Long Tasks, Use Schedule Groups for Shared Configuration, Use `takeUntilTimeout()` for Time-Bounded Processing, Use `withoutOverlapping()` on Variable-Duration Tasks
+Nodes (7): Bound Work Inside the Task, Group Shared Configuration, Prevent Unwanted Overlap, Restrict Tasks by Environment, Run a Task on One Server, Run Eligible Commands in the Background, Task Scheduling Best Practices
 
-### Community 377 - "Testing Best Practices"
+### Community 377 - "Endpoint Tests"
 Cohesion: 0.25
-Nodes (7): Call `Event::fake()` After Factory Setup, Testing Best Practices, Use `Exceptions::fake()` to Assert Exception Reporting, Use Factory States and Sequences, Use `LazilyRefreshDatabase` Over `RefreshDatabase`, Use Model Assertions Over Raw Database Assertions, Use `recycle()` to Share Relationship Instances Across Factories
+Nodes (7): Endpoint Coverage, Endpoint Tests, How to Write the Test, Tenant Isolation, Test Authorization at the Policy Level, Testing Validation, Which Layer Owns Which Case
 
 ### Community 378 - "Collection Best Practices"
 Cohesion: 0.29
-Nodes (6): Choose `cursor()` vs. `lazy()` Correctly, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
+Nodes (6): Choose Between `cursor()` and `lazy()`, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
 
 ### Community 379 - "HTTP Client Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Set Explicit Timeouts, Fake HTTP Calls in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Use Request Pooling for Concurrent Requests, Use Retry with Backoff for External APIs
+Nodes (6): Fake HTTP Requests in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Pool Independent Requests, Retry Only Safe Operations, Set Explicit Timeouts
 
-### Community 380 - "Mail Best Practices"
-Cohesion: 0.29
-Nodes (6): Implement `ShouldQueue` on the Mailable Class, Mail Best Practices, Separate Content Tests from Sending Tests, Use `afterCommit()` on Mailables Inside Transactions, Use `assertQueued()` Not `assertSent()` for Queued Mailables, Use Markdown Mailables for Transactional Emails
+### Community 380 - "Endpoint Tests"
+Cohesion: 0.25
+Nodes (7): Endpoint Coverage, Endpoint Tests, How to Write the Test, Tenant Isolation, Test Authorization at the Policy Level, Testing Validation, Which Layer Owns Which Case
 
-### Community 381 - "Routing & Controllers Best Practices"
+### Community 381 - "Routing and Controller Best Practices"
 Cohesion: 0.29
-Nodes (6): Keep Controllers Thin, Routing & Controllers Best Practices, Type-Hint Form Requests, Use Implicit Route Model Binding, Use Resource Controllers, Use Scoped Bindings for Nested Resources
+Nodes (6): Keep Controllers Focused on HTTP Concerns, Organize Controllers Around Resources, Routing and Controller Best Practices, Scope Nested Bindings, Use Implicit Route Model Binding, Use Resource Routes for Resourceful Actions
 
-### Community 382 - "Conventions & Style"
+### Community 382 - "Convention and Style Best Practices"
 Cohesion: 0.29
-Nodes (6): Conventions & Style, Follow Laravel Naming Conventions, No Inline JS/CSS in Blade, No Unnecessary Comments, Prefer Shorter Readable Syntax, Use Laravel String & Array Helpers
+Nodes (6): Convention and Style Best Practices, Follow Project Naming Conventions, Keep Presentation Code Maintainable, Prefer Clear, Idiomatic Syntax, Use Utilities When They Clarify Intent, Write Comments That Explain Why
 
-### Community 383 - "Validation & Forms Best Practices"
+### Community 383 - "Validation and Forms Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Use `validated()`, Array vs. String Notation for Rules, Use Form Request Classes, Use `Rule::when()` for Conditional Validation, Use the `after()` Method for Custom Validation, Validation & Forms Best Practices
+Nodes (6): Add Cross-Field Validation After Base Rules, Express Conditional Rules Clearly, Extract Validation When It Improves the Boundary, Prefer Readable Rule Syntax, Use Only Intended Validated Data, Validation and Forms Best Practices
 
 ### Community 384 - "Collection Best Practices"
 Cohesion: 0.29
-Nodes (6): Choose `cursor()` vs. `lazy()` Correctly, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
+Nodes (6): Choose Between `cursor()` and `lazy()`, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
 
 ### Community 385 - "HTTP Client Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Set Explicit Timeouts, Fake HTTP Calls in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Use Request Pooling for Concurrent Requests, Use Retry with Backoff for External APIs
+Nodes (6): Fake HTTP Requests in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Pool Independent Requests, Retry Only Safe Operations, Set Explicit Timeouts
 
 ### Community 386 - "Mail Best Practices"
 Cohesion: 0.29
-Nodes (6): Implement `ShouldQueue` on the Mailable Class, Mail Best Practices, Separate Content Tests from Sending Tests, Use `afterCommit()` on Mailables Inside Transactions, Use `assertQueued()` Not `assertSent()` for Queued Mailables, Use Markdown Mailables for Transactional Emails
+Nodes (6): Assert the Delivery Mode, Dispatch Queued Mail After Commit, Mail Best Practices, Queue Slow Mail Delivery, Separate Content and Delivery Tests, Use Markdown Mailables When They Fit
 
-### Community 387 - "Routing & Controllers Best Practices"
+### Community 387 - "Routing and Controller Best Practices"
 Cohesion: 0.29
-Nodes (6): Keep Controllers Thin, Routing & Controllers Best Practices, Type-Hint Form Requests, Use Implicit Route Model Binding, Use Resource Controllers, Use Scoped Bindings for Nested Resources
+Nodes (6): Keep Controllers Focused on HTTP Concerns, Organize Controllers Around Resources, Routing and Controller Best Practices, Scope Nested Bindings, Use Implicit Route Model Binding, Use Resource Routes for Resourceful Actions
 
-### Community 388 - "Conventions & Style"
+### Community 388 - "Convention and Style Best Practices"
 Cohesion: 0.29
-Nodes (6): Conventions & Style, Follow Laravel Naming Conventions, No Inline JS/CSS in Blade, No Unnecessary Comments, Prefer Shorter Readable Syntax, Use Laravel String & Array Helpers
+Nodes (6): Convention and Style Best Practices, Follow Project Naming Conventions, Keep Presentation Code Maintainable, Prefer Clear, Idiomatic Syntax, Use Utilities When They Clarify Intent, Write Comments That Explain Why
 
-### Community 389 - "Validation & Forms Best Practices"
+### Community 389 - "Validation and Forms Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Use `validated()`, Array vs. String Notation for Rules, Use Form Request Classes, Use `Rule::when()` for Conditional Validation, Use the `after()` Method for Custom Validation, Validation & Forms Best Practices
+Nodes (6): Add Cross-Field Validation After Base Rules, Express Conditional Rules Clearly, Extract Validation When It Improves the Boundary, Prefer Readable Rule Syntax, Use Only Intended Validated Data, Validation and Forms Best Practices
 
 ### Community 390 - "Collection Best Practices"
 Cohesion: 0.29
@@ -1855,27 +1893,27 @@ Nodes (6): Evidenze, Fuori piano, aggiunto dal parent, Lars (security), Parent a
 
 ### Community 421 - "Collection Best Practices"
 Cohesion: 0.29
-Nodes (6): Choose `cursor()` vs. `lazy()` Correctly, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
+Nodes (6): Choose Between `cursor()` and `lazy()`, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
 
 ### Community 422 - "HTTP Client Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Set Explicit Timeouts, Fake HTTP Calls in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Use Request Pooling for Concurrent Requests, Use Retry with Backoff for External APIs
+Nodes (6): Fake HTTP Requests in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Pool Independent Requests, Retry Only Safe Operations, Set Explicit Timeouts
 
 ### Community 423 - "Mail Best Practices"
 Cohesion: 0.29
-Nodes (6): Implement `ShouldQueue` on the Mailable Class, Mail Best Practices, Separate Content Tests from Sending Tests, Use `afterCommit()` on Mailables Inside Transactions, Use `assertQueued()` Not `assertSent()` for Queued Mailables, Use Markdown Mailables for Transactional Emails
+Nodes (6): Assert the Delivery Mode, Dispatch Queued Mail After Commit, Mail Best Practices, Queue Slow Mail Delivery, Separate Content and Delivery Tests, Use Markdown Mailables When They Fit
 
-### Community 424 - "Routing & Controllers Best Practices"
+### Community 424 - "Routing and Controller Best Practices"
 Cohesion: 0.29
-Nodes (6): Keep Controllers Thin, Routing & Controllers Best Practices, Type-Hint Form Requests, Use Implicit Route Model Binding, Use Resource Controllers, Use Scoped Bindings for Nested Resources
+Nodes (6): Keep Controllers Focused on HTTP Concerns, Organize Controllers Around Resources, Routing and Controller Best Practices, Scope Nested Bindings, Use Implicit Route Model Binding, Use Resource Routes for Resourceful Actions
 
-### Community 425 - "Conventions & Style"
+### Community 425 - "Convention and Style Best Practices"
 Cohesion: 0.29
-Nodes (6): Conventions & Style, Follow Laravel Naming Conventions, No Inline JS/CSS in Blade, No Unnecessary Comments, Prefer Shorter Readable Syntax, Use Laravel String & Array Helpers
+Nodes (6): Convention and Style Best Practices, Follow Project Naming Conventions, Keep Presentation Code Maintainable, Prefer Clear, Idiomatic Syntax, Use Utilities When They Clarify Intent, Write Comments That Explain Why
 
-### Community 426 - "Validation & Forms Best Practices"
+### Community 426 - "Validation and Forms Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Use `validated()`, Array vs. String Notation for Rules, Use Form Request Classes, Use `Rule::when()` for Conditional Validation, Use the `after()` Method for Custom Validation, Validation & Forms Best Practices
+Nodes (6): Add Cross-Field Validation After Base Rules, Express Conditional Rules Clearly, Extract Validation When It Improves the Boundary, Prefer Readable Rule Syntax, Use Only Intended Validated Data, Validation and Forms Best Practices
 
 ### Community 427 - "bootstrap/app.php"
 Cohesion: 0.40
@@ -1884,6 +1922,10 @@ Nodes (4): Illuminate\Foundation\Application, Illuminate\Foundation\Configuratio
 ### Community 428 - "graphify reference: query, path, explain"
 Cohesion: 0.33
 Nodes (5): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
+
+### Community 429 - "Endpoint Tests"
+Cohesion: 0.25
+Nodes (7): Endpoint Coverage, Endpoint Tests, How to Write the Test, Tenant Isolation, Test Authorization at the Policy Level, Testing Validation, Which Layer Owns Which Case
 
 ### Community 430 - "Filament — Figma sources (merged)"
 Cohesion: 0.33
@@ -1989,25 +2031,125 @@ Nodes (3): Contenuto, Note, US-008: Dettaglio della release con catena e informa
 Cohesion: 0.50
 Nodes (3): Legacy parity, Reference products, Research
 
+### Community 480 - "Assertions"
+Cohesion: 0.29
+Nodes (6): Arrange, Act, Assert, Assert a Known Value, Assert the Complete Result, Assertions, How to Find the Correct Assertion, Named Response Assertions
+
+### Community 481 - ".agents/skills/testing-best-practices/SKILL.md"
+Cohesion: 0.29
+Nodes (3): Built-in Laravel Assertion Methods, How to Find Test Framework Features, Security Tests
+
+### Community 482 - "Fakes, Mocks, and Determinism"
+Cohesion: 0.29
+Nodes (7): Database, Fakes, Mocks, and Determinism, Framework Fakes, How to Isolate a Dependency, Mocking, Outbound HTTP Testing, Time and Randomness
+
+### Community 483 - "Test Suite Performance"
+Cohesion: 0.29
+Nodes (6): Common Errors, Global Fakes, How to Find a Slow Test, How to Run the Suite in Parallel, Test Environment, Test Suite Performance
+
+### Community 484 - "Reviewing Tests"
+Cohesion: 0.29
+Nodes (6): Assertions, Coverage, Data and Determinism, Names and Structure, Reviewing Tests, Test Value
+
+### Community 485 - "Assertions"
+Cohesion: 0.29
+Nodes (6): Arrange, Act, Assert, Assert a Known Value, Assert the Complete Result, Assertions, How to Find the Correct Assertion, Named Response Assertions
+
+### Community 486 - ".claude/skills/testing-best-practices/SKILL.md"
+Cohesion: 0.29
+Nodes (3): Built-in Laravel Assertion Methods, How to Find Test Framework Features, Security Tests
+
+### Community 487 - "Fakes, Mocks, and Determinism"
+Cohesion: 0.29
+Nodes (7): Database, Fakes, Mocks, and Determinism, Framework Fakes, How to Isolate a Dependency, Mocking, Outbound HTTP Testing, Time and Randomness
+
+### Community 488 - "Test Suite Performance"
+Cohesion: 0.29
+Nodes (6): Common Errors, Global Fakes, How to Find a Slow Test, How to Run the Suite in Parallel, Test Environment, Test Suite Performance
+
+### Community 489 - "Reviewing Tests"
+Cohesion: 0.29
+Nodes (6): Assertions, Coverage, Data and Determinism, Names and Structure, Reviewing Tests, Test Value
+
+### Community 490 - "Assertions"
+Cohesion: 0.29
+Nodes (6): Arrange, Act, Assert, Assert a Known Value, Assert the Complete Result, Assertions, How to Find the Correct Assertion, Named Response Assertions
+
+### Community 491 - ".pi/skills/testing-best-practices/SKILL.md"
+Cohesion: 0.29
+Nodes (3): Built-in Laravel Assertion Methods, How to Find Test Framework Features, Security Tests
+
+### Community 492 - "Fakes, Mocks, and Determinism"
+Cohesion: 0.29
+Nodes (7): Database, Fakes, Mocks, and Determinism, Framework Fakes, How to Isolate a Dependency, Mocking, Outbound HTTP Testing, Time and Randomness
+
+### Community 493 - "Test Suite Performance"
+Cohesion: 0.29
+Nodes (6): Common Errors, Global Fakes, How to Find a Slow Test, How to Run the Suite in Parallel, Test Environment, Test Suite Performance
+
+### Community 494 - "Reviewing Tests"
+Cohesion: 0.29
+Nodes (6): Assertions, Coverage, Data and Determinism, Names and Structure, Reviewing Tests, Test Value
+
+### Community 495 - "Configuration Best Practices"
+Cohesion: 0.33
+Nodes (5): Configuration Best Practices, Name Repeated Domain Values, Protect Production Secrets, Read Environment Variables in Configuration Files, Use `App::environment()` for Environment Checks
+
+### Community 496 - "Naming and Structure"
+Cohesion: 0.33
+Nodes (5): File Layout, Grouping, Naming and Structure, Naming Tests, Test Class and Methods
+
+### Community 498 - "Naming and Structure"
+Cohesion: 0.33
+Nodes (5): File Layout, Grouping, Naming and Structure, Naming Tests, Test Class and Methods
+
+### Community 499 - "Naming and Structure"
+Cohesion: 0.33
+Nodes (5): File Layout, Grouping, Naming and Structure, Naming Tests, Test Class and Methods
+
+### Community 500 - "Factories and Test Data"
+Cohesion: 0.40
+Nodes (4): Data Providers, Each Test Makes Its Own Data, Factories and Test Data, Record Construction
+
+### Community 501 - "Testing Best Practices"
+Cohesion: 0.40
+Nodes (5): Consistency First, How to Apply, Rule Index, Testing Best Practices, What to Test
+
+### Community 502 - "Factories and Test Data"
+Cohesion: 0.40
+Nodes (4): Data Providers, Each Test Makes Its Own Data, Factories and Test Data, Record Construction
+
+### Community 503 - "Testing Best Practices"
+Cohesion: 0.40
+Nodes (5): Consistency First, How to Apply, Rule Index, Testing Best Practices, What to Test
+
+### Community 504 - "Factories and Test Data"
+Cohesion: 0.40
+Nodes (4): Data Providers, Each Test Makes Its Own Data, Factories and Test Data, Record Construction
+
+### Community 505 - "Testing Best Practices"
+Cohesion: 0.40
+Nodes (5): Consistency First, How to Apply, Rule Index, Testing Best Practices, What to Test
+
 ## Knowledge Gaps
-- **3085 isolated node(s):** `/Users/apollastri/Library/Application Support/Herd/bin/php85`, `php`, `php`, `Controller`, `$schema` (+3080 more)
+- **3228 isolated node(s):** `/Users/apollastri/Library/Application Support/Herd/bin/php85`, `php`, `php`, `Controller`, `$schema` (+3223 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **54 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **61 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `User` connect `User` to `TestCase`, `WorkflowTemplate`, `Illuminate\Database\Eloquent\Factories\Factory`, `FortifyServiceProvider.php`, `ReleaseStep`, `User.php`, `WorkflowTemplatePolicy`, `WellFormedLinkTest`, `ReleaseEventAppendOnlyTest`, `StartReleaseTest.php`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Project`, `LoginTest`, `CloseStepTest`, `FieldType`, `ReleaseIndexScreenTest`, `ReleaseStepPolicyTest`, `TwoFactorTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `DefaultAssignmentsTest`, `CloseStepScreenTest`, `ReleaseDetailScreenTest`, `UserPolicy`, `DefaultAssignmentPrecompilationTest`, `StepDefinition`, `ReleaseLogScreenTest`, `DatabaseSeeder.php`, `.projectReadyToRelease`, `SaveStepValuesTest`, `ReleasePolicy`, `MyStepsQueryBudgetTest`, `ReleaseDetailQueryBudgetTest`, `ReleaseIndexQueryBudgetTest`, `ReleaseStepPolicy`, `.projectWith`, `ReleaseEvent`, `ReleaseLogQueryBudgetTest`, `PasswordResetTest.php`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
-- **Why does `TestCase` connect `TestCase` to `WorkflowTemplate`, `FortifyServiceProvider.php`, `User`, `ReleaseStep`, `WellFormedLinkTest`, `ReleaseEventAppendOnlyTest`, `LoginTest`, `StartReleaseTest.php`, `Project`, `CloseStepTest`, `FieldType`, `ReleaseIndexScreenTest`, `ReleaseStepPolicyTest`, `TwoFactorTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `DefaultAssignmentsTest`, `CloseStepScreenTest`, `ReleaseDetailScreenTest`, `DefaultAssignmentPrecompilationTest`, `StepDefinition`, `ReleaseLogScreenTest`, `.projectReadyToRelease`, `SaveStepValuesTest`, `MyStepsQueryBudgetTest`, `ReleaseDetailQueryBudgetTest`, `ReleaseIndexQueryBudgetTest`, `.projectWith`, `ReleaseEvent`, `ReleaseLogQueryBudgetTest`, `PasswordResetTest.php`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `WorkflowTemplate` connect `WorkflowTemplate` to `TestCase`, `Illuminate\Database\Eloquent\Factories\Factory`, `DatabaseSeeder.php`, `User`, `ReleaseStep`, `WorkflowTemplatePolicy`, `ReleaseEvent`, `.projectReadyToRelease`, `WorkflowTemplateFactory`, `StartReleaseTest.php`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Project`, `.projectWith`, `FieldType`, `ReleaseStepPolicyTest`, `StartReleaseScreenTest`, `StepDefinition`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `User` connect `User` to `TestCase`, `WorkflowTemplate`, `Illuminate\Database\Eloquent\Factories\Factory`, `FortifyServiceProvider.php`, `Release`, `WellFormedLink`, `ReleaseEventAppendOnlyTest`, `LoginTest`, `StartReleaseTest.php`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Project`, `CloseStepTest`, `FieldType`, `ReleaseIndexScreenTest`, `ReleaseStepPolicyTest`, `TwoFactorTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `StartReleaseOverridesTest`, `CloseStepScreenTest`, `ReleaseDetailScreenTest`, `StartReleaseOverrideScreenTest`, `DefaultAssignmentPrecompilationTest`, `StepDefinition`, `ReleaseLogScreenTest`, `DatabaseSeeder.php`, `.projectReadyToRelease`, `SaveStepValuesTest`, `MyStepsQueryBudgetTest`, `ReleaseDetailQueryBudgetTest`, `Illuminate\Support\Facades\Validator`, `ReleaseIndexQueryBudgetTest`, `ReleaseStepPolicy`, `StartReleaseQueryBudgetTest`, `ReleaseEvent`, `StartReleaseTest`, `ReleaseLogQueryBudgetTest`, `AppServiceProvider`, `ReleasePolicyTest`, `PasswordResetTest`, `ReleaseEventPolicy`, `ProjectPolicy`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
+- **Why does `TestCase` connect `TestCase` to `WorkflowTemplate`, `DecisionGateTest`, `User`, `Release`, `PasswordPolicyTest.php`, `ReleaseEventAppendOnlyTest`, `LoginTest`, `WellFormedLinkTest`, `StartReleaseTest.php`, `Project`, `CloseStepTest`, `FieldType`, `ReleaseIndexScreenTest`, `ReleaseStepPolicyTest`, `TwoFactorTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `StartReleaseOverridesTest`, `CloseStepScreenTest`, `ReleaseDetailScreenTest`, `StartReleaseOverrideScreenTest`, `DefaultAssignmentPrecompilationTest`, `StepDefinition`, `ReleaseLogScreenTest`, `.projectReadyToRelease`, `SaveStepValuesTest`, `MyStepsQueryBudgetTest`, `ReleaseDetailQueryBudgetTest`, `Illuminate\Support\Facades\Validator`, `ReleaseIndexQueryBudgetTest`, `StartReleaseQueryBudgetTest`, `ReleaseEvent`, `StartReleaseTest`, `ReleaseLogQueryBudgetTest`, `BladeComponentAttributesTest`, `ReleasePolicyTest`, `PasswordResetTest`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+- **Why does `Role` connect `Project` to `TestCase`, `WorkflowTemplate`, `Illuminate\Database\Eloquent\Factories\Factory`, `User`, `Release`, `StartReleaseTest.php`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `CloseStepTest`, `MyStepsScreenTest`, `StartReleaseScreenTest`, `StartReleaseOverridesTest`, `ReleaseDetailScreenTest`, `StartReleaseOverrideScreenTest`, `DefaultAssignmentPrecompilationTest`, `StepDefinition`, `DatabaseSeeder.php`, `.projectReadyToRelease`, `ReleaseEvent`, `StartReleaseTest`, `ReleasePolicyTest`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **What connects `/Users/apollastri/Library/Application Support/Herd/bin/php85`, `php`, `php` to the rest of the system?**
-  _3085 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _3228 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `TestCase` be split into smaller, more focused modules?**
-  _Cohesion score 0.07902973395931143 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06569133677567413 - nodes in this community are weakly interconnected._
 - **Should `WorkflowTemplate` be split into smaller, more focused modules?**
-  _Cohesion score 0.056692242114237 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05548654244306418 - nodes in this community are weakly interconnected._
 - **Should `Illuminate\Database\Eloquent\Factories\Factory` be split into smaller, more focused modules?**
-  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08994708994708994 - nodes in this community are weakly interconnected._
