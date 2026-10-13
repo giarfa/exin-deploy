@@ -64,4 +64,30 @@ decisions:
     source: askquestion
     spec: US-013
     supersedes: null
-updated_at: '2026-09-05T14:22:06+00:00'
+  -
+    id: e4eb14d0ab865de7
+    ts: '2026-10-13T19:49:20+00:00'
+    user: 'git:giarfa <giarfa@outlook.com>'
+    phase: larapilot-settings
+    topic: 'release mode'
+    label: 'release mode'
+    value: 'YES'
+    question: null
+    rationale: null
+    source: chat
+    spec: null
+    supersedes: null
+  -
+    id: e80337bfd801f83f
+    ts: '2026-10-13T19:50:52+00:00'
+    user: 'git:giarfa <giarfa@outlook.com>'
+    phase: larapilot-release
+    topic: 'release ledger initial assignment'
+    label: 'release ledger initial assignment'
+    value: '1.0.0 shipped 2026-08-20 = US-001..US-012 (tag v1.0); 1.1.0 planned = US-013'
+    question: null
+    rationale: null
+    source: chat
+    spec: null
+    supersedes: null
+updated_at: '2026-10-13T19:50:52+00:00'

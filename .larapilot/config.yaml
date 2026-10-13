@@ -4,16 +4,35 @@ settings:
   backlog: STANDARD
   git_mode: GITFLOW
   testing: NORMAL
+  account: NONE
+  quality_scope: ALL
   auto_approve: false
   lucille: true
+  decision_log: true
+  code_history: false
+  comments: false
+  api_auth: false
+  security_scan: false
+  aikido: false
+  security: false
+  errors: false
+  boogle: false
   github: false
   gitlab: false
   bitbucket: false
+  azure: false
   notifications: false
   notify_slack: false
   notify_discord: false
   notify_telegram: false
-  decision_tables: true
+  release_mode: true
+  project_docs: false
+  prior_art: true
+  hooks: false
+  sprints: false
+  public_roadmap: false
+  errors_provider: ''
+  security_provider: ''
 frontend:
   repo_path: null
   stack: null
