@@ -51,4 +51,17 @@ decisions:
     source: askquestion
     spec: US-013
     supersedes: null
-updated_at: '2026-09-03T16:57:15+00:00'
+  -
+    id: 8a165f430f2154ee
+    ts: '2026-09-05T14:22:06+00:00'
+    user: 'git:giarfa <giarfa@outlook.com>'
+    phase: larapilot-review
+    topic: 'payload evento avvio release responsabile sostituito'
+    label: 'payload evento avvio release responsabile sostituito'
+    value: 'Il registro annota solo role + to; il nome del responsabile sostituito (from) non entra nel payload'
+    question: null
+    rationale: 'Il registro delle transizioni e leggibile da ogni utente autenticato mentre la mappatura ruolo-persona del progetto e riservata agli amministratori: il nome di chi era designato per un ruolo poi sovrascritto non deve trapelare fuori dalle pagine di amministrazione. Rilievo Medium di Lars al gate umano di US-013; il criterio di accettazione di tracciabilita va aggiornato di conseguenza.'
+    source: askquestion
+    spec: US-013
+    supersedes: null
+updated_at: '2026-09-05T14:22:06+00:00'

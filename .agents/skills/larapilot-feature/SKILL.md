@@ -1,19 +1,21 @@
 ---
 name: larapilot-feature
-description: Adds a new feature or evolutiva to an existing Larapilot project through a focused discovery interview, then creates a backlog spec. Use when the user wants a new capability, enhancement, or evolutiva after inception — not a full greenfield PRD. When the experimental setting `decision_tables` is `YES`, the interview is preceded by enumerating the decision surfaces the change breaks and collecting the human oracle for each — useful when the change alters cardinality, nullability, identity, or an existing contract on an entity that already ships. Italian triggers include "nuova funzionalità", "evolutiva", "aggiungere feature", "miglioramento prodotto".
+description: "Adds one feature to an existing project and creates a backlog spec. Italian: nuova funzionalità, evolutiva, miglioramento prodotto."
 ---
 
-# Larapilot — Feature / Evolutiva
+# Larapilot — Feature / Enhancement
 
 You run a **mini-inception** for one new feature on an **existing** project, then add a spec to the backlog.
 
-## Shared Runtime
+## Context
 
-Read `.larapilot/shared-runtime.md` (core — **Assumptions and Questions**, **Decision tables** for `settings.decision_tables`), then `.larapilot/runtime-ops.md` (**PRD Living Document**, per-skill PRD rules) and `.larapilot/runtime-discovery.md` (**MoSCoW Prioritization**, **Legacy Rewrite & Porting** when the feature touches legacy scope).
+`php artisan larapilot:context feature` — with `--session={token}` when this conversation already holds one (a triage handoff does), `--fresh` after a compaction. Read every file under `data.runtime.read`, none under `loaded`, and an `on_demand` file only when its `when` comes true: `discovery-6.md` for a whole subsystem or a new journey or entity, `discovery-3.md` for legacy scope, `delivery-3.md` for the package policy. Settings, paths, and `data.project` come from that envelope: no `config-show`.
+
+When `data.settings.decision_log` is `YES`, journal material user choices with `decision-log`, and run `decision-check` before reversing a recorded one (**Decision journal**, Project Settings).
 
 ## Output Economy
 
-**Moderate** — brief chat; full spec body in the backlog file. **Exception, only when `settings.decision_tables` is `YES`:** the decision table (0b / 1a) is rendered in full in chat, one row per cell, grouped by surface and numbered — it is the human's working surface, not a summary. Never abridge it, never replace it with a prose recap of the interesting rows, and never paste the raw YAML instead (see **Presenting the table**).
+**Moderate.** A focused mini-inception: brief scope summary in chat, AskQuestion rounds of 3 at most, the full user story and acceptance criteria in the spec body.
 
 ## The Team (this phase)
 
@@ -21,8 +23,7 @@ Read `.larapilot/shared-runtime.md` (core — **Assumptions and Questions**, **D
 | --- | --- |
 | 🤖 **Zoey** | AI Guru — sharpens user intent, output economy, sub-agent orchestration, session/credit risk *(every skill)* |
 | 💎 **Mark** | Product Manager — scope, MoSCoW, PRD alignment, trade-offs |
-| 🔎 **Tom** | Requirements Analyst — acceptance criteria, edge cases; **owns the decision table** when `decision_tables` is `YES` (enumeration, oracle collection, undecided-cell blockers) |
-| 🗄️ **Mike** | Data/Schema — co-enumerates decision sites from schema, FKs, and constraints when `decision_tables` is `YES` and the feature changes cardinality, nullability, or identity |
+| 🔎 **Tom** | Requirements Analyst — acceptance criteria, edge cases |
 | 📐 **John** | Architect — structural impact when the feature crosses domains |
 | 👾 **Andrew** | Laravel Expert — ecosystem fit, package vs built-in |
 | ⌨️ **Sarah** | CLI / Git / Linux — when the feature needs tooling, CI scripts, Git automation, conflict-prone merges, or server shell |
@@ -35,16 +36,13 @@ Read `.larapilot/shared-runtime.md` (core — **Assumptions and Questions**, **D
 
 ## Config & CLI
 
-1. `php artisan larapilot:config-show`
-2. `php artisan larapilot:spec-list`
-3. Read PRD from `data.paths.prd` — if missing, suggest `/larapilot-inception` first
-4. `php artisan larapilot:validate-spec --file=...`
-5. `php artisan larapilot:spec-add --file=...`
+1. `php artisan larapilot:spec-list` — titles, statuses, and `cites`: the PRD ids each spec names
+2. `php artisan larapilot:prd-show` — the outline; then `--ids=` for the FRs, journeys, and NFRs the feature touches. When `data.project.prd` is `false`, suggest `/larapilot-inception` first. Read the whole PRD only when step 3 edits it
+3. `php artisan larapilot:validate-spec --file=...`
+4. `php artisan larapilot:spec-add --file=...`
+5. When `release_mode=YES`: always propose a target version — an open release, or a **future** one Sarah names — AskQuestion, then `release-set --add-spec=US-XXX` after `spec-add` (it leaves any other open version) and `**Release:** x.y.z` on the spec body. No version only when the user says so (`versions.md`); the closing summary names the version and its new progress. When `settings.sprints` is `YES`, propose a sprint and persist it with `php artisan larapilot:spec-sprint {code} {n}`.
 6. When PRD scope changes per **PRD Living Document**: edit PRD, append **PRD Revision History**, then `php artisan larapilot:prd-write` + `php artisan larapilot:validate-prd`
-7. *(`decision_tables: YES` only)* When undecided cells remain in the decision table: `php artisan larapilot:spec-comment {code} --blocks-merge --author=Tom --message=...`
-8. *(`decision_tables: YES` only)* `php artisan larapilot:decisions-check --spec={code} --base=develop` — decision-table gate, after committing the table
-
-**Decision table artifact:** `{paths.research}/decisions/{code}.yaml` (`paths.research` from `config-show`). The skill writes and reads the YAML directly — there is no write command, by design: a single writer is easier to enforce than a permission. Approval blocking rides on `spec-comment --blocks-merge`, which `spec-approve` already honors; integrity is `larapilot:decisions-check`.
+7. On a **change request**: `php artisan larapilot:prd-impact --ids=FR-XXX` — the other specs that rest on the promise being changed, with the action each needs by status
 
 ## Preconditions
 
@@ -53,220 +51,54 @@ Read `.larapilot/shared-runtime.md` (core — **Assumptions and Questions**, **D
 
 Read **`data.paths.client_materials`**, **`data.paths.legacy`**, and **`data.paths.research`** when relevant. Trace the feature to existing `FR-XXX`, MoSCoW tags, and legacy parity rows in `{paths.research}/legacy-parity.md`.
 
+## Handoff from `larapilot-triage`
+
+When the session arrives with a **Triage handoff** block, take it as answers already given:
+
+- `context feature --session={token}` lists only what triage did not read, and Zoey's start line is posted — repeat neither. Post the end line and the single `usage-log`, counting what triage read
+- `request` is the feature — do not restate it or ask for it again
+- `evidence` answers **Traceability** in Round 1: an FR cited → extends existing `FR-XXX`; `none` → needs new `FR-XXX`
+- `verdict: Feature — change request` means today's behavior is as specified: cite the FR or criterion being changed, and step 3 edits that FR instead of adding one
+
+With or without a handoff: when discovery shows an FR or an acceptance criterion already promises this behavior, say so in one line and hand over to `larapilot-bug` instead of writing a feature spec. Hand over once, on new evidence only — never against a verdict the user settled.
+
 ## Workflow
 
 ### 0. Context load
 
-Run `config-show` and `spec-list`. Read PRD `## MVP Scope` (Project Kind, Delivery Target) and scan existing specs to avoid duplicates.
+Run `context`, `spec-list`, and the `prd-show` outline. Project Kind and Delivery Target are `data.project.kind` and `data.project.delivery_target`; scan the spec titles and `cites` to avoid duplicates.
 
 Summarize in one line what you understood from the user's request; ask for clarification only if the request is empty or ambiguous.
 
-### 0b. Decision surfaces (Tom + Mike — deterministic enumeration) — **experimental, opt-in**
-
-**Read `data.settings.decision_tables` from `config-show` first. When it is `NO` (the default), skip 0b, 1, 1a, and 1b entirely and go to 1c — the discovery interview is then the whole interview.** Do not enumerate, do not create `{paths.research}/decisions/`, do not run `decisions-check`, and do not mention the mechanism in chat. Everything from here to the end of 1b applies **only** when the setting is `YES`; suggesting the user turn it on is allowed once, never as a precondition for proceeding.
-
-Before asking anything, enumerate the **sites** where this feature breaks an assumption the codebase already relies on. The enumeration is **deterministic, not generative**: totality comes from artifacts, not from inference — an LLM enumerating from the spec shares the spec's blind spots by construction. No sub-agent required (safe under `ECO`).
-
-Sources, in this order:
-
-1. **Schema** — Boost `Database Schema`: columns, FKs, unique/nullable constraints on the entities in scope; **Mike** reads cardinality, identity, and cascade implications
-2. **Code** — over `data.workdir`, grep the symbols that carry the assumption: `rg -n --stats '<symbol>' app/ routes/ resources/views/ database/ tests/ lang/`. `<symbol>` is not "the terms that sound relevant to the change" — it is a **closure over the artifacts read in step 1**, and it is the only thing that makes the enumeration reproducible:
-   - for every table the schema read touched: the **table name** and every **FK column** on it
-   - for every model on that path: the **class name**, its **relation method names**, its **factory** and its **policy**
-   - for every exception, event, or action class on that path: the **class name**
-   - singular/plural field names, payload keys, and Blade/JSON accessors for the fields involved
-   - **both sides of the assumption, not only the side the request talks about.** The request is written from the *action* that breaks the assumption (`StartRelease`); the assumption is carried by the *entities* that encode it (`ProjectRoleAssignment`, `DefaultRoleAssignment`). A symbol list with only the action side reaches a fraction of the surface and looks complete from inside the session that wrote it
-3. **Routes** — `php artisan route:list --json` for public and API surfaces
-4. **Implicit surfaces** — check these even when grep does not reach them: API contract, entity duplication, export/feed/sitemap, `og:image` and single-preview slots, search index, delete cascade, import/seeding, permissions, cache invalidation, notifications
-
-**Every row on a file names the symbols that found it.** The table-level `symbols` list says what the grep was; the cell's own `symbols` say which of those terms hit *that* site (`symbols: ["attachment_id", "->attachment"]`, verbatim, a subset of the table list). Write them as you enumerate — they are a by-product of the grep you already ran, and reconstructing them afterwards is guesswork. Rows whose `site` is prose (`entity duplication`, a table name) carry none: nothing was grepped to find them.
-
-That per-row attribution is what makes the enumeration re-derivable rather than merely re-readable: it says which term reaches which site, so a reviewer can re-run one symbol and check its rows instead of re-running the whole list and eyeballing a count. If you found a site some other way — reading a model, following an import, recognizing a screen — the term that found it goes into `symbols` (both levels) before the site goes into `cells`. `decisions-check` reports the three ways this fails: a cell that names no symbol (`DECISION_CELL_SYMBOLS_MISSING`), one the table does not record (`DECISION_CELL_SYMBOL_UNDECLARED`), and one that does not occur at the site (`DECISION_CELL_SYMBOL_ABSENT`) — plus a file no recorded symbol reaches at all (`DECISION_SYMBOL_UNREACHED`). An enumeration nobody can re-run is not evidence, and, worse, drop detection re-runs *this* list — so a term you used and did not record leaves its whole surface invisible to the gate as well.
-
-**One occurrence = one row.** Do not merge rows and do not filter by relevance: prioritization is a separate, ratified step (see 1b). A row nobody looks at is a row nobody decided — that is the state the table exists to make visible.
-
-**Nothing downstream may shrink this list.** The acceptance-criteria aggregation in §2 collapses cells into a few criteria; it never removes a cell. Dropping a row because it will "probably come back unchanged" *is* deciding it, and the tail it lands on — `tests/`, factories, seeders, policies, adjacent models — is the largest and least visible part of the enumeration. A test that exercises a *neighbouring* flow over the same symbol is a site, not a distraction: it is precisely where "unchanged on purpose" gets proven, and "this test is not about the feature" is the sentence that drops it. `larapilot:decisions-check` re-runs this grep with the `symbols` the table itself records and reports every file with a live hit and no cell (`DECISION_SITE_DROPPED`), so a pruned tail comes back as findings rather than as a shorter table.
-
-Write the table to `{paths.research}/decisions/{code}.yaml`:
-
-```yaml
-spec: US-XXX
-broken_surface: "attachment: cardinality 1 → N"
-enumerated_at: "{{DATE}}"
-sources: [schema, grep, routes, implicit]
-symbols: ["attachment_id", "->attachment", "attachment:"]   # verbatim grep terms
-
-scope: ["app", "routes", "resources", "database", "tests", "lang"]
-cells:
-  - site: "app/Http/Resources/PostResource.php:24"
-    source: grep              # grep | schema | route | implicit
-
-    symbols: ["attachment_id", "attachment:"]   # the recorded terms that hit THIS site
-
-    question: "payload shape for the field"
-    state: decided            # decided | decided-null | undecided | out-of-scope
-
-    value: "keep singular field + add new array field"
-    human_text: "tieni il campo singolare e aggiungi un array"   # the human's own words
-
-    decided_by: human         # human | proposal
-
-    ratified: true
-    ac: AC-3                  # the acceptance criterion that verifies this cell
-
-  - site: "entity duplication"
-    source: implicit
-    # prose site: nothing grepped it, so it carries no `symbols`
-
-    question: "are files copied or referenced"
-    state: undecided          # → blocks approval
-
-    proposals: []             # stays empty until the human has answered (1a)
-
-  - site: "resources/views/post/show.blade.php:41"
-    source: grep
-    symbols: ["->attachment"]
-    question: "which files are rendered"
-    state: decided-null       # explicit decision: behavior unchanged
-
-    value: "N/A — renders the primary file, unchanged"
-    human_text: "lascia come sta, mostra il primario"
-    decided_by: human
-    ratified: true
-    ac: AC-9                  # non-regression criterion, shared with the other unchanged views
-
-  - site: "app/Services/PostCache.php:71"
-    source: implicit
-    symbols: ["->attachment"]   # found implicitly, but the term is there and must be recorded
-
-    question: "when the cache is invalidated"
-    state: decided
-    value: "invalidate on attach and detach"
-    human_text: "la cache si deve aggiornare, non mi interessa come"
-    decided_by: human
-    ratified: true
-    ac: internal              # nothing an analyst can observe from outside
-
-    verify_note: "automated test in the task that touches the cache"
-  - site: "app/Console/Commands/ReindexCommand.php:88"
-    source: grep
-    symbols: ["attachment_id"]
-    question: "how the search index treats N files"
-    state: out-of-scope       # human cut it from this spec — NOT an agent move
-
-    scope_note: "deferred to US-014; AC removed from this spec"
-```
-
-- **`symbols` and `scope` are load-bearing, not metadata** — they are what lets the enumeration be *reproduced* by someone who was not in the session, and an enumeration that cannot be reproduced cannot be trusted. Record the grep terms verbatim, at **both levels**: the table's list is the grep, the cell's list is which of those terms hit that row's site. The cell list must be a subset of the table list and must actually occur at the site — `decisions-check` re-greps both, so an attribution invented after the fact fails rather than passes
-- **`human_text` carries the human's own words**, not a tidied restatement — it is the only evidence in the file that a human answered at all. When the human accepts a proposal from 1b verbatim, that is `decided_by: proposal` + `ratified: true`, not `human`
-- **`ac` is what keeps the table readable downstream** — every `decided` and `decided-null` cell names the acceptance criterion that verifies it (`AC-n`), or `internal` plus a `verify_note` when there is nothing to verify by hand. Many cells map to one criterion: that aggregation is what turns a site-level enumeration into a list a functional analyst can test (see §2)
-- **`out-of-scope` is a human state only** — it means the product owner cut the site from this spec. No downstream skill may set it (see **Single writer** below)
-- **The three states are the point** — `decided-null` is a decision that nothing changes here; `undecided` is a hole. Prose cannot represent the difference, a table can, and that difference is the auditable, re-runnable part of the method
-
-When the spec is a **rework** or the surface was enumerated before, read the existing file first: keep ratified cells, append newly discovered sites, and never silently drop a row that no longer greps (mark it `state: undecided` with a note instead).
-
-#### Single writer
-
-**This skill is the only writer of the decision table.** `plan`, `implement`, `review`, and `autopilot` read it and never write it — they have no human in the room, so a cell filled there is a cell the agent decided for itself.
-
-The invariant is mechanical, not honour-based: the table must be committed **before the feature branch exists** (or on `develop` under `GITFLOW`), so any later change shows up as a diff on the branch. Commit it in its own commit, touching nothing else:
-
-```bash
-git add {paths.research}/decisions/{code}.yaml && \
-  git commit -m "docs({code}): decision table — K cells open"
-php artisan larapilot:decisions-check --spec={code} --base=develop   # must exit 0 before handing off
-
-```
-
-The order in that block is load-bearing: the checker anchors enumeration time to the commit that wrote the table, so run it **after** the commit. Run it before and drop detection has no anchor — it falls back to the working tree and lists any file with a live hit and no cell in `notes`, as a warning. Read those notes: an exit 0 from an unanchored run proves less than an anchored one, and at that moment a pruned enumeration is still one edit away from being fixed.
-
-If a cell needs deciding once implementation is under way, the legal path is to come **back here**, with the human, and land the answer as a new commit outside the feature branch. There is no legal path that fills a cell mid-flight.
-
-### 1. Interviews — two passes, in this order (`decision_tables: YES` only)
-
-The order is binding: **1a always precedes 1b.** An oracle collected after seeing candidate answers is a ratification, not an oracle.
-
-#### Presenting the table
-
-The YAML is the artifact, **not** what the human reads. Never paste it at them: a format built for `plan` to parse is a format that hides the one thing the human is here for. Render the table in chat instead.
-
-**Open with the two numbers side by side** — `44 files matched · 20 have a cell` — taken from the `--stats` line of the grep you just ran and from the table itself. A cell count alone cannot show what was left out; the gap can be legitimate (a symbol that also appears in unrelated code), and when it is, say why in one line. It is the human's gap to accept, never yours to close in silence.
-
-Number the rows **1..N by their position in `cells`** and keep that numbering stable for the whole session, so the human can answer `4, 9 → unchanged` instead of retyping file paths. Group the rows by surface — schema, API contract, UI/views, commands and jobs, tests, implicit — and give each group its own small table with its own count. Thirty rows in one block is a wall; the same thirty in six labelled groups is a review.
-
-```markdown
-🔎 Tom: **US-012 — attachment: cardinality 1 → N** · 34 files matched · 31 sites · 31 open
-
-**API contract** (3)
-
-| # | Site | To decide | State |
-
-| --- | --- | --- | --- |
-| 1 | `app/Http/Resources/PostResource.php:24` | payload shape when a post has N files | ? open |
-| 2 | `routes/api.php:88` | whether the index endpoint breaks or gets a version | ? open |
-| 3 | `app/Http/Requests/PostRequest.php:31` | upload validation for more than one file | ? open |
-
-**UI / views** (7)
-
-| # | Site | To decide | State |
-
-| --- | --- | --- | --- |
-| 4 | `resources/views/post/show.blade.php:41` | which files the detail page renders | ? open |
-
-Answer by number, in bulk or a few at a time — `1 → keep the singular field and add an array`, `5,6 → unchanged`.
-Row 12 (rollback with 2+ files saved) is the only irreversible one on the list.
-```
-
-States render as `✓ decided` · `— unchanged (ratified)` · `? open` · `⊘ out of scope`, so the column scans at a glance. Those are **chat labels for the YAML states** `decided` / `decided-null` / `undecided` / `out-of-scope` — the human reads the label, the file keeps the state, and the counts line in the spec body always uses the YAML names. Rules that make the table readable rather than merely complete:
-
-- **`To decide` is a question in the human's own language** — not the YAML `question` key pasted verbatim, and not the file path restated. If a row cannot be phrased as a question the product owner could answer, the row is not understood yet: say so, and do not fill it in
-- **Sites stay byte-exact** (`path:line`) per **Verbatim technical content** in Output Economy. The question around them is prose; the path never is
-- **Full table once, deltas afterwards** — render every row on the first pass, then re-render only what is still open, with a one-line counter: `US-012 · 22 decided · 6 unchanged · 3 open`. Re-dumping 31 rows every turn is as unreadable as hiding them
-- **Grouping is for reading, never for filtering** — do not sort by interest, do not fold a group away because it looks boring, and never drop the per-group counts: those counts are what tell the human nothing was quietly removed
-- **Name the irreversible rows** — data loss, destructive migrations, and public contract breaks get one line under the table. Everything else is reversible, and saying which is which is what lets the human spend attention where it matters
-- **Echo back before persisting** — when the human answers in bulk, show a confirmation table (`#`, site, state, value **in their words**) and let them correct it before the YAML is written. A misparsed bulk answer is a decision nobody made, recorded as one
-
-**1a — Oracle (no options).** Present the full grouped table with every cell open. In this pass **do not use AskQuestion** and **do not offer values, alternatives, or recommendations**: this is the one exception to the AskQuestion rule in **Assumptions and Questions** (`shared-runtime.md`), and it applies here only. The "max 3 questions" limit does **not** apply to table cells — the table is total by construction and truncating it defeats its purpose. The human may answer in bulk, partially, or mark cells unchanged; keep the counter in view as they work, because watching `open` fall from 31 to 3 is what makes a long pass finishable.
-
-**1b — Proposals (only for cells still open).** Render **one block per open cell**, with the readings as a lettered list so the human can answer `7b`:
-
-```markdown
-🔎 Tom: **#7 · `app/Http/Resources/PostResource.php:24`** — payload shape when a post has N files
-
-a) keep `attachment` singular and add `attachments[]` — nothing breaks; two fields mean two truths to keep in sync
-b) replace it with `attachments[]` behind a new API version — clean payload; every consumer has to migrate
-c) `attachments[]` with a `primary` flag — one field, and the preview slot gets its answer for free
-
-All three are defensible; the trade-off is yours.
-```
-
-**At least three** readings per cell — never two, since a binary pair is almost always a false dichotomy — each with **one line of consequence** and **no recommendation**: no "recommended" marker, no default, no option presented last as the obvious one. Values accepted here are recorded with `decided_by: proposal` and require an explicit `ratified: true`; a cell with `decided_by: proposal` and `ratified: false` stays `undecided`. Prioritization ("these rows usually pay off most") is allowed as a **declared heuristic**, never as a filter: no row is removed from the table.
-
-Under `effort: ECO`, keep 1b to open cells that touch persisted schema, public API contracts, or data loss — the enumeration in 0b is never skipped at any effort level, and neither is the grouped table in 1a.
-
-### 1c. Discovery interview (AskQuestion — max 3 per round, skippable)
-
-Runs **after** the table when `decision_tables` is `YES`, and is **the only interview** when it is `NO`. These are process choices, not domain choices, so option anchoring does no harm here.
+### 1. Discovery interview (AskQuestion — max 3 per round, skippable)
 
 Use **AskQuestion** for fixed choices; persona intro stays in chat.
 
 **Round 1 — Scope & priority** (Mark)
 
 - **MoSCoW** for this feature: `Must` | `Should` | `Could`
-- **Traceability:** extends existing `FR-XXX` | needs new `FR-XXX` | standalone fix/enhancement (no PRD FR)
-- **User persona** affected (pick from PRD or `Other`)
+- **Traceability:** extends existing `FR-XXX` | changes existing `FR-XXX` (change request) | needs new `FR-XXX` | standalone enhancement (no PRD FR)
+- **Journey and persona:** existing `J-XXX` from `## User Journeys` (its persona applies) | new journey (Mark adds it to the PRD and names the persona) | none — technical enhancement (pick the persona affected, or `Other`)
+
+**Prior art at feature level (Andrew, before a new FR)** — when the feature is a capability something already ships (billing, search, CMS, import/export, notifications), check in this order per **Vendor & Package Policy**: Laravel built-in → first-party → Spatie → maintained community package. Say in one line what exists and what it would cost to adopt; when the feature is a whole subsystem and `data.settings.prior_art` is `YES`, run one web search round with the consent question from **Prior Art & Open-Source Alternatives**. The verdict goes in the spec body (`**Prior art:** built-in / package X / custom — reason`), never silently.
 
 **Round 2 — Delivery shape** (Tom + Mark)
 
-- **Complexity signal:** small (1 spec) | medium (may split) | large (suggest epic breakdown) — honor `settings.backlog` (see **Backlog granularity** in shared-runtime): under `LEAN`/`STANDARD` prefer one spec with richer plan tasks over splitting; split/epic breakdown mainly under `GRANULAR`
+- **Complexity signal:** small (1 spec) | medium (may split) | large (suggest epic breakdown) — honor `settings.backlog` (**Backlog granularity**, Project Settings): under `LEAN`/`STANDARD` prefer one spec with richer plan tasks over splitting; split/epic breakdown mainly under `GRANULAR`
 - **Mockup first?** `Yes — /larapilot-design` | `No — plan directly` | `Already have mockups`
 - **Legacy touch?** `No` | `Maps to legacy parity row` | `Needs new legacy scraping/porting` _(Sabrine joins)_
+
+**Quality & domain impact** (Tom + Mike — read from the PRD, asked only when it cannot be told): which `NFR-XXX` rows apply to the feature, whether it needs a new or changed NFR target, and whether it adds an entity or a state to `## Domain Model`. Said in one line in chat; the answers feed step 2 and step 3.
 
 **Round 3 — Backlog placement** (Mark)
 
 - **Priority:** `CRITICAL` | `HIGH` | `MEDIUM` | `LOW` (default from MoSCoW: Must→HIGH, Should→MEDIUM, Could→LOW; compliance/security→CRITICAL)
-- **Epic:** existing epic code (default — reuse the closest match from `spec-list`) | new epic (propose title) only when no existing epic covers the product area (see **Epic consolidation** in shared-runtime)
+- **Epic:** existing epic code (default — reuse the closest match from `spec-list`) | new epic (propose title) only when no existing epic covers the product area (**Epic consolidation**, Project Settings)
 - **Blocked by:** none | existing `US-XXX` (dependency)
+
+**Release assignment (when `release_mode=YES`)** — always propose a target version: each open `planned`/`in_progress` release, or a **future release** Sarah proposes (current or the next cut). AskQuestion, then persist after `spec-add` with `release-set --add-spec=` and `**Release:** x.y.z`. That question picks the release, not the git branch. Do not ask again which branch to check out: `release-list` → `git.needs_choice` is the only later branch question, and only when the spec stayed unassigned.
+
+**Sprint (when `settings.sprints` is `YES`)** — propose which two-week sprint the spec belongs to and write it with `php artisan larapilot:spec-sprint {code} {n}` (`none` clears it). When the setting is `NO`, do not ask.
 
 When **Sabrine** joins: confirm which legacy modules, DB tables, assets, or scraped content the feature depends on; update or cite parity rows — never drop legacy scope silently.
 
@@ -274,33 +106,27 @@ When **John** or **Andrew** join: note architectural constraints (tenancy, panel
 
 ### 2. Acceptance criteria (Tom)
 
-Draft INVEST-compliant criteria in chat for user confirmation before persisting. Include happy path, error case, and edge case minimum.
+Draft INVEST-compliant criteria in chat for user confirmation before persisting. Build them from what the PRD already says, then add what it does not:
 
-When `decision_tables` is `YES`: **derive AC from the decision table, not from the request text — but aggregate, do not transcribe.** The enumeration in 0b is deterministic and site-level, so a total enumeration over a mature codebase runs to many tens of rows **and stays that size**; one AC per row yields a list only a developer can read, and the person who signs the spec off is a functional analyst. The trace does not live in the AC text: it lives in the cell's `ac` field, where `decisions-check` can verify it both ways.
+- **Happy path** from the FR's **Done means** bullets — one criterion per bullet at least
+- **Error cases** from the journey's **Failure modes**
+- **Edge cases** Tom adds: empty, maximum, concurrent, unauthorized, other tenant
+- **NFR targets** for every NFR that applies, with the number (`p95 < 300 ms`, `WCAG 2.2 AA`)
+- **Open questions** the feature depends on, written as `blocked by Q-XXX until …` — never a guessed answer
 
-**The aggregation is downstream: it changes how many criteria you write, never how many cells you enumerate.** Every rule below is about the AC list. None of them is a reason to have enumerated less in 0b.
+Every criterion is observable: a state, a number, a timing, a refusal. Names and states come from `## Domain Model`, verbatim.
 
-**One AC = one behaviour observable from outside the application** — a screen, an API response, an exported file, a mail, a permission denied. Write it from `human_text` (the product owner's own words, already in the table), never from `site`.
+### 2b. Ready check and readback (Tom + Mark)
 
-- **No `path:line` inside an AC.** Sites stay in the table and in the review diff, read by someone who opens the code
-- **Every `decided` / `decided-null` cell carries `ac`** — `AC-n`, or `internal` + `verify_note` when the decision has no observable effect (cache invalidation, reindex, internal payload, seeding). `internal` cells never become AC: they become an automated-test obligation on the task that implements them, named in the plan
-- **`decided-null` cells aggregate into non-regression criteria** — a few per surface ("the detail page still shows only the primary file"), never one each. They are the largest class in a total enumeration — that is why they aggregate *here*, and exactly why they all stay in the table: `tests/`, factories, seeders, and adjacent models are the sites where "unchanged on purpose" is worth recording
-- **Target 6–15 AC per spec, whatever the cell count — the threshold is on criteria only.** A cell count in the tens is normal for a small change on a mature codebase and is never evidence about story size. When the *criteria* pass 15, the signal is not "too granular", it is that the story is too large: go back to Round 2 with Mark and honor `settings.backlog`
-- **Number them `AC-1..AC-n`** and keep the numbers stable once persisted — the coverage line, the plan tasks, and the review diff all cite them
-- **Confirm the mapping, not only the list** — when presenting the AC in chat, show which numbered rows each criterion covers (`AC-3 ← #1,#7`), so the human can see that a decision they made did not quietly lose its criterion. Same numbering as 1a, so they recognize their own answers
+Before anything is persisted, Tom checks five points and says in one line each which fail:
 
-`larapilot:decisions-check` enforces both directions: a closed cell with no `ac` is a decision no acceptance criterion verifies, and an `AC-n` in the spec body with no cell behind it is a criterion nobody was asked about. The second direction is the one a citation inside the AC line could never catch.
+1. The actor is a named persona or system actor — not "the user"
+2. At least two verifiable done-means (new or changed FR) or criteria (spec-only)
+3. The journey is named, or the feature is stated as having none
+4. Every NFR that applies is cited; a new target has a verifier
+5. No open question is hidden inside a criterion
 
-For every `undecided` cell left after 1b, open a single blocking comment so the workflow engine — not a convention — holds the gate:
-
-```bash
-php artisan larapilot:spec-comment US-XXX --blocks-merge --author=Tom \
-  --message="Undecided cells in {paths.research}/decisions/US-XXX.yaml: <site list>"
-```
-
-`spec-approve` refuses while `[blocks-merge]` comments are open, so no new command is needed. Never resolve that comment on the human's behalf, and never close it with `--force` to unblock delivery: a table whose blockers get forced is documentation, and documentation is exactly what this artifact is not.
-
-When `decision_tables` is `NO`, AC come from the request, the PRD, and the discovery interview as usual — plain unnumbered bullets, no `Decision table:` line, no `Decision coverage:` line, no blocking comment.
+Then Mark reads back in at most six lines — the FR (new, extended, or changed: before → after), MoSCoW and journey, the criteria count, the PRD edits that will be made, backlog placement, and on a change request the specs `prd-impact` found — and asks via **AskQuestion**: `Add to backlog` | `Revise`.
 
 ### 3. PRD sync (when scope changes)
 
@@ -308,11 +134,11 @@ Apply **PRD Living Document** rules — update the PRD when the feature changes 
 
 **Update PRD when any of:**
 
-- New `### FR-XXX` needed (not covered by existing FRs)
-
+- New `### FR-XXX` needed (not covered by existing FRs) — written in the **Requirement Quality** shape (`discovery-7.md`): MoSCoW, journey, persona, actor and trigger, behavior, verifiable **Done means**, out of this FR, depends on, source
+- A new journey, a new entity or state in `## Domain Model`, or a new NFR row the feature introduces
+- An open question in `## Risks & Assumptions` the feature answers (resolve it there, cite the decision)
 - MoSCoW changes on an existing `FR-XXX` (e.g. `Could` → `Must`)
 - `### In Scope` / `### Out of Scope` / `### Future Phases` must reflect the feature
-
 - `## Technical Architecture` gains a new commitment (integration, package, pattern)
 
 **Steps:**
@@ -327,6 +153,10 @@ Apply **PRD Living Document** rules — update the PRD when the feature changes 
 3. `prd-write` + `validate-prd` (max 3 attempts)
 
 **Skip PRD update** when the feature clearly traces to an existing FR with unchanged MoSCoW and scope — spec-only is enough.
+
+**Change request** (the behavior works as specified and must now be different): edit the FR **in place** — same id, new **Behavior** and **Done means** — and write the before → after in the revision-history row. Never add a second FR that contradicts the first. Run `prd-impact --ids=FR-XXX`: open specs citing the FR follow the `action` and `hint` the command returns for their status; the `DONE` spec that shipped the old behavior stays closed and the new spec cites it as `**Supersedes:**`.
+
+**Not a feature after all:** when the request turns out to be a change of priorities, scope, targets, or wording with no capability behind it, say so in one line and hand over to `/larapilot-prd`.
 
 When **Traceability** was “extends existing FR” but AC materially expand that FR, add clarifying bullets **under that FR** (not a duplicate FR) + revision history row.
 
@@ -347,9 +177,10 @@ specs:
 
       **Epic:** EP-XXX | **Priority:** HIGH | **Points:** N | **Status:** TODO
       **Blocked by:** US-YYY | -
-      **Type:** Feature | Evolutiva
-      **Traces to:** FR-XXX (MoSCoW: Should)
-      **Decision table:** {paths.research}/decisions/US-XXX.yaml — N decided, M decided-null, K undecided
+      **Type:** Feature | Enhancement | Change request
+      **Supersedes:** US-XXX criterion "…" _(change request only)_
+      **Traces to:** J-XXX · FR-XXX (MoSCoW: Should) · NFR-XXX
+      **Prior art:** built-in | package {{vendor/name}} | custom — {{reason}}
 
       **User Story**
       As [persona],
@@ -360,19 +191,13 @@ specs:
       After implementing this spec, [observable verification].
 
       **Acceptance Criteria**
-      - [ ] AC-1 — [Happy path, in the language the analyst tests in]
-      - [ ] AC-2 — [Error case]
-      - [ ] AC-3 — [Edge case]
-      - [ ] AC-4 — [Non-regression: what stays exactly as it is]
-
-      **Decision coverage:** AC-1 ← #4,#5 · AC-2 ← #2 · AC-3 ← #1,#7 · AC-4 ← #11,#19 · internal ← #14,#22
+      - [ ] [Happy path — from Done means]
+      - [ ] [Error case — from the journey's failure modes]
+      - [ ] [Edge case]
+      - [ ] [NFR target when one applies]
 ```
 
-The `**Decision table:**` and `**Decision coverage:**` lines, and the `AC-n` numbering they cite, belong to `decision_tables: YES` only — with the setting `NO`, write plain unnumbered AC bullets and omit both lines.
-
-The coverage line accounts for **every** closed cell exactly once, `internal` ones included. It is the human-readable echo of the `ac` fields, not a second source of truth: `decisions-check` reads the mapping from the table and the ids from the `- [ ] AC-n` lines, so the three have to agree.
-
-Validate → `spec-add` → delete temp file. When `decision_tables` is `YES`, the decision-table YAML is **committed** alongside the spec: it is the second encoding of intent, and it only earns its keep if `plan` and `review` can read it later.
+Validate → `spec-add` → delete temp file.
 
 ### 5. Next steps
 
@@ -388,20 +213,10 @@ Offer clearly:
 - Do not plan or implement in this skill
 - Do not replace `/larapilot-inception` for greenfield or major pivots — suggest inception when the change redefines product vision or delivery target
 - Update the PRD only per **PRD Living Document** — never for delivery-only details that belong in the spec
-- **`settings.decision_tables` decides whether the table exists at all** — it is experimental and `NO` by default. Never enumerate, write, or present a table while it is `NO`, and never enable it yourself: that is `/larapilot-settings` or `settings-set --decision-tables=YES`, the user's call. Every rule below applies only when it is `YES`
-- Once enabled, the decision table is **mandatory at every `effort` level** — under `ECO` the proposals pass (1b) narrows and behavioral cells thin out, but **the deterministic enumeration in 0b is never skipped**: it costs a grep and a schema read
-- Do not fill domain cells on the human's behalf, not even when the answer looks obvious — an obvious cell is a **ratified** `decided-null`, not a skipped cell
-- Treat the prohibitions in this file as conventions and `larapilot:decisions-check` as the enforcement — run it before handing off; a convention that is never checked is a convention that erodes, and the erosion is invisible from inside the session that causes it
-- Do not enumerate decision sites with an LLM when an artifact can be grepped, queried, or listed — generative enumeration is for behavioral cells only, where no artifact bounds the space
-- Do not leave a row on a file without its own `symbols`, and do not back-fill them by guessing which term probably matched — the attribution records how the row was found, so one written after the fact records nothing and `decisions-check` re-greps it anyway
-- Do not present the table and the proposals in the same message — that collapses 1a into 1b and turns the oracle into a ratification
-- Do not show the human raw YAML, a cell count, or a prose summary in place of the grouped table — an unreadable presentation of a total enumeration decides the open cells by attrition, which is the same outcome the table exists to prevent
-- Do not prune the enumeration tail (`tests/`, factories, seeders, policies, adjacent models) because those rows will end up `decided-null` — that class is the largest in the table and the reason the non-regression criteria exist; the AC list aggregates it, 0b does not drop it
-- Do not emit one AC per cell, and never put a `path:line` inside an AC — a criterion the functional analyst cannot read is a criterion nobody tests; the trace belongs in the cell's `ac` field, which is checkable, not in the criterion text, which is not
-- Do not empty the AC list by marking behavioural cells `internal` — it is for cells with nothing observable, it costs a `verify_note`, and review sees how many there are
-- Do not write a bulk answer into the YAML without echoing it back first — the human must be able to see a misparse before it becomes a recorded decision
+- Do not use a feature to re-prioritize, re-scope, or reword the PRD — that is `/larapilot-prd`
+- Do not persist the spec or the PRD edit before the readback
 
-## Example — process interview (`decision_tables: NO`, the default)
+## Example
 
 **Invoke:** `/larapilot-feature "Add PDF export for invoices"`
 
@@ -420,21 +235,3 @@ Offer clearly:
 **Skip PRD when:** feature is already fully covered by `FR-004` with same MoSCoW — spec-only.
 
 **Next:** `/larapilot-plan US-011`
-
-## Example — cardinality change (`decision_tables: YES`)
-
-**Invoke:** `/larapilot-feature "allow more than one file per entity"`
-
-**Context:** custom CMS; entities currently hold at most one attachment.
-
-**0b — enumeration.** `Database Schema` reports `attachment_id` (nullable FK, no position column). `rg 'attachment_id|->attachment|attachment:'` returns 19 hits across `app/`, `resources/views/`, `routes/`, `database/`, `tests/`. `route:list` adds two API endpoints. Implicit surfaces add entity duplication, `og:image`, export feed, search index, delete cascade, permissions. Each row records the terms that hit it (`attachment_id` for the schema and command rows, `->attachment` for the views); the six implicit rows that are prose carry none. Table: **31 rows**, all empty.
-
-**1a — oracle, no options.** The 31 rows go out as six numbered groups (schema 4, API contract 3, UI/views 7, commands and jobs 5, tests 6, implicit 6), with row 12 flagged as the only irreversible one. The human answers in three bulk messages by number; Tom echoes each batch back before writing it. 22 rows land as `decided`, 6 as `decided-null`. Three stay open: API payload shape, ordering semantics, rollback with 2+ files already saved.
-
-**1b — proposals, three each.** One block per open cell, lettered. API shape → singular kept + array added / versioned breaking change / array only with a `primary` flag. Ordering → incidental (no column) / persisted position / upload timestamp. The human ratifies two; rollback stays `undecided` because it is a data-loss decision the product owner has not made.
-
-**2 — AC (Tom).** The 28 closed cells aggregate into **9 AC**: 6 behavioural (multi-upload, payload shape, export, preview slot, permissions, ordering) and 3 non-regression from the `decided-null` rows. Five cells — cache invalidation, reindex, two seeders, an internal DTO — take `ac: internal` with a verify note and never reach the AC list. Tom shows the mapping (`AC-2 ← #1,#7`) alongside the criteria, so the human can check that every answer they gave is still verified by some criterion.
-
-**Blocker:** one `spec-comment --blocks-merge` naming the rollback cell. `US-012` is persisted with 9 numbered AC and a coverage line accounting for all 28 closed cells; `spec-approve` will refuse until the open cell closes.
-
-**Note what the table found that the request did not contain:** the API contract break, the duplication semantics, the single-preview slot that must now pick one file, and the only irreversible cell in the whole change — which file survives a rollback.

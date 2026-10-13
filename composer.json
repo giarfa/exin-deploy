@@ -8,21 +8,9 @@
         "framework"
     ],
     "license": "MIT",
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../larapilot",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "andreapollastri/larapilot": "2.4.0.0"
-                }
-            }
-        }
-    ],
     "require": {
         "php": "^8.3",
-        "andreapollastri/larapilot": "^2.3",
+        "andreapollastri/larapilot": "^5.2",
         "laravel/fortify": "^1.38",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
