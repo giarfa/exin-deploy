@@ -124,7 +124,16 @@ class StartReleaseScreenTest extends TestCase
         $this->assertSame(1, Release::count());
     }
 
-    public function test_a_project_without_a_responsible_shows_the_reason_and_disables_the_command(): void
+    /**
+     * Un ruolo scoperto **non** blocca piu l'avvio (US-013, FR-029): e proprio il
+     * caso che la scelta dei responsabili in avvio esiste per coprire, e tenerlo
+     * come blocco impedirebbe la funzione nel punto in cui la si userebbe.
+     *
+     * Il ruolo resta nominato, ma come avviso: senza questa nota il prossimo
+     * lettore rimetterebbe il ramo dentro `Project::startBlocker()` credendo di
+     * riparare una dimenticanza.
+     */
+    public function test_a_project_without_a_responsible_names_the_role_without_blocking_the_start(): void
     {
         $project = $this->projectReadyToRelease();
 
@@ -138,9 +147,10 @@ class StartReleaseScreenTest extends TestCase
 
         $component = Livewire::test('releases.start', ['project' => $project->fresh()]);
 
-        $component->assertSee(__('releases.blocked_heading'));
+        $component->assertDontSee(__('releases.blocked_heading'));
         $component->assertSee($orphan->name);
-        $component->assertSee(__('releases.blocked_hint_assignments'));
+        $component->assertSee(__('releases.responsible_choice_required'));
+        $this->assertNull($project->fresh()->startBlocker());
     }
 
     public function test_a_project_without_a_template_explains_why_it_cannot_release(): void
@@ -161,7 +171,13 @@ class StartReleaseScreenTest extends TestCase
             ->assertSee(__('releases.blocked_inactive_project'));
     }
 
-    public function test_an_inactive_responsible_blocks_the_start_and_is_named(): void
+    /**
+     * Stessa ragione del ruolo scoperto (US-013, FR-029): un responsabile
+     * predefinito disattivato e letteralmente l'assenza che la spec esiste per
+     * coprire — sostituire una persona su un singolo rilascio. Resta **nominato**
+     * ma non blocca; il suo ruolo chiedera una scelta esplicita.
+     */
+    public function test_an_inactive_responsible_is_named_without_blocking_the_start(): void
     {
         $project = $this->projectReadyToRelease();
 
@@ -169,8 +185,11 @@ class StartReleaseScreenTest extends TestCase
         $responsible->update(['is_active' => false]);
 
         Livewire::test('releases.start', ['project' => $project->fresh()])
-            ->assertSee(__('releases.blocked_heading'))
-            ->assertSee($responsible->name);
+            ->assertDontSee(__('releases.blocked_heading'))
+            ->assertSee($responsible->name)
+            ->assertSee(__('releases.responsible_choice_required'));
+
+        $this->assertNull($project->fresh()->startBlocker());
     }
 
     public function test_a_start_refused_by_the_action_is_a_message_and_not_an_unhandled_error(): void
@@ -192,7 +211,22 @@ class StartReleaseScreenTest extends TestCase
         $this->assertSame(0, Release::count());
     }
 
-    public function test_a_refusal_arriving_after_the_summary_names_the_role_that_blocked_it(): void
+    /**
+     * Prima di US-013 questo caso era un **rifiuto**: l'assegnazione spariva fra
+     * il riepilogo e la scrittura, e l'avvio si fermava nominando il ruolo
+     * rimasto scoperto.
+     *
+     * Da FR-029 non si ferma piu, ed e il punto della spec: il modulo porta con
+     * se una scelta esplicita per quel ruolo — la persona che era precompilata,
+     * ancora attiva — e l'avvio la usa. Gli override si risolvono in avvio e non
+     * dipendono dalla mappatura del progetto, quindi togliere la mappatura mentre
+     * il modulo e aperto non puo invalidare una scelta gia fatta.
+     *
+     * Cosa resta coperto altrove: un rifiuto che arriva dopo il riepilogo e un
+     * messaggio e non un 500 — lo verifica il caso del progetto disattivato qui
+     * sopra, dove nessuna scelta nel modulo puo sanare la causa.
+     */
+    public function test_a_choice_made_in_the_form_survives_the_mapping_being_removed(): void
     {
         $project = $this->projectReadyToRelease();
 
@@ -200,21 +234,26 @@ class StartReleaseScreenTest extends TestCase
             $project->workflowTemplate->stepDefinitions->first()->role_id
         )->first();
 
+        $chosen = User::query()->whereKey(
+            $project->assignments->firstWhere('role_id', $orphan->id)->user_id
+        )->firstOrFail();
+
         $component = Livewire::test('releases.start', ['project' => $project]);
 
-        // Il responsabile sparisce **dopo** che la schermata ha letto le
-        // precondizioni: e la finestra fra controllo e scrittura. Il messaggio
-        // nasce dall'eccezione, che porta con se il ruolo scoperto, e non da un
-        // ricalcolo dello stato corrente — cosi dice cosa ha bloccato quel
-        // tentativo anche se nel frattempo la causa fosse stata risolta.
         $project->assignments->firstWhere('role_id', $orphan->id)->delete();
 
         $component->set('label', 'v2.4.0')
             ->call('start')
-            ->assertHasNoErrors()
-            ->assertSee($orphan->name);
+            ->assertHasNoErrors();
 
-        $this->assertSame(0, Release::count());
+        $this->assertSame(1, Release::count());
+
+        $step = ReleaseStep::query()->where('role_id', $orphan->id)->firstOrFail();
+
+        $this->assertSame($chosen->id, $step->assigned_user_id);
+        // Il ruolo non aveva piu un predefinito da cui ereditare: la persona e
+        // stata indicata in avvio, e lo snapshot lo dichiara.
+        $this->assertTrue($step->responsible_overridden);
     }
 
     public function test_the_start_command_appears_on_the_project_list_for_administrators(): void
@@ -237,6 +276,38 @@ class StartReleaseScreenTest extends TestCase
         // il comando resta visibile ma disabilitato, con il motivo accanto.
         $response->assertDontSee(route('releases.start', $blocked), escape: false);
         $response->assertSee(__('releases.blocked_without_template'));
+    }
+
+    /**
+     * L'elenco progetti segnala ruoli scoperti e responsabili disattivati **senza**
+     * disabilitare l'avvio (US-013, FR-029): sono i casi che la scelta dei
+     * responsabili in avvio copre.
+     *
+     * Il caso vale anche come rete su una dipendenza non ovvia: il badge dei
+     * responsabili disattivati esiste solo se `projects()` precarica la **colonna**
+     * `is_active` sulla persona. Il test di budget confronta il numero di query fra
+     * cinque e dieci progetti, quindi intercetta una relazione tolta dalla select ma
+     * non una colonna: senza `is_active` ogni responsabile risulterebbe attivo, il
+     * badge sparirebbe e il budget resterebbe verde.
+     */
+    public function test_the_project_list_flags_gaps_without_disabling_the_start_command(): void
+    {
+        $uncovered = $this->projectReadyToRelease();
+        ProjectRoleAssignment::where('project_id', $uncovered->id)->delete();
+
+        $withInactive = $this->projectReadyToRelease();
+        User::query()
+            ->whereKey($withInactive->assignments->pluck('user_id'))
+            ->update(['is_active' => false]);
+
+        $response = $this->get(route('projects.index'))->assertOk();
+
+        $response->assertSee(trans_choice('projects.uncovered_roles_badge', 3, ['count' => 3]));
+        $response->assertSee(trans_choice('projects.inactive_responsibles_badge', 3, ['count' => 3]));
+
+        // Il comando resta raggiungibile su entrambi: informa senza impedire.
+        $response->assertSee(route('releases.start', $uncovered), escape: false);
+        $response->assertSee(route('releases.start', $withInactive), escape: false);
     }
 
     public function test_the_project_list_does_not_query_per_row_for_the_start_command(): void

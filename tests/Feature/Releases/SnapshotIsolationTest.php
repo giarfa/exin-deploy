@@ -405,7 +405,7 @@ class SnapshotIsolationTest extends TestCase
     private function shapeOf(Release $release): array
     {
         return $release->steps()->with('fields')->get()
-            ->map(fn ($step): array => [
+            ->map(fn (ReleaseStep $step): array => [
                 'position' => $step->position,
                 'name' => $step->name,
                 'instructions' => $step->instructions,
@@ -413,7 +413,7 @@ class SnapshotIsolationTest extends TestCase
                 'assigned_user_id' => $step->assigned_user_id,
                 'status' => $step->status->value,
                 'fields' => $step->fields
-                    ->map(fn ($field): array => [
+                    ->map(fn (ReleaseStepField $field): array => [
                         'position' => $field->position,
                         'label' => $field->label,
                         'type' => $field->type->value,

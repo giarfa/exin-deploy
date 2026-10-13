@@ -1,0 +1,67 @@
+decisions:
+  -
+    id: 1169e27570a82743
+    ts: '2026-09-03T16:48:05+00:00'
+    user: 'git:giarfa <giarfa@outlook.com>'
+    phase: larapilot-feature
+    topic: 'granularità override responsabili in avvio release'
+    label: 'granularità override responsabili in avvio release'
+    value: 'Per ruolo — un responsabile per ruolo valido su tutti gli step della release'
+    question: null
+    rationale: "Coerente con il modello ruolo → persona e con un form corto; per-step cambierebbe l'unità di responsabilità"
+    source: askquestion
+    spec: US-013
+    supersedes: null
+  -
+    id: ecad921f00e4e2e8
+    ts: '2026-09-03T16:48:05+00:00'
+    user: 'git:giarfa <giarfa@outlook.com>'
+    phase: larapilot-feature
+    topic: 'ruoli scoperti in avvio release con override'
+    label: 'ruoli scoperti in avvio release con override'
+    value: "L'override può coprire un ruolo senza responsabile sul progetto e sblocca l'avvio; le precondizioni restano avvisi non bloccanti"
+    question: null
+    rationale: 'Consente rilasci una tantum senza modificare la configurazione del progetto'
+    source: askquestion
+    spec: US-013
+    supersedes: null
+  -
+    id: 36924f614d369dcb
+    ts: '2026-09-03T16:48:05+00:00'
+    user: 'git:giarfa <giarfa@outlook.com>'
+    phase: larapilot-feature
+    topic: 'priorità override responsabili per release'
+    label: 'priorità override responsabili per release'
+    value: 'Must → priorità HIGH nel backlog'
+    question: null
+    rationale: null
+    source: askquestion
+    spec: US-013
+    supersedes: null
+  -
+    id: cc143d1236644315
+    ts: '2026-09-03T16:57:15+00:00'
+    user: 'git:giarfa <giarfa@outlook.com>'
+    phase: larapilot-plan
+    topic: 'responsabile predefinito disattivato in avvio release'
+    label: 'responsabile predefinito disattivato in avvio release'
+    value: 'Sovrascrivibile in avvio come un ruolo scoperto: selettore vuoto e scelta richiesta; startBlocker() conserva solo progetto disattivato e processo mancante/disattivato/senza step'
+    question: null
+    rationale: "E il caso d'uso letterale della spec (sostituzione per assenza): un membro disattivato e proprio l'assenza da coprire. Comporta l'aggiornamento di due test schermata di US-004."
+    source: askquestion
+    spec: US-013
+    supersedes: null
+  -
+    id: 8a165f430f2154ee
+    ts: '2026-09-05T14:22:06+00:00'
+    user: 'git:giarfa <giarfa@outlook.com>'
+    phase: larapilot-review
+    topic: 'payload evento avvio release responsabile sostituito'
+    label: 'payload evento avvio release responsabile sostituito'
+    value: 'Il registro annota solo role + to; il nome del responsabile sostituito (from) non entra nel payload'
+    question: null
+    rationale: 'Il registro delle transizioni e leggibile da ogni utente autenticato mentre la mappatura ruolo-persona del progetto e riservata agli amministratori: il nome di chi era designato per un ruolo poi sovrascritto non deve trapelare fuori dalle pagine di amministrazione. Rilievo Medium di Lars al gate umano di US-013; il criterio di accettazione di tracciabilita va aggiornato di conseguenza.'
+    source: askquestion
+    spec: US-013
+    supersedes: null
+updated_at: '2026-09-05T14:22:06+00:00'

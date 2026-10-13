@@ -104,6 +104,45 @@ class ReleaseDetailScreenTest extends TestCase
         $response->assertDontSee('Quality Assurance');
     }
 
+    /**
+     * Quando il responsabile di uno step e stato **indicato in avvio** invece che
+     * ereditato dalla mappatura del progetto, il dettaglio lo dichiara (US-013).
+     *
+     * Con parola e non col solo colore: chi non distingue le tinte non deve dover
+     * dedurre nulla. Il dato arriva dalla colonna dello snapshot, quindi la pagina
+     * non torna a leggere `project_role_assignments` — invariante verificata da
+     * `SnapshotIsolationTest`.
+     */
+    public function test_a_responsible_indicated_at_start_is_declared_on_the_step(): void
+    {
+        $release = $this->releaseInProgress();
+
+        // Lo stato di factory esiste per questo: verificare la segnalazione senza
+        // costruire un avvio completo con override, che e gia coperto altrove.
+        ReleaseStep::factory()->for($release)->blocked()->overriddenResponsible()->create([
+            'position' => 6,
+            'role_name' => 'DevOps',
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('releases.show', $release))
+            ->assertOk()
+            ->assertSee(__('releases.responsible_overridden_note'));
+    }
+
+    public function test_a_step_whose_responsible_was_inherited_says_nothing_extra(): void
+    {
+        // Nessuno step della release di prova ha il responsabile sovrascritto: la
+        // segnalazione non deve comparire, altrimenti direbbe di ogni rilascio cio
+        // che vale solo per alcuni.
+        $release = $this->releaseInProgress();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('releases.show', $release))
+            ->assertOk()
+            ->assertDontSee(__('releases.responsible_overridden_note'));
+    }
+
     public function test_a_completed_step_shows_the_values_the_author_and_the_closing_instant(): void
     {
         $release = $this->releaseInProgress();

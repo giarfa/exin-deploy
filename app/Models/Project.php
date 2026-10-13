@@ -89,7 +89,10 @@ class Project extends Model
      * hanno un responsabile.
      *
      * E la segnalazione che evita di scoprire il buco all'avvio di una release,
-     * quando lo step resterebbe senza nessuno che possa chiuderlo.
+     * quando lo step resterebbe senza nessuno che possa chiuderlo. Da US-013 e
+     * un **avviso** e non piu un blocco: chi avvia puo coprire il ruolo indicando
+     * li una persona. Cosa questo metodo calcola non e cambiato — e cambiato chi
+     * lo interpreta, e come.
      *
      * Percorso a rischio N+1 per costruzione, perche compare in elenco: quando le
      * relazioni sono gia precaricate questo metodo **non** interroga il database.
@@ -124,7 +127,9 @@ class Project extends Model
      *
      * Un membro disattivato non accede piu: lo step gli verrebbe assegnato e
      * resterebbe fermo. La mappatura resta valida per lo storico, ma per una
-     * nuova release va aggiornata prima.
+     * nuova release va aggiornata — oppure, da US-013, sovrascritta in avvio.
+     * Anche questo e un **avviso** e non piu un blocco, per la stessa ragione dei
+     * ruoli scoperti.
      *
      * Stessa avvertenza di `uncoveredRoles()`: con le relazioni gia precaricate
      * questo metodo **non** interroga il database, e `loadMissing` e la rete di
@@ -156,6 +161,73 @@ class Project extends Model
     }
 
     /**
+     * Ruoli previsti dal processo con il proprio responsabile predefinito, uno per
+     * ruolo anche quando il processo lo usa su piu step.
+     *
+     * E il dato su cui la schermata di avvio disegna un selettore per ruolo. La
+     * persona predefinita e `null` in due casi che a chi avvia si presentano allo
+     * stesso modo — una scelta da fare — anche se hanno origini diverse: il ruolo
+     * non ha alcuna assegnazione sul progetto, oppure ne ha una su una persona
+     * disattivata. Un disattivato non e selezionabile, quindi non e nemmeno un
+     * valore che si possa precompilare: proporlo significherebbe offrire una
+     * scelta che l'avvio poi rifiuta.
+     *
+     * L'ordine e quello del **primo step che usa il ruolo** e non alfabetico: la
+     * schermata segue la catena, e un elenco ordinato per nome costringerebbe a
+     * ricostruire mentalmente il processo.
+     *
+     * Stessa avvertenza N+1 di `uncoveredRoles()` e `inactiveResponsibles()`: con
+     * le relazioni gia precaricate questo metodo **non** interroga il database, e
+     * `loadMissing` e la rete di sicurezza per l'uso su un singolo progetto — non
+     * una licenza a chiamarlo dentro un ciclo senza eager loading.
+     *
+     * Torna una **lista** e non una `Collection`: qui serve una sequenza ordinata
+     * su cui la vista itera, e niente a valle usa i metodi di Collection. Non e
+     * una preferenza — un array shape dentro un generic invariante fa riportare a
+     * Larastan un disallineamento fra due tipi identici, e piegare il codice per
+     * aggirarlo costerebbe piu della forma piu semplice.
+     *
+     * @return list<array{role: Role, default: User|null, requires_choice: bool}>
+     */
+    public function responsibleChoices(): array
+    {
+        $this->loadMissing(['workflowTemplate.stepDefinitions.role', 'assignments.user']);
+
+        $template = $this->workflowTemplate;
+
+        /** @var list<array{role: Role, default: User|null, requires_choice: bool}> $choices */
+        $choices = [];
+
+        if ($template === null) {
+            return $choices;
+        }
+
+        $byRole = $this->assignments->keyBy('role_id');
+
+        foreach ($template->stepDefinitions->unique('role_id') as $definition) {
+            $role = $definition->role;
+
+            if ($role === null) {
+                continue;
+            }
+
+            $responsible = $byRole->get($definition->role_id)?->user;
+
+            if ($responsible !== null && ! $responsible->is_active) {
+                $responsible = null;
+            }
+
+            $choices[] = [
+                'role' => $role,
+                'default' => $responsible,
+                'requires_choice' => $responsible === null,
+            ];
+        }
+
+        return $choices;
+    }
+
+    /**
      * Motivo per cui non si puo avviare una release sul progetto, `null` quando
      * si puo.
      *
@@ -168,6 +240,15 @@ class Project extends Model
      * il primo. Le precondizioni sono le stesse verificate da
      * `App\Actions\Releases\StartRelease`, che resta l'unico percorso che decide
      * davvero: qui si anticipa il rifiuto, non lo si sostituisce.
+     *
+     * **Da US-013 (FR-029) restano solo le regole che nessun override puo
+     * sanare.** Ruolo scoperto e responsabile predefinito disattivato erano qui e
+     * ne sono usciti di proposito: sono esattamente i casi che la scelta dei
+     * responsabili in avvio esiste per coprire, e tenerli come blocco
+     * impedirebbe la funzione mentre si e nel punto in cui la si userebbe.
+     * Restano **segnalati** — da `uncoveredRoles()` e `inactiveResponsibles()`,
+     * che non sono cambiati — ma non impediscono piu nulla. Chi li rimettesse qui
+     * credendo di riparare una dimenticanza spegnerebbe US-013.
      */
     public function startBlocker(): ?string
     {
@@ -183,22 +264,6 @@ class Project extends Model
 
         if (! $template->isUsable()) {
             return __((string) $template->unusableReason());
-        }
-
-        $uncovered = $this->uncoveredRoles();
-
-        if ($uncovered->isNotEmpty()) {
-            return trans_choice('releases.blocked_uncovered_roles', $uncovered->count(), [
-                'roles' => $uncovered->pluck('name')->implode(', '),
-            ]);
-        }
-
-        $inactive = $this->inactiveResponsibles();
-
-        if ($inactive->isNotEmpty()) {
-            return trans_choice('releases.blocked_inactive_responsibles', $inactive->count(), [
-                'members' => $inactive->pluck('name')->implode(', '),
-            ]);
         }
 
         return null;

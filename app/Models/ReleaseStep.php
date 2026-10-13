@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\DB;
  * @property ReleaseStepStatus $status
  * @property CarbonInterface|null $completed_at
  * @property string $release_id
+ * @property bool $responsible_overridden vero quando il responsabile e stato indicato in avvio invece di essere ereditato dalla mappatura del progetto
  * @property CarbonInterface|null $previous_step_completed_at colonna calcolata da `withActivationInstant()`, assente senza quello scope
  */
 #[Fillable([
@@ -47,6 +48,7 @@ use Illuminate\Support\Facades\DB;
     'role_name',
     'assigned_user_id',
     'status',
+    'responsible_overridden',
 ])]
 class ReleaseStep extends Model
 {
@@ -64,6 +66,13 @@ class ReleaseStep extends Model
             'position' => 'integer',
             'status' => ReleaseStepStatus::class,
             'completed_at' => 'datetime',
+            /*
+             * `StartRelease` scrive lo snapshot con `insert()`, che non passa dal
+             * cast: qui conta perche la **lettura** torni un booleano e non l'intero
+             * che SQLite restituisce. In `#[Fillable]` la colonna c'e comunque —
+             * un'incoerenza fra i due sarebbe una trappola per chi arriva dopo.
+             */
+            'responsible_overridden' => 'boolean',
             /*
              * Non e una colonna: e l'alias della sottoquery di
              * `withActivationInstant()`. Il cast e comunque necessario, altrimenti

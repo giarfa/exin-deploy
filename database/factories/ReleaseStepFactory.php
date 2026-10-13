@@ -79,6 +79,8 @@ class ReleaseStepFactory extends Factory
             'role_id' => Role::factory(),
             'assigned_user_id' => User::factory(),
             'status' => ReleaseStepStatus::Blocked,
+            // Il caso normale: il responsabile arriva dalla mappatura del progetto.
+            'responsible_overridden' => false,
         ];
     }
 
@@ -126,6 +128,20 @@ class ReleaseStepFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => ReleaseStepStatus::Blocked,
+        ]);
+    }
+
+    /**
+     * Step il cui responsabile e stato indicato in avvio invece di essere ereditato
+     * dalla mappatura del progetto.
+     *
+     * Esiste per i test di interfaccia: la segnalazione sul dettaglio della release
+     * si verifica senza dover costruire un avvio completo con override.
+     */
+    public function overriddenResponsible(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'responsible_overridden' => true,
         ]);
     }
 

@@ -199,6 +199,17 @@ new class extends Component
                                 ]) }}
                             </flux:text>
 
+                            {{-- Il responsabile indicato in avvio si dichiara con icona
+                                 **e** parola, mai dal solo colore. Il dato e sulla riga
+                                 dello snapshot: nessuna query in piu, e nessun ritorno a
+                                 `project_role_assignments`, vietata a release avviata. --}}
+                            @if ($step->responsible_overridden)
+                                <flux:text class="inline-flex items-start gap-1.5 text-sm">
+                                    <flux:icon name="user-plus" variant="mini" class="mt-0.5 size-4 shrink-0" />
+                                    {{ __('releases.responsible_overridden_note') }}
+                                </flux:text>
+                            @endif
+
                             @if ($step->status === ReleaseStepStatus::Completed)
                                 <flux:text class="text-sm">
                                     {{ __('releases.detail_step_closed_at', [

@@ -31,6 +31,33 @@ return [
     'blocked_hint_assignments' => 'Assegna i responsabili mancanti',
 
     /*
+     * Avvisi della scelta dei responsabili in avvio (US-013). **Non** bloccano:
+     * dicono cosa va indicato nel modulo e lasciano il comando attivo. Nominano i
+     * ruoli e le persone perche "manca qualcosa" senza sapere cosa non si risolve.
+     */
+    'warning_uncovered_roles' => '{1} Questo ruolo non ha un responsabile sul progetto: :roles. Indicane uno qui sotto per avviare.|[2,*] Questi ruoli non hanno un responsabile sul progetto: :roles. Indicane uno per ciascuno qui sotto per avviare.',
+    'warning_inactive_responsibles' => '{1} Questo responsabile e disattivato e non puo ricevere step: :members. Indica un\'altra persona qui sotto per avviare.|[2,*] Questi responsabili sono disattivati e non possono ricevere step: :members. Indica altre persone qui sotto per avviare.',
+
+    'responsibles_heading' => 'Responsabili di questo rilascio',
+    'responsibles_help' => 'Ogni ruolo arriva gia con il responsabile configurato sul progetto: cambialo solo per questo rilascio, per un\'assenza o una sostituzione. La mappatura del progetto resta com\'e.',
+    'responsible_choice_required' => 'Va indicato un responsabile: questo ruolo non ne ha uno utilizzabile sul progetto.',
+    'responsible_choose_option' => '— Indica un responsabile —',
+    'responsible_overridden_note' => 'Responsabile indicato in avvio, non ereditato dalla mappatura del progetto.',
+    'override_required' => 'Indica chi risponde del ruolo :role per questo rilascio.',
+
+    /*
+     * Rifiuti degli override indicati in avvio. Distinti dai `blocked_*` perche non
+     * parlano della configurazione del progetto ma della scelta appena fatta: si
+     * risolvono cambiando la persona nel modulo, non aprendo la pagina dei
+     * responsabili. Il nome del ruolo e dentro il messaggio e non solo
+     * nell'etichetta del campo, perche chi lo ascolta da uno screen reader lo sente
+     * da solo.
+     */
+    'override_refused_missing_member' => 'La persona indicata per il ruolo :role non esiste piu.',
+    'override_refused_inactive_member' => 'La persona indicata per il ruolo :role e disattivata e non puo ricevere step.',
+    'override_refused_role_not_in_process' => 'L\'avvio indicava un responsabile per un ruolo che il processo del progetto non prevede: la release non e stata creata.',
+
+    /*
      * Conferma dopo l'avvio: la prova visiva che lo snapshot esiste.
      */
     'started_heading' => 'Release :label avviata',
@@ -222,6 +249,16 @@ return [
     'log_on_release' => 'Riguarda il rilascio nel suo insieme, non un singolo step',
 
     'log_detail_started' => 'Processo congelato da :template, :steps step copiati nella release.',
+    /*
+     * Sovrascritture indicate in avvio (US-013). Compaiono **solo** quando il
+     * payload le porta: una release avviata senza override, e ogni riga scritta
+     * prima di questa spec, resta identica a prima.
+     */
+    'log_detail_overrides' => '{1} Un ruolo e stato indicato in avvio: :overrides.|[2,*] :count ruoli sono stati indicati in avvio: :overrides.',
+    'log_detail_override_replaced' => ':role, da :from a :to',
+    // Frase propria per il ruolo che non aveva un responsabile: un nome vuoto o un
+    // trattino lascerebbe a chi legge il compito di indovinare.
+    'log_detail_override_uncovered' => ':role, era senza responsabile, affidato a :to',
     'log_detail_step_completed' => '{0} Nessuna informazione fornita|{1} Un\'informazione fornita|[2,*] :count informazioni fornite',
     'log_detail_step_activated' => 'Il flusso e passato a :name.',
     'log_detail_release_completed' => 'La release :label risulta consegnata.',

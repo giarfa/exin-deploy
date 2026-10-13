@@ -50,9 +50,14 @@ return [
 
     /*
      * Ruoli previsti dal template e non ancora assegnati.
+     *
+     * Da US-013 (FR-029) il testo dice la conseguenza vera: la release **parte**
+     * lo stesso, purche chi la avvia indica li un responsabile. Dire che si
+     * bloccherebbe manderebbe a cercare una soluzione dove non serve piu.
      */
-    'uncovered_roles' => 'Ruolo previsto dal template senza responsabile su questo progetto: :roles. Una release avviata ora si bloccherebbe su quello step.|Ruoli previsti dal template senza responsabile su questo progetto: :roles. Una release avviata ora si bloccherebbe su quegli step.',
+    'uncovered_roles' => 'Ruolo previsto dal template senza responsabile su questo progetto: :roles. Per avviare una release va indicato un responsabile in fase di avvio, oppure assegnato qui una volta per tutte.|Ruoli previsti dal template senza responsabile su questo progetto: :roles. Per avviare una release vanno indicati i responsabili in fase di avvio, oppure assegnati qui una volta per tutte.',
     'uncovered_roles_badge' => ':count ruolo scoperto|:count ruoli scoperti',
+    'inactive_responsibles_badge' => ':count responsabile disattivato|:count responsabili disattivati',
     'all_roles_covered' => 'Tutti i ruoli previsti dal template hanno un responsabile.',
     'multiple_roles' => ':name ricopre :count ruoli su questo progetto: e una scelta, non un errore.',
 

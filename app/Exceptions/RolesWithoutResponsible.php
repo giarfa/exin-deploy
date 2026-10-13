@@ -20,13 +20,22 @@ class RolesWithoutResponsible extends RuntimeException
 {
     /**
      * @param  list<string>  $roleNames
+     * @param  list<string>  $roleIds  identificativi degli stessi ruoli, nello stesso ordine
      */
-    private function __construct(string $message, public readonly array $roleNames)
-    {
+    private function __construct(
+        string $message,
+        public readonly array $roleNames,
+        public readonly array $roleIds = [],
+    ) {
         parent::__construct($message);
     }
 
     /**
+     * Gli identificativi affiancano i nomi — aggiunta additiva di US-013, che non
+     * tocca il messaggio: la schermata di avvio ha un campo per ruolo, e senza
+     * l'identificativo potrebbe solo mettere il rifiuto in testa invece che
+     * accanto al selettore da correggere.
+     *
      * @param  Collection<int, Role>  $roles
      */
     public static function on(Project $project, Collection $roles): self
@@ -35,7 +44,8 @@ class RolesWithoutResponsible extends RuntimeException
 
         return new self(
             "Sul progetto [{$project->name}] questi ruoli non hanno un responsabile: ".implode(', ', $names).'.',
-            $names
+            $names,
+            $roles->pluck('id')->all(),
         );
     }
 }

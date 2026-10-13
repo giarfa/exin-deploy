@@ -1,21 +1,21 @@
 ---
 name: larapilot-review
-description: Facilitates human acceptance of a spec in REVIEW. Present deliverables and execute approve (DONE) or request-changes (back to TODO). Triggers include "review US-005", "accept the spec", "what's waiting for review".
+description: "Human acceptance of a spec in REVIEW: approve to DONE or request changes. Use for review US-005 or accept the spec."
 ---
 
 # Larapilot — Spec Review (Human Gate)
 
 Present the delivered increment and execute the human verdict.
 
-## Shared Runtime
+## Context
 
-Read `.larapilot/shared-runtime.md` — including **Project Settings** and **Sub-agents** (review artifact from implement).
+`php artisan larapilot:context review` — with `--session={token}` when this conversation already holds one, `--fresh` after a compaction. Read every file under `data.runtime.read`, none under `loaded`: after an implement run in the same conversation there is usually nothing left to read. Settings, paths, `data.project`, and `data.dev_docs` come from that envelope: no `config-show`. The gate is **Code Review Gate** (`delivery-2.md`) and the **Freshness gate** (`dev-docs.md`).
 
 ## Output Economy
 
-**High** — see `larapilot-review` in shared-runtime. Robert presents a checklist gate: criteria, evidence pointers, risks, verdict ask. Summarize diffs; do not narrate every hunk.
+**High.** Robert presents a **checklist gate**: criteria status, evidence pointers (branch, test command and output), residual risks, verdict ask. Summarize diffs; do not narrate every hunk.
 
-When `settings.effort` is **`ECO`**: ultra-short checklist (criteria + tests + verdict); **do not block on missing README/PDF**; **do block if public API routes changed without OpenAPI update**. When **`MAX`**: expand residual risks, design-system, docs, and copy notes.
+When `settings.effort` is **`ECO`**: ultra-short checklist (criteria + tests + verdict); **do not block on missing README/PDF**; **do block if public API routes changed without OpenAPI update, or if a touched domain has no current file under `{paths.dev_docs}`** — domain docs are not part of the `ECO` deferral. When **`MAX`**: expand residual risks, design-system, docs, and copy notes.
 
 ## The Team
 
@@ -32,12 +32,13 @@ When `settings.effort` is **`ECO`**: ultra-short checklist (criteria + tests + v
 
 ## Config & CLI
 
-1. `php artisan larapilot:config-show` — honor `data.settings` (git/testing evidence; `auto_approve`)
-2. `php artisan larapilot:spec-list --status=REVIEW`
-3. `php artisan larapilot:spec-show {code}`
-4. On approval: `php artisan larapilot:spec-approve {code}`
-5. On rework: `php artisan larapilot:spec-request-changes {code} --file=...`
-6. When `settings.decision_tables` is `YES` (experimental, default `NO`): `php artisan larapilot:decisions-check --spec={code} --base=develop` — decision-table gate, before any narrative judgement
+1. `php artisan larapilot:spec-list --status=REVIEW`
+2. `php artisan larapilot:spec-show {code} --fields=id,title,status` — the spec body with its acceptance criteria, the tasks without their bodies
+3. On approval: `php artisan larapilot:spec-approve {code}`
+4. On rework: `php artisan larapilot:spec-request-changes {code} --file=...`
+5. When `data.settings.hooks` is `YES`, both run the project's workflow hooks (`hooks.md`). A refused approval names a failing hook or a skill to run first: report it to the human, never approve around it, and repeat with `--skill-hooks-done=` once the skill ran. The skills under `data.hooks.after.skills` run before the review is closed.
+
+Honor `data.settings` for the evidence asked: `git_mode`, `testing`, `auto_approve`, `security_scan`.
 
 When `settings.auto_approve` is **`NO`** (default): always ask the human Approve / Request changes before calling CLI. When **`YES`** and this skill was invoked from autopilot (or the user already said to approve), you may `spec-approve` after the short checklist if no Critical blockers — still never invent approval on failed tests.
 
@@ -54,42 +55,19 @@ Robert speaks in character. For the selected spec, he presents:
 - Mockup/responsive evidence — smoke usability on phone/desktop; automated multi-viewport only when `BEST`
 - `CHANGELOG.md`, `security.txt`, `SECURITY.md` updates when in scope
 - Residual risks or open concerns before the human verdict
-- Lars security findings from implementation — read `{paths.review}/{code}.md` (from `config-show`) when present (written during implement sub-agent merge); otherwise from implementation notes
+- Lars security findings from implementation — read `{paths.review}/{code}.md` when present (written during the implement review merge); otherwise from implementation notes
+- **Security findings** — when `settings.security` is `YES` and the spec carries a **Security finding** (Aikido or Hackly): the criterion "the scanner no longer reports it" is met only after the merge and a new scan, so approve on the evidence of the fix and say `php artisan larapilot:security-scan` in the handoff. Never run the whole list of findings here — that is `/larapilot-security` and the ship gate
+- **Security scan** — when `settings.security_scan` is `YES`: run `php artisan larapilot:checkpoint-scan` (it runs `andreapollastri/checkpoint` and keeps the result for the dashboard, **Security → Checkpoint**). Fold results into Robert's checklist — every `FAIL` is a **Critical blocker** (do not approve until fixed, or the user records a waiver via `php artisan larapilot:decision-log`); `WARN` findings are review notes. If it answers `E_PRECONDITION` (not installed), **stop and tell the user** to `composer require --dev andreapollastri/checkpoint` or turn `security_scan` back OFF via `/larapilot-settings`. Skip entirely when `security_scan` is `NO`
 - **Sabrine** parity findings when Project Origin is legacy **or the spec is refactoring/porting** — compare deliverables to `{paths.research}/legacy-parity.md` and porting/refactoring AC; flag undocumented feature or content drops; **Robert does not approve without Sabrine sign-off**
 - **Marika** + **Emily** copy/i18n notes when the spec touched user-facing text — typos, tone, clarity, **translation consistency** between source and `lang/` files _(skip or one-liner under `effort: ECO`)_
 - **Joe** design-system notes when UI changed — token/component drift vs Elise mockups and agreed design system _(skip or one-liner under `effort: ECO`)_
+- **Frontend repository** — when the spec has `repo: frontend` tasks: review that diff per **Review** in **Frontend Companion** (`frontend.md`) — the FE repo's agent rules (`frontend-rules --file=` for each changed file), `write_scope`, `observed` conventions, `commands.affected` green, no undocumented endpoint, generated client untouched. Each finding names the rule file it breaks
 - **Anne** manual test handoff — list tests the human should run on real devices or outside automation (when applicable)
-- **Decision-table gate** *(only when `settings.decision_tables` is `YES`; when `NO`, skip this and the three bullets below — no gate, no table diff, no cell-level scope reductions)* — present the checker output **verbatim**, before any narrative judgement. A non-zero exit is a **hard blocker**: the table changed after the human left, or a site was dropped, or a cell carries no record of a human answering. Do not interpret, minimize, or re-derive its findings, and never re-run it with narrower flags to get a cleaner result — route back to `/larapilot-feature`. The `notes` are part of the output: an unanchored run (`…not an enumeration anchor`) and any dropped sites it lists there are not a pass, and the reach line (`the recorded symbols reach N file(s) in scope, M of which have a cell`) says how much of the codebase the gate was ever able to see
-- **Decision table diff** — read `{paths.research}/decisions/{code}.yaml` when present and present the divergence from delivered behavior in both directions: cells `decided` but not implemented (or implemented with a different value); cells `decided-null` where behavior actually changed; and **behavior implemented on sites that were never enumerated** — the most informative class, since it names decisions no human ever saw. Each unenumerated site is a new cell, not a note: route it back to `/larapilot-feature` rather than approving it retroactively here. Open `[blocks-merge]` comments on undecided cells already block `spec-approve` — do not clear them from this skill. Format below
-- **Scope reductions** — read `## Scope Reduction` in the plan and every `undecided` cell; present each as what it is, a behavior the increment does **not** implement because nobody decided it, one line per cell with its number and site. This is the moment the human learns the spec narrowed, so state it plainly rather than folding it into residual risks
-
-- **Never approve to unblock** — if the human asks to force it through, say what is being waived, cell by cell, and let them use `spec-approve --force` themselves. Do **not** pass `--force` from this skill
 - Any open review notes
 
-### Decision table diff — format (`decision_tables: YES` only)
-
-Only the rows that **diverge**, as a table, using the **same row numbers** the human answered in `/larapilot-feature` so they recognize their own decisions. Never render the raw YAML at the human here either — see **Presenting the table** in `larapilot-feature`.
-
-```markdown
-🛡️ Robert: **US-012** · 24 of 27 cells delivered as decided · 3 diverge
-
-| # | Site | AC | Decided | Delivered |
-
-| --- | --- | --- | --- | --- |
-| 7 | `app/Http/Resources/PostResource.php:24` | AC-2 | singular kept + `attachments[]` added | `attachments[]` only — **contract break** |
-| 19 | `resources/views/post/show.blade.php:41` | AC-9 | unchanged (ratified) | now renders every file |
-| 14 | `app/Services/PostCache.php:71` | internal | invalidate on attach/detach | no test covers it |
-| — | `app/Console/Commands/ExportCommand.php:52` | — | **never enumerated** | exports all files |
-
-Diverging cells affect **AC-2** and **AC-9** — those are the criteria to re-test.
-Row 12 (rollback with 2+ files saved) is still open and still blocking.
-```
-
-Matching rows are the one-line counter, never a second table: the diff is what needs the human's eyes. A row with `—` for a number was never enumerated — say so in those words, since that is the class no human has ever seen.
-
-**Name the affected AC, not only the rows.** Cells aggregate onto criteria (`ac: AC-n`), so a diverging cell invalidates the sign-off on whatever criterion covers it — that is the line the functional analyst acts on, and it is one line, not a re-reading of the table. A cell with `ac: internal` diverges when the test its `verify_note` promised does not exist: report it as a missing verification, not as a missing AC.
-
 Ask the human: **Approve** or **Request changes** (with feedback).
+
+With release mode on (`versions.md`): name the story's version in the presentation; under Gitflow, a PR whose base is not that version's `release/x.y.z` is a FAIL. After `spec-approve`, close with the version line from `php artisan larapilot:release-show --semver=x.y.z` (`v1.2.0 4/5 (80%)`); when it delivered the last open story of the version, say so and propose `/larapilot-release` → notes and ship.
 
 ## Approval
 
@@ -127,7 +105,7 @@ Delete temp file after CLI exits.
 
 - Robert speaks in character when presenting the increment
 - Only human approval moves a spec to DONE
-- Judge against the **full spec** and PRD delivery target — not a reduced MVP bar unless the PRD says MVP. Read `paths.prd` (from `config-show`) when the delivered increment looks narrower than the spec and you need to confirm that's actually the chosen target
-- **`spec-request-changes` never updates the PRD** — rework is spec/plan level per **PRD Living Document** in shared-runtime; suggest `/larapilot-feature` if the gap is new product scope
+- Judge against the **full spec** and `data.project.delivery_target` — not a reduced MVP bar unless the target is MVP. When the delivered increment looks narrower than the spec, read the promise with `prd-show --ids=` on the spec's `**Traces to:**` line — never the whole PRD
+- **`spec-request-changes` never updates the PRD** — rework is spec and plan level; suggest `/larapilot-feature` if the gap is new product scope
 - This is a gate, not a re-implementation — follow Output Economy (checklist format, no diff narration)
-- Use the detected language for all user-facing messages (see Language Policy in shared runtime)
+- Use the detected language for all user-facing messages

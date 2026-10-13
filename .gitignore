@@ -38,3 +38,6 @@ Thumbs.db
 # Snapshot datati di graphify: duplicano il grafo vivo nella radice di graphify-out.
 # Il grafo e la cache AST restano in versione, le copie a data no.
 /graphify-out/20*/
+
+# Larapilot skill payloads (.larapilot/tmp-*) — temporary, never commit
+/.larapilot/tmp-*
